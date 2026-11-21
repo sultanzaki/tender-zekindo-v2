@@ -33,7 +33,7 @@ const pages = [
 const settings = {
   href: "/settings",
   label: "Settings",
-  icon: "filters",
+  icon: "settings",
 } as const;
 function CreateLink() {
   const params = useSearchParams();
