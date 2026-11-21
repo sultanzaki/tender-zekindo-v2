@@ -323,6 +323,33 @@ test("schedule matrix opens on desktop and phone and contains long package names
     await page.close();
   }
 });
+test("long statuses and editors stay inside the cell, and matrix preferences work", async () => {
+  for (const width of [390, 1440]) {
+    const page = await open("table&audit=1", width);
+    const status = page.getByRole("button", {name:"Edit result for TN-1", exact:true});
+    const inside = el => {
+      const cell = el.closest("td").getBoundingClientRect();
+      const content = el.getBoundingClientRect();
+      return content.left >= cell.left - 1 && content.right <= cell.right + 1;
+    };
+    assert.ok(await status.locator('[data-slot="badge"]').evaluate(inside));
+    await status.click();
+    const editor = page.getByRole("combobox",{name:"Edit result for TN-1",exact:true});
+    assert.ok(await editor.evaluate(inside));
+    await page.getByRole("combobox",{name:"Jump to milestone"}).selectOption("site");
+    assert.equal(await page.evaluate(() => document.activeElement.closest("th")?.dataset.column),"site");
+    await page.getByRole("button",{name:"Columns",exact:true}).click();
+    await page.getByRole("searchbox",{name:"Find a column"}).fill("site");
+    await page.getByRole("checkbox",{name:"Site visit"}).uncheck();
+    assert.equal(await page.getByRole("columnheader",{name:"Site visit"}).count(),0);
+    await page.getByRole("checkbox",{name:"Compact rows"}).check();
+    await page.getByRole("button",{name:"Restore default columns"}).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("columnheader",{name:"Site visit"}).waitFor();
+    assert.equal(await page.getByRole("table").getAttribute("data-compact"), "true");
+    await page.close();
+  }
+});
 test("saved views restore filter state and column preferences persist", async () => {
   const page = await open("table");
   await page.getByRole("button", { name: "Filters", exact: true }).click();

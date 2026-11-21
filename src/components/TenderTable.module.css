@@ -646,3 +646,42 @@
   .tableWorkspace .packageCell {width:136px;min-width:136px;max-width:136px;font-size:12px;}
   .tableWorkspace .bulkBar {display:flex;}
 }
+
+.tableWorkspace .statusCell {
+  width: 166px;
+  min-width: 140px;
+  max-width: 166px;
+}
+.statusCell .cellButton {
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 32px;
+  justify-content: flex-start;
+  text-align: left;
+}
+.statusCell [data-slot="badge"] {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.statusCell [data-slot="badge"]::before { flex: none; }
+.statusCell [data-slot="native-select-wrapper"], .statusCell select { width: 100%; min-width: 0; max-width: 100%; }
+.tableWorkspace .datePast { background: transparent; color: var(--muted-foreground); }
+.dateCell[data-next] { box-shadow: inset 2px 0 var(--primary); }
+.nextDate { display: block; font-size: 11px; color: var(--color-fg2); }
+.tableWorkspace .table[data-compact="true"] :is(.td,.dateCell) { padding-block: 3px; }
+.columnChoices { max-height: 13rem; overflow-y: auto; padding: 7px 0; margin-block: 5px; border-bottom: 1px solid var(--border); }
+@media(max-width:600px) { .tableWorkspace .statusCell { width: 130px; min-width: 130px; max-width: 130px; } }
+.commandBar [data-slot="native-select-wrapper"] { max-width: min(100%, 205px); }
+.commandBar [aria-label="Jump to milestone"] { text-overflow: ellipsis; }
+.tableWorkspace .tdRight { max-width: none; }
+@media (max-width: 600px) {
+  .tableWorkspace .commandBar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
+  .commandBar .searchField { min-width: 0; max-width: none; }
+  .commandBar .filterToggle { grid-column: 2 / -1; justify-self: end; }
+  .commandBar [data-slot="native-select-wrapper"] { width: 100%; }
+  .commandBar .colMenuWrap { grid-column: 2; }
+}

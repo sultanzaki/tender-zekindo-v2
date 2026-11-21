@@ -121,7 +121,13 @@ const components = {
   ),
   table: (
     <TenderTableClient
-      tenders={tenders}
+      tenders={new URLSearchParams(location.search).has("audit") ? tenders.map((t,i) => ({
+        ...t,
+        product: ["Production Chemical Supply for Offshore Operations", "Laboratory Testing Services", "Water Treatment Chemicals"][i % 3],
+        customer: ["Petrochemical Indonesia", "Energi Nusantara"][i % 2],
+        result: i % 2 ? null : "LOSS TECHNICAL (BOTTLE TEST)",
+        milestones: {site: i % 2 ? null : "2026-10-20"},
+      })) : tenders}
       initialFilters={readTenderFilters(
         new URLSearchParams(window.location.search),
       )}

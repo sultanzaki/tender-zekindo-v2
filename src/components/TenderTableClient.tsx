@@ -22,6 +22,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -180,6 +181,7 @@ export function TenderTableClient({
   initialFilters?: TenderFilters;
 }) {
   const router = useRouter();
+  const matrixRef = useRef<HTMLDivElement>(null);
   const [filters, setFilters] = useState<TenderFilters>(initialFilters);
   // Keyed by column key rather than a fixed union: milestone keys are data now,
   // so an admin-added milestone needs a visibility slot without a code change.
@@ -203,6 +205,14 @@ export function TenderTableClient({
   ) {
     saveCols(update(visibleCols));
   }
+  const [columnSearch, setColumnSearch] = useState("");
+  const [compact, setCompact] = useStoredJSON("zekindo-matrix-compact", false);
+  const columnChoices = [
+    ...FIELD_TOGGLES.filter((c) => c.key !== "track" || track === "all"),
+    ...milestoneTypes,
+  ].filter((c) =>
+    c.label.toLowerCase().includes(columnSearch.trim().toLowerCase()),
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<{
     key: SortKey;
@@ -412,6 +422,7 @@ export function TenderTableClient({
       <TableHead
         key={key}
         scope="col"
+        data-column={key}
         aria-sort={
           sort?.key === key
             ? sort.direction === "asc"
@@ -544,8 +555,43 @@ export function TenderTableClient({
           >
             <ListFilter /> {showFilters ? "Hide filters" : "Filters"}
           </Button>
+          {pageItems.length > 0 && visibleMilestones.length > 0 && (
+            <NativeSelect
+              aria-label="Jump to milestone"
+              value=""
+              onChange={(event) => {
+                const region = matrixRef.current;
+                if (!region) return;
+                const header = region.querySelector<HTMLElement>(
+                  `th[data-column="${CSS.escape(event.target.value)}"]`,
+                );
+                if (!header) return;
+                const pinned = region.querySelector(
+                  'th[data-column="product"]',
+                );
+                region.scrollLeft +=
+                  header.getBoundingClientRect().left -
+                  region.getBoundingClientRect().left -
+                  (pinned?.getBoundingClientRect().width ?? 0);
+                header.querySelector("button")?.focus({ preventScroll: true });
+              }}
+            >
+              <NativeSelectOption value="" disabled>
+                Jump to milestone…
+              </NativeSelectOption>
+              {visibleMilestones.map((m) => (
+                <NativeSelectOption key={m.key} value={m.key}>
+                  {m.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          )}
           <div className={styles.colMenuWrap}>
-            <Popover>
+            <Popover
+              onOpenChange={(open) => {
+                if (!open) setColumnSearch("");
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button variant="outline">
                   <Columns3 /> Columns
@@ -557,28 +603,47 @@ export function TenderTableClient({
                 aria-label="Visible columns"
                 className="max-h-80 w-60 overflow-y-auto p-3"
               >
-                {FIELD_TOGGLES.map((c) => (
-                  <Label key={c.key} className={styles.colMenuItem}>
-                    <Checkbox
-                      checked={!!visibleCols[c.key]}
-                      onCheckedChange={() =>
-                        setVisibleCols((v) => ({ ...v, [c.key]: !v[c.key] }))
-                      }
-                    />
-                    {c.label}
-                  </Label>
-                ))}
-                {milestoneTypes.map((m) => (
-                  <Label key={m.key} className={styles.colMenuItem}>
-                    <Checkbox
-                      checked={!!visibleCols[m.key]}
-                      onCheckedChange={() =>
-                        setVisibleCols((v) => ({ ...v, [m.key]: !v[m.key] }))
-                      }
-                    />
-                    {m.label}
-                  </Label>
-                ))}
+                <Input
+                  type="search"
+                  aria-label="Find a column"
+                  placeholder="Find a column…"
+                  value={columnSearch}
+                  onChange={(event) => setColumnSearch(event.target.value)}
+                />
+                <div className={styles.columnChoices}>
+                  {columnChoices.map((c) => (
+                    <Label key={c.key} className={styles.colMenuItem}>
+                      <Checkbox
+                        checked={!!visibleCols[c.key]}
+                        onCheckedChange={() =>
+                          setVisibleCols((v) => ({ ...v, [c.key]: !v[c.key] }))
+                        }
+                      />
+                      {c.label}
+                    </Label>
+                  ))}
+                  {!columnChoices.length && (
+                    <p role="status">No matching columns.</p>
+                  )}
+                </div>
+                <Label className={styles.colMenuItem}>
+                  <Checkbox
+                    checked={compact === true}
+                    onCheckedChange={(value) => setCompact(value === true)}
+                  />
+                  Compact rows
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    saveCols(defaultCols);
+                    setColumnSearch("");
+                  }}
+                >
+                  Restore default columns
+                </Button>
               </PopoverContent>
             </Popover>
           </div>
@@ -729,19 +794,25 @@ export function TenderTableClient({
 
         {pageItems.length > 0 ? (
           <div
+            ref={matrixRef}
             className={styles.scroll}
             tabIndex={0}
             role="region"
             aria-label="Schedule matrix"
           >
-            <Table className={styles.table}>
+            <Table className={styles.table} data-compact={compact === true}>
               <TableHeader>
                 <TableRow className={styles.theadRow}>
                   {isAdmin && (
                     <TableHead className={`${styles.th} ${styles.checkboxCol}`}>
                       <Checkbox
                         className={styles.checkbox}
-                        checked={allOnPageSelected}
+                        checked={
+                          allOnPageSelected ||
+                          (pageIds.some((id) => selected.has(id))
+                            ? "indeterminate"
+                            : false)
+                        }
                         onCheckedChange={toggleAllOnPage}
                         title="Select every row on this page"
                         aria-label="Select every row on this page"
@@ -815,7 +886,10 @@ export function TenderTableClient({
                     >
                       {t.customer || "—"}
                     </TableCell>
-                    <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                    <TableCell
+                      className={`${styles.td} ${styles.statusCell}`}
+                      title={t.result || "Running"}
+                    >
                       {isAdmin &&
                       editingCell?.tenderId === t.id &&
                       editingCell.column === "result" ? (
@@ -845,6 +919,7 @@ export function TenderTableClient({
                           type="button"
                           className={styles.cellButton}
                           disabled={quickEditPending}
+                          aria-description={t.result || "Running"}
                           aria-label={`Edit result for ${t.tenderNo || t.id}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -870,13 +945,17 @@ export function TenderTableClient({
                             key={m.key}
                             className={styles.dateCell}
                             aria-label="Not applicable"
+                            title="Outside this tender’s schedule"
                           >
-                            —
+                            N/A
                           </TableCell>
                         );
                       }
                       const iso = t.milestones[m.key] ?? null;
                       const tone = dateTone(iso, t.result, anchor);
+                      const next = upcoming.get(t.id);
+                      const nearest = next?.key === m.key ? next : null;
+                      const dateLabel = iso ? formatDateID(iso) : "Not set";
                       const isEditing =
                         isAdmin &&
                         editingCell?.tenderId === t.id &&
@@ -910,6 +989,7 @@ export function TenderTableClient({
                         <TableCell
                           key={m.key}
                           className={`${styles.dateCell} ${DATE_TONE_CLASS[tone]} ${isAdmin ? styles.editableCell : ""}`}
+                          data-next={nearest ? true : undefined}
                           title={isAdmin ? `Click to edit ${m.label}` : m.label}
                         >
                           {isAdmin ? (
@@ -927,12 +1007,19 @@ export function TenderTableClient({
                                 });
                               }}
                             >
-                              {iso ? formatDateID(iso) : "—"}
+                              {dateLabel}
                             </Button>
-                          ) : iso ? (
-                            formatDateID(iso)
                           ) : (
-                            "—"
+                            dateLabel
+                          )}
+                          {nearest && (
+                            <small className={styles.nextDate}>
+                              {nearest.diff === 0
+                                ? "Today"
+                                : nearest.diff === 1
+                                  ? "Tomorrow"
+                                  : `In ${nearest.diff} days`}
+                            </small>
                           )}
                         </TableCell>
                       );
