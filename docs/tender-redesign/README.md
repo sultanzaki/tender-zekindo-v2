@@ -37,7 +37,7 @@ Kedua versi memakai akun admin lokal, seed tender yang sama, dan tiga tanggal Re
 | Tender List | [Sebelum](before-list-1440.png) · [Sesudah](after-list-1440.png) | [Sebelum](before-list-390.png) · [Sesudah](after-list-390.png) |
 | Tender Detail | [Sebelum](before-detail-1440.png) · [Sesudah](after-detail-1440.png) | [Sebelum](before-detail-390.png) · [Sesudah](after-detail-390.png) |
 
-- **Overview.** Antrean deadline dan follow-up mengambil posisi pertama. Ringkasan active tenders, nilai pipeline, dan win rate berada setelah antrean.
+- **Overview.** Agenda tujuh hari menampilkan jumlah tender per tanggal. Pilih tanggal berisi deadline untuk menuju baris terkait. Follow-up dan ringkasan pipeline membentuk kolom pendamping pada desktop.
 - **Tender List.** Paket, customer, status, dan milestone berada di kolom depan. Di HP, tanggal ada di setiap tender dan filter lanjutan dapat dibuka sesuai kebutuhan. Link paket membawa filter daftar ke halaman detail.
 - **Tender Detail.** Status dan tanggal muncul bersama identitas, sebelum tab Schedule, Documents, dan Activity. Tombol Edit milestones membuka bagian Milestones langsung. Link kembali mengikuti halaman asal dari Overview atau Tender List.
 - **Analytics.** Cakupan tender dan periode tampil pada judul, dengan grafik win rate dan jumlah outcome sebelum ringkasan. Grafik customer menyebut ukuran sampel minimum.

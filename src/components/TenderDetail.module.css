@@ -322,3 +322,13 @@
   .identity { padding: 15px 14px 0; }
   .handoff { gap: 8px; grid-template-columns: minmax(65px, .8fr) minmax(0, 1.4fr) minmax(65px, .7fr); }
 }
+.identity {
+  border-top: 3px solid var(--color-primary);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #172b4609;
+}
+.handoff {
+  border-top: 0;
+  margin-top: 0;
+}
+.sectionTabs { background: #e9eef5; padding: 2px 12px 0; border-radius: 8px 8px 0 0; }

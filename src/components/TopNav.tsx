@@ -93,9 +93,8 @@ export function TopNav({
             height={32}
             priority
           />
-          <span>Tender workspace</span>
+          <strong>Tender workspace</strong>
         </Link>
-        <div className={styles.navLabel}>WORKSPACE</div>
         <nav aria-label="Main navigation" className={styles.navigation}>
           {pages.map((p) => (
             <Link
@@ -133,13 +132,6 @@ export function TopNav({
           </>
         )}
         <div className={styles.sidebarFooter}>
-          <span className={styles.access}>
-            {profile
-              ? isAdmin
-                ? "Administrator"
-                : "Read-only access"
-              : "Sign-in required"}
-          </span>
           <button
             className={styles.accountButton}
             onClick={() => account.current?.showModal()}
@@ -150,7 +142,7 @@ export function TopNav({
             <span>
               {profile?.name || "Guest"}
               <small>
-                {profile ? "Account & access" : "Sign in for admin tools"}
+                {isAdmin ? "Administrator" : "Viewer"}
               </small>
             </span>
             <Icon name="account" />

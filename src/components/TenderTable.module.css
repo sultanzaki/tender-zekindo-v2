@@ -629,3 +629,10 @@
     font-size: 12px;
   }
 }
+.tableWorkspace {
+  border-radius: 13px;
+  box-shadow: 0 8px 24px #172b4609;
+}
+.tableWorkspace .viewBar { background: #f4f7fb; }
+.theadRow, .theadRow .stickyIdentity { background: #eaf0f7; }
+.packageCell { padding-block: 15px; }

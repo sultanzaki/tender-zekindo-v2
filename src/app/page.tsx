@@ -26,6 +26,18 @@ export default async function Overview({ searchParams }: {
   const today = todayISO();
   const deadlines = computeDeadlines(tenders, today, catalog);
   const followups = computeStalled(tenders, today, catalog);
+  const week = Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offset);
+    const iso = date.toISOString().slice(0, 10);
+    return {
+      iso,
+      day: date.getUTCDate(),
+      weekday: new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(date),
+      count: deadlines.filter((item) => item.dateIso === iso).length,
+    };
+  });
+  const visibleDeadlines = deadlines.slice(0, 6);
   const active = tenders.filter((tender) => !tender.result);
   const rate = overallWinRate(tenders);
   const known = active.filter((tender) => tender.oe !== null).length;
@@ -38,7 +50,7 @@ export default async function Overview({ searchParams }: {
   return (
     <div className={styles.page}>
       <OperationsHeading
-        title="Overview"
+        title="Tender operations"
         context={<time dateTime={today}>{formatDateID(today)} · WIB</time>}
         actions={<Link className="button button-secondary" href={`/tenders?track=${track}`}>Open tenders <Icon name="arrow" width={14} height={14} /></Link>}
       />
@@ -56,12 +68,34 @@ export default async function Overview({ searchParams }: {
             <div><h2 id="deadlines">Upcoming deadlines</h2><p>{deadlines.length} tenders · Next 14 days</p></div>
             <Link href={queueHref("all")}>All deadlines <Icon name="arrow" width={14} height={14} /></Link>
           </header>
-          {deadlines.length > 0 ? (
+          <ol className={styles.week} aria-label="Deadline counts for the next seven days">
+            {week.map((day) => {
+              const contents = <>
+                <span>{day.weekday}</span>
+                <time dateTime={day.iso}>{day.day}</time>
+                {day.count > 0 && <small>{day.count}<span className={styles.srOnly}> tenders due</span></small>}
+              </>;
+              return (
+                <li key={day.iso} data-today={day.iso === today}>
+                  {visibleDeadlines.some((item) => item.dateIso === day.iso)
+                    ? <a href={`#due-${day.iso}`}>{contents}</a>
+                    : day.count > 0
+                      ? <Link href={queueHref("week")}>{contents}</Link>
+                      : <div>{contents}</div>}
+                </li>
+              );
+            })}
+          </ol>
+          {visibleDeadlines.length > 0 ? (
             <>
               <div className={styles.columnLabels} aria-hidden="true"><span>Package</span><span>Milestone / due</span></div>
               <ul className={styles.list}>
-                {deadlines.slice(0, 6).map((item, index) => (
-                  <li key={item.tenderId} className={index === 0 ? styles.first : undefined}>
+                {visibleDeadlines.map((item, index) => (
+                  <li
+                    key={item.tenderId}
+                    id={visibleDeadlines[index - 1]?.dateIso !== item.dateIso ? `due-${item.dateIso}` : undefined}
+                    className={index === 0 ? styles.first : undefined}
+                  >
                     <Link className={styles.dueRow} href={tenderHref(item.tenderId)}>
                       <span className={styles.identity}>
                         <strong>{item.product === "—" ? item.customer : item.product}</strong>
@@ -77,39 +111,41 @@ export default async function Overview({ searchParams }: {
           ) : <p className={styles.empty}>No milestones due in the next 14 days.</p>}
         </section>
 
-        <section className={styles.queue} aria-labelledby="followups">
-          <header className={styles.sectionHead}>
-            <div><h2 id="followups">Follow-up queue</h2><p>{followups.length} active tenders without a next date</p></div>
-            <Link href={queueHref("followup")}>View queue <Icon name="arrow" width={14} height={14} /></Link>
-          </header>
-          {followups.length > 0 ? (
-            <ul className={styles.list}>
-              {followups.slice(0, 4).map((item) => (
-                <li key={item.tenderId}>
-                  <Link className={styles.followRow} href={tenderHref(item.tenderId)}>
-                    <span className={styles.identity}>
-                      <strong>{item.product === "—" ? item.customer : item.product}</strong>
-                      <small>{item.customer}</small>
-                      <small>{item.lastMilestoneLabel && item.lastMilestoneDateFormatted ? `Last: ${item.lastMilestoneLabel} · ${item.lastMilestoneDateFormatted}` : "No milestone recorded"}</small>
-                    </span>
-                    <span className={styles.arrow} aria-hidden="true">›</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : <p className={styles.empty}>No tenders in the follow-up queue.</p>}
-        </section>
-      </div>
+        <aside className={styles.rail} aria-label="Follow-up and pipeline">
+          <section className={styles.followups} aria-labelledby="followups">
+            <header className={styles.sectionHead}>
+              <div><h2 id="followups">Follow-up queue</h2><p>{followups.length} active tenders without a next date</p></div>
+              <Link href={queueHref("followup")}>View queue <Icon name="arrow" width={14} height={14} /></Link>
+            </header>
+            {followups.length > 0 ? (
+              <ul className={styles.list}>
+                {followups.slice(0, 4).map((item) => (
+                  <li key={item.tenderId}>
+                    <Link className={styles.followRow} href={tenderHref(item.tenderId)}>
+                      <span className={styles.identity}>
+                        <strong>{item.product === "—" ? item.customer : item.product}</strong>
+                        <small>{item.customer}</small>
+                        <small>{item.lastMilestoneLabel && item.lastMilestoneDateFormatted ? `Last: ${item.lastMilestoneLabel} · ${item.lastMilestoneDateFormatted}` : "No milestone recorded"}</small>
+                      </span>
+                      <span className={styles.arrow} aria-hidden="true">›</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className={styles.empty}>No tenders in the follow-up queue.</p>}
+          </section>
 
-      <section className={styles.summary} aria-labelledby="pipeline">
-        <h2 id="pipeline">Pipeline context</h2>
-        <dl>
-          <div><dt>Active tenders</dt><dd>{active.length}</dd></div>
-          <div><dt>Known pipeline · {known} tenders with OE</dt><dd><MoneyValue value={known ? totalPipelineValue(tenders) : null} canView /></dd></div>
-          <div><dt>Win rate · {rate.decided} decided</dt><dd>{rate.pct === null ? "—" : `${rate.pct}%`}</dd></div>
-        </dl>
-        <Link href={analyticsHref}>Analytics <Icon name="arrow" width={14} height={14} /></Link>
-      </section>
+          <section className={styles.summary} aria-labelledby="pipeline">
+            <h2 id="pipeline">Pipeline context</h2>
+            <dl>
+              <div><dt>Active tenders</dt><dd>{active.length}</dd></div>
+              <div><dt>Known pipeline · {known} tenders with OE</dt><dd><MoneyValue value={known ? totalPipelineValue(tenders) : null} canView /></dd></div>
+              <div><dt>Win rate · {rate.decided} decided</dt><dd>{rate.pct === null ? "—" : `${rate.pct}%`}</dd></div>
+            </dl>
+            <Link href={analyticsHref}>Analytics <Icon name="arrow" width={14} height={14} /></Link>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }
