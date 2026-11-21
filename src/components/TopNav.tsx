@@ -30,11 +30,11 @@ const pages = [
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/notifications", label: "Deadlines", icon: "notifications" },
 ] as const;
-const adminPages = [
-  { href: "/tenders/archive", label: "Archive", icon: "archive" },
-  { href: "/admin/users", label: "Manage users", icon: "users" },
-  { href: "/admin/milestones", label: "Manage milestones", icon: "milestones" },
-] as const;
+const settings = {
+  href: "/settings",
+  label: "Settings",
+  icon: "filters",
+} as const;
 function CreateLink() {
   const params = useSearchParams();
   return (
@@ -105,12 +105,14 @@ function Workspace({
     return () => document.removeEventListener("keydown", shortcut);
   }, []);
   const isAdmin = profile.role === "admin";
-  const current = [...adminPages, ...pages].find((p) =>
-    path.startsWith(p.href),
-  );
-  function menu(
-    items: readonly ((typeof pages)[number] | (typeof adminPages)[number])[],
-  ) {
+  const isSettings =
+    path === "/settings" ||
+    path.startsWith("/admin/") ||
+    path === "/tenders/archive";
+  const current = isSettings
+    ? settings
+    : pages.find((p) => path.startsWith(p.href));
+  function menu(items: readonly ((typeof pages)[number] | typeof settings)[]) {
     return (
       <SidebarMenu>
         {items.map((item) => (
@@ -143,8 +145,8 @@ function Workspace({
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <Sidebar variant="inset">
-        <SidebarHeader className="px-5 pt-6 pb-4">
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarHeader className="px-5 pt-6 pb-4 group-data-[collapsible=icon]:px-1">
           <Link
             href="/"
             aria-label="Zekindo workspace"
@@ -159,19 +161,15 @@ function Workspace({
             />
           </Link>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="group-data-[collapsible=icon]:hidden">
           <SidebarGroup>
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-            <nav aria-label="Main navigation">{menu(pages)}</nav>
+            <nav aria-label="Main navigation">
+              {menu(isAdmin ? [...pages, settings] : pages)}
+            </nav>
           </SidebarGroup>
-          {isAdmin && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Administration</SidebarGroupLabel>
-              <nav aria-label="Administration">{menu(adminPages)}</nav>
-            </SidebarGroup>
-          )}
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="group-data-[collapsible=icon]:hidden">
           <Separator />
           <SidebarMenuButton size="lg" onClick={() => setAccountOpen(true)}>
             <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
@@ -196,7 +194,11 @@ function Workspace({
           </span>
           <span className="hidden text-muted-foreground md:inline">/</span>
           <span className="hidden text-sm font-medium md:inline">
-            {current?.label}
+            {isSettings && path !== "/settings" ? (
+              <Link href="/settings">Settings</Link>
+            ) : (
+              current?.label
+            )}
           </span>
           {path !== "/tenders" && (
             <form
@@ -242,34 +244,6 @@ function Workspace({
       >
         <p className="text-sm text-muted-foreground">{profile.email}</p>
         <nav aria-label="Account actions" className="grid gap-2">
-          {isAdmin && (
-            <>
-              <Suspense>
-                <div onClick={() => setAccountOpen(false)}>
-                  <CreateLink />
-                </div>
-              </Suspense>
-              {adminPages.map((p) => (
-                <Button
-                  key={p.href}
-                  variant="ghost"
-                  asChild
-                  className="justify-start"
-                >
-                  <Link
-                    href={p.href}
-                    onClick={() => {
-                      setAccountOpen(false);
-                      setOpenMobile(false);
-                    }}
-                  >
-                    <Icon name={p.icon} />
-                    {p.label}
-                  </Link>
-                </Button>
-              ))}
-            </>
-          )}
           <form action={logout}>
             <Button type="submit" variant="outline">
               Sign out

@@ -155,20 +155,12 @@ test("signed-in viewers see monetary fields and metrics without administrator co
     await page.close();
   }
 });
-test("mobile navigation exposes account actions and preserves downstream creation", async () => {
+test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");
   await page.getByRole("button", { name: "Account", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog
-    .getByRole("link", { name: "Manage users", exact: true })
-    .waitFor();
-  assert.equal(
-    await dialog
-      .getByRole("link", { name: "New tender", exact: true })
-      .getAttribute("href"),
-    "/tenders/new?track=downstream",
-  );
+  assert.equal(await dialog.getByRole("link").count(), 0);
   assert.equal(
     await dialog
       .getByRole("button", { name: "Sign out", exact: true })
@@ -188,6 +180,28 @@ test("mobile navigation exposes account actions and preserves downstream creatio
     ),
     false,
   );
+  await page.close();
+});
+test("collapsed desktop navigation keeps the logo and restores Settings", async () => {
+  const page = await open("nav", 1440);
+  const toggle = page.getByRole("button", {name:"Toggle navigation"});
+  const settings = page.getByRole("link", {name:"Settings", exact:true});
+  await settings.waitFor();
+  const timing = page.evaluate(() => new Promise(resolve => {
+    const times = [];
+    function frame(now) {
+      times.push(now);
+      if (times.length === 2) document.querySelector('[data-slot="sidebar-trigger"]').click();
+      if (times.length < 32) requestAnimationFrame(frame);
+      else resolve(Math.round(31000 / (times.at(-1) - times[0])));
+    }
+    requestAnimationFrame(frame);
+  }));
+  console.log("Desktop sidebar sample (fps)", await timing);
+  assert.equal(await settings.isVisible(), false);
+  assert.ok(await page.getByRole("link",{name:"Zekindo workspace"}).isVisible());
+  await toggle.click();
+  await settings.waitFor();
   await page.close();
 });
 test("decimal fields retain fractions and precision during editing", async () => {

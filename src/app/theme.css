@@ -74,3 +74,19 @@
 @media (prefers-reduced-motion: reduce) {
   [data-slot="dialog-content"], [data-slot="dialog-overlay"], [data-slot="sheet-content"], [data-slot="sheet-overlay"] { animation: none; }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, a, input, select, textarea) {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 140ms;
+    transition-timing-function: ease-out;
+  }
+  button:active:not(:disabled) { translate: 0 1px; }
+  #main-content > :first-child { animation: workspace-enter 160ms ease-out; }
+  @keyframes workspace-enter { from { opacity: .85; } to { opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+/* Resize the matrix once when the navigation rail changes width. */
+[data-slot="sidebar-gap"], [data-slot="sidebar-container"] { transition-property: transform; }
