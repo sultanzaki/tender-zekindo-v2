@@ -132,7 +132,7 @@ function Workspace({
                 onClick={() => setOpenMobile(false)}
               >
                 <Icon name={item.icon} />
-                <span>{item.label}</span>
+                <span className="group-data-[collapsible=icon]:sr-only">{item.label}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -146,7 +146,7 @@ function Workspace({
         Skip to content
       </a>
       <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader className="px-5 pt-6 pb-4 group-data-[collapsible=icon]:px-1">
+        <SidebarHeader className="px-5 pt-6 pb-4 group-data-[collapsible=icon]:hidden">
           <Link
             href="/"
             aria-label="Zekindo workspace"
@@ -161,9 +161,9 @@ function Workspace({
             />
           </Link>
         </SidebarHeader>
-        <SidebarContent className="group-data-[collapsible=icon]:hidden">
+        <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Workspace</SidebarGroupLabel>
             <nav aria-label="Main navigation">
               {menu(isAdmin ? [...pages, settings] : pages)}
             </nav>

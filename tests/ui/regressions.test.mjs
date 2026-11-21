@@ -182,7 +182,7 @@ test("mobile account shows sign out without duplicating navigation", async () =>
   );
   await page.close();
 });
-test("collapsed desktop navigation keeps the logo and restores Settings", async () => {
+test("collapsed desktop navigation shows icons with tooltips and hides the logo", async () => {
   const page = await open("nav", 1440);
   const toggle = page.getByRole("button", {name:"Toggle navigation"});
   const settings = page.getByRole("link", {name:"Settings", exact:true});
@@ -198,8 +198,13 @@ test("collapsed desktop navigation keeps the logo and restores Settings", async 
     requestAnimationFrame(frame);
   }));
   console.log("Desktop sidebar sample (fps)", await timing);
-  assert.equal(await settings.isVisible(), false);
-  assert.ok(await page.getByRole("link",{name:"Zekindo workspace"}).isVisible());
+  assert.equal(await settings.isVisible(), true);
+  await settings.hover();
+  await page.getByRole("tooltip", {name:"Settings"}).waitFor();
+  await page.mouse.move(500,500);
+  await page.getByRole("link",{name:"Analytics",exact:true}).focus();
+  await page.getByRole("tooltip",{name:"Analytics"}).waitFor();
+  assert.equal(await page.getByRole("link",{name:"Zekindo workspace"}).isVisible(), false);
   await toggle.click();
   await settings.waitFor();
   await page.close();
