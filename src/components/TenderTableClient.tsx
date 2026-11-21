@@ -27,6 +27,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
+import { MeetingLink } from "@/components/MeetingLink";
 import { flushSync } from "react-dom";
 import { OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
@@ -1156,7 +1157,7 @@ export function TenderTableClient({
                           ) : (
                             dateLabel
                           )}
-                          {!!t.meetingCounts?.[m.key] && <Link prefetch={false} className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`} onClick={e=>e.stopPropagation()}><CalendarRange size={13} aria-hidden />{t.meetingCounts[m.key]} meetings</Link>}
+                          {!!t.meetingCounts?.[m.key] && <MeetingLink className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`}><CalendarRange size={13} aria-hidden />{t.meetingCounts[m.key]} meetings</MeetingLink>}
                           {nearest && (
                             <small className={styles.nextDate}>
                               {nearest.diff === 0

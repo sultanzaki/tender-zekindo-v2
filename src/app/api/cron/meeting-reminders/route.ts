@@ -1,3 +1,4 @@
+import { renderMeetingEmail } from "@/lib/meeting-email";
 import { authorized } from "@/lib/cron-auth";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -20,11 +21,16 @@ export async function GET(request: Request) {
   for (const job of jobs.data) {
     try {
       const [profile, pending] = await Promise.all([
-        db
-          .from("profiles")
-          .select("email")
-          .eq("id", job.recipient)
-          .maybeSingle(),
+        job.recipient
+          ? db
+              .from("profiles")
+              .select("email")
+              .eq("id", job.recipient)
+              .maybeSingle()
+          : {
+              data: job.extra_email ? { email: job.extra_email } : null,
+              error: null,
+            },
         db
           .from("meeting_mail")
           .select("id")
@@ -52,6 +58,7 @@ export async function GET(request: Request) {
           to: [profile.data.email],
           subject: job.subject,
           text: job.body,
+          html: renderMeetingEmail(job.subject, job.body),
         }),
       });
       if (!response.ok) throw Error();

@@ -16,6 +16,7 @@ export type Meeting = {
   starts_at: string;
   link: string | null;
   participants: string[];
+  extra_emails:string[];
   day_notice: boolean;
   hour_notice: boolean;
   cancelled: boolean;
@@ -24,7 +25,8 @@ export type Meeting = {
 type MeetingMail = {
   id: string;
   meeting_id: string;
-  recipient: string;
+  recipient: string|null;
+  extra_email:string|null;
   kind: string;
   subject: string;
   body: string;

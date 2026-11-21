@@ -3,6 +3,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { MeetingLink } from "@/components/MeetingLink";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
 import { getTenderById } from "@/lib/tenders";
@@ -251,7 +252,7 @@ export default async function Detail({
                       data-next={next?.key === m.key}
                     >
                       <div className={styles.timelineLabel}>{m.label}</div>
-                      <Link className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts[id]?.[m.key] ?? 0} meetings</Link>
+                      <MeetingLink className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts[id]?.[m.key] ?? 0} meetings</MeetingLink>
                       <div className={styles.timelineDate}>
                         {m.date ? (
                           <time dateTime={m.date}>{formatDateID(m.date)}</time>

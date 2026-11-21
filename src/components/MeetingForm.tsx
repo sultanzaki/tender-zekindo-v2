@@ -99,6 +99,15 @@ export function MeetingForm({
           ))}
         </div>
       </fieldset>
+      <label>
+        Additional @zekindo.co.id emails
+        <Input
+          name="emails"
+          defaultValue={meeting?.extra_emails?.join(", ")}
+          placeholder="nama@zekindo.co.id"
+        />
+        <small>Separate addresses with commas.</small>
+      </label>
       <fieldset>
         <legend>Email reminders</legend>
         {[

@@ -195,12 +195,12 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 
 ### Reminder meeting internal (Resend)
 
-Setiap milestone dapat memiliki beberapa meeting. Buka **Tender detail → Schedule → meetings**. Pengguna yang membuat meeting otomatis menjadi peserta. Pilih anggota internal lain, waktu dalam WIB, dan reminder 24 jam atau 1 jam. Link bersifat opsional. Penyelenggara dan admin dapat mengubah atau membatalkan meeting. Pengiriman individual menggunakan plain text.
+Setiap milestone dapat memiliki beberapa meeting. Buka **Tender detail → Schedule → meetings**. Pengguna yang membuat meeting otomatis menjadi peserta. Pilih anggota internal lain, waktu dalam WIB, dan reminder 24 jam atau 1 jam. Link bersifat opsional. Penyelenggara dan admin dapat mengubah atau membatalkan meeting. Tambahkan alamat @zekindo.co.id meski penerima belum memiliki akun. Pengiriman individual memakai HTML dan versi teks. [Contoh email](docs/meeting-reminders/email-example.png)
 
 Untuk mengaktifkan pengiriman di production:
 
-1. Terapkan migrasi Supabase sampai `0011_tender_meetings.sql`.
-2. Pada server aplikasi, isi `RESEND_API_KEY`, `REMINDER_FROM_EMAIL` (domain terverifikasi di Resend), dan `CRON_SECRET` acak minimal 32 karakter. Penerima meeting berasal dari profil internal yang dipilih. `REMINDER_RECIPIENTS` hanya untuk digest deadline.
+1. Terapkan migrasi Supabase sampai `0012_meeting_email_participants.sql`.
+2. Pada server aplikasi, isi `RESEND_API_KEY`, `REMINDER_FROM_EMAIL` (domain terverifikasi di Resend), dan `CRON_SECRET` acak minimal 32 karakter. Penerima meeting dapat dipilih dari profil internal atau ditambahkan melalui alamat @zekindo.co.id. `REMINDER_RECIPIENTS` hanya untuk digest deadline.
 3. Di Supabase Vault buat secret `tender_app_url` berisi origin HTTPS deployment dan `tender_cron_secret` berisi nilai yang sama dengan `CRON_SECRET`. Jalankan [SQL scheduler](supabase/operations/schedule-meeting-reminders.sql) di project tersebut. Cron per menit ini terpisah dari digest harian Vercel.
 4. Uji dengan akun internal sendiri. Endpoint mengembalikan jumlah sent/failed. Periksa cron.job_run_details, respons pg_net, dan log Resend. sent_at menunjukkan Resend menerima permintaan, bukan konfirmasi masuk inbox.
 

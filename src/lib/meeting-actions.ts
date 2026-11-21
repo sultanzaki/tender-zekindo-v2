@@ -43,6 +43,24 @@ export async function saveMeeting(
   const participants = [
     ...new Set([organizer, ...form.getAll("member").map(String)]),
   ];
+  const extra_emails = [
+    ...new Set(
+      String(form.get("emails") ?? "")
+        .toLowerCase()
+        .split(/[\s,;]+/)
+        .filter(Boolean),
+    ),
+  ];
+  if (
+    !cancel &&
+    (extra_emails.length > 50 ||
+      extra_emails.some(
+        (email) =>
+          email.length > 254 ||
+          !/^[a-z0-9_%+-]+(?:\.[a-z0-9_%+-]+)*@zekindo\.co\.id$/.test(email),
+      ))
+  )
+    return "Enter up to 50 valid @zekindo.co.id addresses.";
   if (!cancel) {
     const stages = await getMilestoneTypes(t.track);
     if (
@@ -74,6 +92,7 @@ export async function saveMeeting(
         starts_at: time.toISOString(),
         link: link || null,
         participants,
+        extra_emails,
         day_notice: form.has("day"),
         hour_notice: form.has("hour"),
       };

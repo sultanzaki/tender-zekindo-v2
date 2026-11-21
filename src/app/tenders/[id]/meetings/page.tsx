@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
 import { getTenderById } from "@/lib/tenders";
-import { getMilestoneTypes } from "@/lib/milestones";
+import { getMilestoneCatalog } from "@/lib/milestones";
 import { resolveTenderMilestones } from "@/lib/tender-logic";
 import { supabaseServer } from "@/lib/supabase-server";
 import { MeetingForm } from "@/components/MeetingForm";
@@ -16,12 +16,12 @@ export default async function Meetings({
 }) {
   const ctx = await requireUser(),
     { id } = await params,
-    { milestone } = await searchParams,
-    t = await getTenderById(id);
-  if (!t || !milestone) notFound();
+    { milestone } = await searchParams;
+  if (!milestone) notFound();
   const db = supabaseServer(),
-    [catalog, rows, people] = await Promise.all([
-      getMilestoneTypes(t.track),
+    [t, catalog, rows, people] = await Promise.all([
+      getTenderById(id),
+      getMilestoneCatalog(),
       db
         .from("tender_meetings")
         .select("*")
@@ -30,8 +30,9 @@ export default async function Meetings({
         .order("starts_at"),
       db.from("profiles").select("id,name").order("name"),
     ]);
+  if (!t) notFound();
   if (rows.error || people.error) throw Error("Could not load meeting agenda.");
-  const stage = resolveTenderMilestones(t, { [t.track]: catalog }).find(
+  const stage = resolveTenderMilestones(t, catalog).find(
     (m) => m.key === milestone,
   );
   if (!stage && !rows.data.length) notFound();
@@ -74,6 +75,7 @@ export default async function Meetings({
             {people.data
               .filter((p) => m.participants.includes(p.id))
               .map((p) => p.name)
+              .concat(m.extra_emails ?? [])
               .join(", ")}
           </p>
           {m.link && !m.cancelled && (
