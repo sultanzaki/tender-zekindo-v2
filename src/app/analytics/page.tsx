@@ -107,10 +107,12 @@ export default async function Analytics({
   const outcome = overallWinRate(data);
   const active = data.filter((t) => !t.result);
   const won = data.filter((t) => t.result === "WIN");
-  const knownBids = won.filter(t => t.nilaiPenawaran !== null).length;
-  const estimated = active.filter(t => t.oe !== null);
+  const knownBids = won.filter((t) => t.nilaiPenawaran !== null).length;
+  const estimated = active.filter((t) => t.oe !== null);
   const rows = outcomesByPeriod(data, periods);
-  const maxClosed = Math.max(1, ...rows.map((r) => r.win + r.loss + r.other));
+  const totals = new Map<string, number>();
+  for (const t of data) totals.set(t.period, (totals.get(t.period) ?? 0) + 1);
+  const maxVolume = Math.max(1, ...totals.values());
   const bids = new Map<string, number>();
   for (const t of data)
     if (t.customer && t.nilaiPenawaran != null)
@@ -167,59 +169,75 @@ export default async function Analytics({
             </div>
             <div>
               <span>Won bid value</span>
-              <strong>{won.length && !knownBids ? "—" : formatCompactRupiah(totalWinValue(data))}</strong>
+              <strong>
+                {won.length && !knownBids
+                  ? "—"
+                  : formatCompactRupiah(totalWinValue(data))}
+              </strong>
               <small>
-                {knownBids} of{" "}
-                {won.length} wins with a bid value
+                {knownBids} of {won.length} wins with a bid value
               </small>
             </div>
             <div>
               <span>Active pipeline · OE</span>
-              <strong>{active.length && !estimated.length ? "—" : formatCompactRupiah(totalPipelineValue(data))}</strong>
+              <strong>
+                {active.length && !estimated.length
+                  ? "—"
+                  : formatCompactRupiah(totalPipelineValue(data))}
+              </strong>
               <small>
-                {estimated.length} of {active.length}{" "}
-                open packages with an estimate
+                {estimated.length} of {active.length} open packages with an
+                estimate
               </small>
             </div>
           </div>
           <div className={s.grid}>
             <Report
-              title="Outcomes by period"
-              caption="Closed tenders · bar length shows total outcomes"
+              title="Tender volume by period"
+              caption="Number of packages per period, grouped by outcome"
             >
               <div className={s.legend}>
-                <span>Won</span>
-                <span>Lost</span>
-                <span>Other closed</span>
+                {["Won", "Lost", "Other closed", "Active"].map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
               </div>
               {rows.length ? (
-                <div className={s.periods}>
-                  {rows.map((r) => (
-                    <div key={r.period}>
-                      <div className={s.line}>
-                        <b>{r.period}</b>
-                        <small>
-                          {r.winRatePct === null
-                            ? "No decisions"
-                            : r.winRatePct + "% win rate"}
-                        </small>
-                      </div>
-                      <div className={s.stack} aria-hidden="true">
-                        {[r.win, r.loss, r.other].map((n, i) => (
-                          <i
-                            key={i}
-                            style={{ width: `${(n * 100) / maxClosed}%` }}
-                          />
-                        ))}
-                      </div>
-                      <small>
-                        {r.win} won · {r.loss} lost · {r.other} other
-                      </small>
-                    </div>
-                  ))}
+                <div
+                  className={s.plotScroll}
+                  role="region"
+                  aria-label="Tender volume chart"
+                  tabIndex={0}
+                >
+                  <div className={s.plot}>
+                    {rows.map((r) => {
+                      const total = totals.get(r.period) ?? 0;
+                      const active = total - r.win - r.loss - r.other;
+                      const description = `${r.period}: ${total} packages, ${r.win} won, ${r.loss} lost, ${r.other} other closed, ${active} active`;
+                      return (
+                        <figure
+                          key={r.period}
+                          aria-label={description}
+                          title={description}
+                        >
+                          <div className={s.columnTrack}>
+                            <strong>{total}</strong>
+                            <div
+                              className={s.column}
+                              style={{ height: `${(total / maxVolume) * 80}%` }}
+                            >
+                              {[r.win, r.loss, r.other, active].map((n, i) => (
+                                <i key={i} style={{ flexGrow: n }} />
+                              ))}
+                            </div>
+                          </div>
+                          <figcaption>{r.period}</figcaption>
+                        </figure>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
-                <p className={s.empty}>No outcomes in this scope.</p>
+                <p className={s.empty}>No tenders match these filters.</p>
               )}
             </Report>
             <Report
@@ -249,21 +267,13 @@ export default async function Analytics({
             title="Track comparison"
             caption="Tender count, win rate and known monetary values"
           >
-            <div className={s.comparisons}>
-              {trackComparison(data).map((r) => (
-                <div key={r.track}>
-                  <b>{r.label}</b>
-                  <span>
-                    {r.count} tenders ·{" "}
-                    {r.winRate === null ? "—" : r.winRate + "%"} win rate
-                  </span>
-                  <small>
-                    Pipeline {formatCompactRupiah(r.pipelineValue)} · Won{" "}
-                    {formatCompactRupiah(r.winValue)}
-                  </small>
-                </div>
-              ))}
-            </div>
+            <RankedBars
+              rows={trackComparison(data).map((r) => ({
+                label: r.label,
+                value: r.count,
+                detail: `${r.winRate === null ? "—" : r.winRate + "%"} win rate · Pipeline ${formatCompactRupiah(r.pipelineValue)} · Won ${formatCompactRupiah(r.winValue)}`,
+              }))}
+            />
           </Report>
           <Report
             title="Active pipeline by area"
@@ -271,10 +281,7 @@ export default async function Analytics({
           >
             <RankedBars
               money
-              rows={pipelineValueByGroup(
-                estimated,
-                (t) => t.area,
-              )
+              rows={pipelineValueByGroup(estimated, (t) => t.area)
                 .slice(0, 8)
                 .map((r) => ({ label: r.group, value: r.value }))}
             />

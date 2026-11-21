@@ -302,22 +302,25 @@ test("sorting and quick edits work with keyboard; detail links preserve context"
     .waitFor();
   await page.close();
 });
-test("mobile tender cards fit narrow screens and keep detail access", async () => {
-  const page = await open("table", 375);
-  assert.equal(
-    await page
-      .getByRole("link", { name: /TN-1 Running/ })
-      .first()
-      .isVisible(),
-    true,
-  );
-  assert.equal(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth > innerWidth,
-    ),
-    false,
-  );
-  await page.close();
+test("schedule matrix opens on desktop and phone and contains long package names", async () => {
+  for (const width of [390, 1440]) {
+    const page = await open("table", width);
+    const matrix = page.getByRole("region", {name:"Schedule matrix"});
+    await matrix.getByRole("columnheader", {name:"Site visit"}).waitFor();
+    const link = matrix.getByRole("link", {name:"Package 1", exact:true});
+    assert.match(await link.getAttribute("href"), /^\/tenders\/0/);
+    const fits = await link.evaluate(el => {
+      el.textContent = "UnbrokenPackageReference".repeat(12);
+      const cell = el.closest("td").getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return [...range.getClientRects()].every(r => r.right <= cell.right + 1 && r.left >= cell.left - 1);
+    });
+    assert.ok(fits, `package overflows at ${width}`);
+    if (width === 390) assert.ok(await matrix.evaluate(el => el.scrollWidth > el.clientWidth));
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.close();
+  }
 });
 test("saved views restore filter state and column preferences persist", async () => {
   const page = await open("table");

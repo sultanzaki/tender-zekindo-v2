@@ -175,8 +175,11 @@ const getFormReferences = unstable_cache(
 
 export async function getTenderFormChoices(track: Track | "all") {
   await requireAdmin();
-  const rows = await getFormReferences(track);
-  const selectOptions = await getSelectOptions(rows);
+  const [rows, options] = await Promise.all([
+    getFormReferences(track),
+    loadSelectOptions(),
+  ]);
+  const selectOptions = mergeSelectOptions(rows, options);
   const existingTenders = rows
     .filter((row) => row.tender_no)
     .map((row) => ({ id: row.id, tenderNo: row.tender_no }));
@@ -186,17 +189,21 @@ export async function getTenderFormChoices(track: Track | "all") {
 /** Dropdown options for every extendable field (Area, Customer, Entity):
  * existing tender values plus anything an admin added via
  * addSelectOption(), even if no tender uses it yet. */
-export async function getSelectOptions(
-  tenders: Pick<Tender, "area" | "customer" | "entitas">[],
-): Promise<SelectOptionsMap> {
-  await requireUser();
+async function loadSelectOptions() {
   const { data, error } = await supabaseServer()
     .from("select_options")
     .select("field, value");
   if (error) throw new Error(`Failed to load select options: ${error.message}`);
 
+  return data ?? [];
+}
+
+function mergeSelectOptions(
+  tenders: Pick<Tender, "area" | "customer" | "entitas">[],
+  options: { field: string; value: string }[],
+): SelectOptionsMap {
   const fromOptions: Record<string, string[]> = {};
-  for (const row of data ?? []) {
+  for (const row of options) {
     (fromOptions[row.field] ??= []).push(row.value);
   }
 
@@ -214,4 +221,11 @@ export async function getSelectOptions(
       ...(fromOptions.entitas ?? []),
     ]),
   };
+}
+
+export async function getSelectOptions(
+  tenders: Pick<Tender, "area" | "customer" | "entitas">[],
+): Promise<SelectOptionsMap> {
+  await requireUser();
+  return mergeSelectOptions(tenders, await loadSelectOptions());
 }

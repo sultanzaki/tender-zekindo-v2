@@ -2,12 +2,12 @@
 
 | Halaman saat ini | Desktop 1440 px | HP 390 px |
 | --- | --- | --- |
-| Tender dan prioritas deadline | [Desktop](workspace-1440.png) | [HP](workspace-390.png) |
+| Tender · Schedule Matrix | [Desktop](workspace-1440.png) | [HP](workspace-390.png) |
 | Analytics · Performance | [Desktop](analytics-1440.png) | [HP](analytics-390.png) |
 | Masuk | [Desktop](login-1440.png) | [HP](login-390.png) |
 | Tambah tender | [Desktop](new-1440.png) | [HP](new-390.png) |
 
-Kartu deadline menyaring tabel pada halaman yang sama. Tautan Overview lama membuka register dengan track yang sesuai.
+Register langsung menampilkan Schedule Matrix di desktop dan HP. Geser tabel untuk melihat tanggal setiap milestone. Kartu deadline menyaring matriks yang sama. Tautan Overview lama membuka register dengan track yang sesuai.
 
 ## Riwayat migrasi ke shadcn/ui
 

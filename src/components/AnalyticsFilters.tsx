@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { TRACKS, TRACK_LABELS, type Track } from "@/lib/types";
-import styles from "./Workspace.module.css";
+import styles from "../app/analytics/Analytics.module.css";
 export function AnalyticsFilters({
   report,
   areas,
@@ -49,10 +49,10 @@ export function AnalyticsFilters({
   }
   return (
     <div className={styles.filterBar} aria-busy={pending}>
-      <Label>
-        Track
+      <div className={styles.filterField}>
+        <Label htmlFor="analytics-track">Track</Label>
         <NativeSelect
-          className="control"
+          id="analytics-track"
           value={track}
           disabled={pending}
           onChange={(e) => apply({ track: e.target.value })}
@@ -64,7 +64,7 @@ export function AnalyticsFilters({
             </NativeSelectOption>
           ))}
         </NativeSelect>
-      </Label>
+      </div>
       {(
         [
           { key: "area", label: "Area", value: area, options: areas },
@@ -77,10 +77,10 @@ export function AnalyticsFilters({
           },
         ] as const
       ).map((field) => (
-        <Label key={field.key}>
-          {field.label}
+        <div className={styles.filterField} key={field.key}>
+          <Label htmlFor={`analytics-${field.key}`}>{field.label}</Label>
           <NativeSelect
-            className="control"
+            id={`analytics-${field.key}`}
             value={field.value}
             disabled={pending}
             onChange={(e) => apply({ [field.key]: e.target.value })}
@@ -92,7 +92,7 @@ export function AnalyticsFilters({
               <NativeSelectOption key={value}>{value}</NativeSelectOption>
             ))}
           </NativeSelect>
-        </Label>
+        </div>
       ))}
       <Button
         variant="outline"

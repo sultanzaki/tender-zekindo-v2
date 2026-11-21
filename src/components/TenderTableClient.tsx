@@ -19,22 +19,19 @@ import {
 } from "@/components/ui/native-select";
 
 import {
-  Fragment,
   useDeferredValue,
   useEffect,
   useMemo,
   useState,
   useTransition,
-  useSyncExternalStore,
 } from "react";
 import Link from "next/link";
-import { MilestoneDue, OperationsHeading } from "./TenderOperations";
+import { OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
 import { Icon } from "./Icon";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
   ListFilter,
-  TableProperties,
   Columns3,
   CalendarClock,
   CalendarOff,
@@ -69,7 +66,6 @@ import {
   filterTenders,
   formatDateID,
   nextMilestone,
-  resolveTenderMilestones,
   sortTenders,
   type SortDirection,
   type SortKey,
@@ -142,12 +138,6 @@ const priorityCards = [
   },
 ] as const;
 
-const phoneQuery = "(max-width: 600px)";
-function subscribePhone(notify: () => void) {
-  const media = window.matchMedia(phoneQuery);
-  media.addEventListener("change", notify);
-  return () => media.removeEventListener("change", notify);
-}
 const PAGE_SIZES = [25, 50, 100];
 
 interface EditingCell {
@@ -190,11 +180,6 @@ export function TenderTableClient({
   initialFilters?: TenderFilters;
 }) {
   const router = useRouter();
-  const phone = useSyncExternalStore(
-    subscribePhone,
-    () => window.matchMedia(phoneQuery).matches,
-    () => false,
-  );
   const [filters, setFilters] = useState<TenderFilters>(initialFilters);
   // Keyed by column key rather than a fixed union: milestone keys are data now,
   // so an admin-added milestone needs a visibility slot without a code change.
@@ -218,10 +203,6 @@ export function TenderTableClient({
   ) {
     saveCols(update(visibleCols));
   }
-  const [fullTable, setFullTable] = useStoredJSON(
-    `zekindo-full-table:${track}`,
-    false,
-  );
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<{
     key: SortKey;
@@ -328,34 +309,6 @@ export function TenderTableClient({
     () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
     [sorted, safePage, pageSize],
   );
-
-  function scheduleCell(tender: RegisterTender) {
-    const next = upcoming.get(tender.id);
-    if (next)
-      return (
-        <MilestoneDue label={next.label} date={next.date} days={next.diff} />
-      );
-    const previous = resolveTenderMilestones(tender, catalog).reduce<{
-      label: string;
-      date: string;
-    } | null>(
-      (last, m) =>
-        m.date && m.date < anchor && (!last || m.date > last.date)
-          ? { label: m.label, date: m.date }
-          : last,
-      null,
-    );
-    return (
-      <span>
-        {tender.result ? "Closed schedule" : "Needs follow-up"}
-        <small className={styles.packageNumber}>
-          {previous
-            ? `Last scheduled: ${previous.label} · ${formatDateID(previous.date)}`
-            : "No upcoming milestone"}
-        </small>
-      </span>
-    );
-  }
 
   const visibleMilestones = milestoneTypes.filter((m) => visibleCols[m.key]);
 
@@ -492,7 +445,7 @@ export function TenderTableClient({
         title="Tender register"
         context={
           <>
-            {filtered.length} of {tenders.length} tenders
+            Schedule matrix · {filtered.length} of {tenders.length} tenders
             {sort ? "" : " · Next deadline first"}
           </>
         }
@@ -500,6 +453,7 @@ export function TenderTableClient({
           isAdmin ? (
             <Button asChild variant="default">
               <Link
+                prefetch={true}
                 href={
                   track === "downstream"
                     ? "/tenders/new?track=downstream"
@@ -590,21 +544,8 @@ export function TenderTableClient({
           >
             <ListFilter /> {showFilters ? "Hide filters" : "Filters"}
           </Button>
-          <Button
-            variant="outline"
-            type="button"
-            aria-pressed={fullTable}
-            className={styles.matrixToggle}
-            onClick={() => setFullTable(!fullTable)}
-          >
-            <TableProperties /> Schedule matrix
-          </Button>
           <div className={styles.colMenuWrap}>
-            <Popover
-              onOpenChange={(open) => {
-                if (open) setFullTable(true);
-              }}
-            >
+            <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline">
                   <Columns3 /> Columns
@@ -786,386 +727,277 @@ export function TenderTableClient({
           </Alert>
         )}
 
-        {phone && (
-          <div className={styles.mobileCards}>
-            {pageItems.map((tender) => {
-              return (
-                <Link
-                  prefetch={false}
-                  href={tenderHref(tender.id)}
-                  key={tender.id}
-                  className={styles.tenderCard}
-                >
-                  <span className={styles.cardTop}>
-                    <span>{tender.tenderNo || `Tender #${tender.rowNo}`}</span>
-                    <ResultBadge result={tender.result} />
-                  </span>
-                  <strong>{tender.product || tender.customer}</strong>
-                  <span>{tender.customer}</span>
-                  <span className={styles.mobileDeadline}>
-                    {scheduleCell(tender)}
-                    <span aria-hidden="true">›</span>
-                  </span>
-                  <span className={styles.cardMeta}>
-                    Bid:{" "}
-                    <MoneyValue
-                      value={tender.nilaiPenawaran}
-                      canView={canViewMoney}
-                    />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
         {pageItems.length > 0 ? (
-          !phone && (
-            <div
-              className={styles.scroll}
-              tabIndex={0}
-              role="region"
-              aria-label="Tender table; scroll horizontally for milestone columns"
-            >
-              <Table className={styles.table} data-matrix={fullTable}>
-                <TableHeader>
-                  <TableRow className={styles.theadRow}>
+          <div
+            className={styles.scroll}
+            tabIndex={0}
+            role="region"
+            aria-label="Schedule matrix"
+          >
+            <Table className={styles.table}>
+              <TableHeader>
+                <TableRow className={styles.theadRow}>
+                  {isAdmin && (
+                    <TableHead className={`${styles.th} ${styles.checkboxCol}`}>
+                      <Checkbox
+                        className={styles.checkbox}
+                        checked={allOnPageSelected}
+                        onCheckedChange={toggleAllOnPage}
+                        title="Select every row on this page"
+                        aria-label="Select every row on this page"
+                      />
+                    </TableHead>
+                  )}
+                  {sortableHeader("product", "Package")}
+                  {sortableHeader("customer", "Customer")}
+                  {sortableHeader("result", "Status")}
+                  {visibleMilestones.map((m) =>
+                    sortableHeader(
+                      m.key,
+                      shortHeader(m.label),
+                      "left",
+                      m.label,
+                    ),
+                  )}
+                  {sortableHeader("tenderNo", "Tender No.")}
+                  {sortableHeader("rowNo", "No")}
+                  {visibleCols.track && track === "all" && (
+                    <TableHead scope="col" className={styles.th}>
+                      Track
+                    </TableHead>
+                  )}
+                  {sortableHeader("area", "Area")}
+                  {track !== "downstream" &&
+                    sortableHeader("entitas", "Entity")}
+                  {visibleCols.period && sortableHeader("period", "Period")}
+                  {visibleCols.oe && sortableHeader("oe", "OE (Rp)", "right")}
+                  {visibleCols.qty && sortableHeader("qty", "Qty", "right")}
+                  {sortableHeader("nilaiPenawaran", "Bid Value", "right")}
+                  {visibleCols.pnl && sortableHeader("pnl", "P&L")}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageItems.map((t) => (
+                  <TableRow
+                    key={t.id}
+                    className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
+                    onClick={() => router.push(tenderHref(t.id))}
+                  >
                     {isAdmin && (
-                      <TableHead
-                        className={`${styles.th} ${styles.checkboxCol}`}
+                      <TableCell
+                        className={`${styles.td} ${styles.checkboxCol}`}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
                           className={styles.checkbox}
-                          checked={allOnPageSelected}
-                          onCheckedChange={toggleAllOnPage}
-                          title="Select every row on this page"
-                          aria-label="Select every row on this page"
+                          checked={selected.has(t.id)}
+                          onCheckedChange={() => toggleRow(t.id)}
+                          aria-label={`Select tender ${t.tenderNo || t.id}`}
                         />
-                      </TableHead>
+                      </TableCell>
                     )}
-                    <TableHead scope="col" className={styles.th}>
-                      Next milestone
-                    </TableHead>
-                    {sortableHeader("product", "Package")}
-                    {sortableHeader("customer", "Customer")}
-                    {sortableHeader("result", "Status")}
-                    {fullTable && sortableHeader("tenderNo", "Tender No.")}
-                    {fullTable && (
-                      <>
-                        {sortableHeader("rowNo", "No")}
-                        {visibleCols.track && track === "all" && (
-                          <TableHead scope="col" className={styles.th}>
-                            Track
-                          </TableHead>
-                        )}
-                        {sortableHeader("area", "Area")}
-                        {track !== "downstream" &&
-                          sortableHeader("entitas", "Entity")}
-                        {visibleCols.period &&
-                          sortableHeader("period", "Period")}
-                        {visibleCols.oe &&
-                          sortableHeader("oe", "OE (Rp)", "right")}
-                        {visibleCols.qty &&
-                          sortableHeader("qty", "Qty", "right")}
-                      </>
-                    )}
-                    {sortableHeader("nilaiPenawaran", "Bid Value", "right")}
-                    {fullTable &&
-                      visibleCols.pnl &&
-                      sortableHeader("pnl", "P&L")}
-                    {fullTable &&
-                      visibleMilestones.map((m) =>
-                        sortableHeader(
-                          m.key,
-                          shortHeader(m.label),
-                          "left",
-                          m.label,
-                        ),
-                      )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pageItems.map((t, index) => (
-                    <Fragment key={t.id}>
-                      {!sort &&
-                        !fullTable &&
-                        (index === 0 ||
-                          Boolean(upcoming.get(t.id)) !==
-                            Boolean(upcoming.get(pageItems[index - 1].id))) && (
-                          <TableRow className={styles.division}>
-                            <TableCell colSpan={isAdmin ? 6 : 5}>
-                              {upcoming.get(t.id) ? (
-                                <>
-                                  <CalendarClock /> Upcoming deadlines
-                                </>
-                              ) : (
-                                <>
-                                  <CalendarOff /> No upcoming deadline
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      <TableRow
-                        key={t.id}
-                        className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
-                        onClick={() => router.push(tenderHref(t.id))}
+                    <TableCell
+                      className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}
+                    >
+                      <Link
+                        prefetch={false}
+                        href={tenderHref(t.id)}
+                        onClick={(event) => event.stopPropagation()}
                       >
-                        {isAdmin && (
+                        {t.product || t.customer || "View tender"}
+                      </Link>
+                    </TableCell>
+                    <TableCell
+                      className={`${styles.td} ${styles.tdEllipsis}`}
+                      style={{ maxWidth: 220 }}
+                      title={t.customer}
+                    >
+                      {t.customer || "—"}
+                    </TableCell>
+                    <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                      {isAdmin &&
+                      editingCell?.tenderId === t.id &&
+                      editingCell.column === "result" ? (
+                        <NativeSelect
+                          aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                          autoFocus
+                          defaultValue={t.result ?? ""}
+                          className={styles.inlineSelect}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) =>
+                            handleQuickResult(t.id, e.target.value)
+                          }
+                          onBlur={() => setEditingCell(null)}
+                        >
+                          <NativeSelectOption value="">
+                            (Running)
+                          </NativeSelectOption>
+                          {RESULT_ENUM.map((r) => (
+                            <NativeSelectOption key={r} value={r}>
+                              {r}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                      ) : isAdmin ? (
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          className={styles.cellButton}
+                          disabled={quickEditPending}
+                          aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCell({
+                              tenderId: t.id,
+                              column: "result",
+                            });
+                          }}
+                        >
+                          <ResultBadge result={t.result} />
+                        </Button>
+                      ) : (
+                        <ResultBadge result={t.result} />
+                      )}
+                    </TableCell>
+                    {visibleMilestones.map((m) => {
+                      if (
+                        t.track !== m.track ||
+                        (t.milestoneOrder && !t.milestoneOrder.includes(m.key))
+                      ) {
+                        return (
                           <TableCell
-                            className={`${styles.td} ${styles.checkboxCol}`}
+                            key={m.key}
+                            className={styles.dateCell}
+                            aria-label="Not applicable"
+                          >
+                            —
+                          </TableCell>
+                        );
+                      }
+                      const iso = t.milestones[m.key] ?? null;
+                      const tone = dateTone(iso, t.result, anchor);
+                      const isEditing =
+                        isAdmin &&
+                        editingCell?.tenderId === t.id &&
+                        editingCell.column === m.key;
+                      if (isEditing) {
+                        return (
+                          <TableCell
+                            key={m.key}
+                            className={styles.dateCell}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Checkbox
-                              className={styles.checkbox}
-                              checked={selected.has(t.id)}
-                              onCheckedChange={() => toggleRow(t.id)}
-                              aria-label={`Select tender ${t.tenderNo || t.id}`}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell
-                          className={`${styles.td} ${styles.deadlineCell}`}
-                        >
-                          {scheduleCell(t)}
-                        </TableCell>
-                        <TableCell
-                          className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}
-                        >
-                          <Link
-                            prefetch={false}
-                            href={tenderHref(t.id)}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {t.product || t.customer || "View tender"}
-                          </Link>
-                          {!fullTable && (
-                            <small className={styles.packageNumber}>
-                              {t.tenderNo || `Tender #${t.rowNo}`} ·{" "}
-                              {TRACK_LABELS[t.track]} · {t.period}
-                            </small>
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={`${styles.td} ${styles.tdEllipsis}`}
-                          style={{ maxWidth: 220 }}
-                          title={t.customer}
-                        >
-                          {t.customer || "—"}
-                          {!fullTable && (
-                            <small className={styles.packageNumber}>
-                              {[t.area, t.entitas].filter(Boolean).join(" · ")}
-                            </small>
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={`${styles.td} ${styles.tdNoWrap}`}
-                        >
-                          {isAdmin &&
-                          editingCell?.tenderId === t.id &&
-                          editingCell.column === "result" ? (
-                            <NativeSelect
-                              aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                            <Input
+                              type="date"
+                              aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
                               autoFocus
-                              defaultValue={t.result ?? ""}
-                              className={styles.inlineSelect}
-                              onClick={(e) => e.stopPropagation()}
+                              defaultValue={iso ?? ""}
+                              className={styles.inlineDateInput}
                               onChange={(e) =>
-                                handleQuickResult(t.id, e.target.value)
+                                handleQuickMilestone(
+                                  t.id,
+                                  m.key,
+                                  e.target.value,
+                                )
                               }
                               onBlur={() => setEditingCell(null)}
-                            >
-                              <NativeSelectOption value="">
-                                (Running)
-                              </NativeSelectOption>
-                              {RESULT_ENUM.map((r) => (
-                                <NativeSelectOption key={r} value={r}>
-                                  {r}
-                                </NativeSelectOption>
-                              ))}
-                            </NativeSelect>
-                          ) : isAdmin ? (
+                            />
+                          </TableCell>
+                        );
+                      }
+                      return (
+                        <TableCell
+                          key={m.key}
+                          className={`${styles.dateCell} ${DATE_TONE_CLASS[tone]} ${isAdmin ? styles.editableCell : ""}`}
+                          title={isAdmin ? `Click to edit ${m.label}` : m.label}
+                        >
+                          {isAdmin ? (
                             <Button
                               variant="ghost"
                               type="button"
                               className={styles.cellButton}
                               disabled={quickEditPending}
-                              aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                              aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingCell({
                                   tenderId: t.id,
-                                  column: "result",
+                                  column: m.key,
                                 });
                               }}
                             >
-                              <ResultBadge result={t.result} />
+                              {iso ? formatDateID(iso) : "—"}
                             </Button>
+                          ) : iso ? (
+                            formatDateID(iso)
                           ) : (
-                            <ResultBadge result={t.result} />
+                            "—"
                           )}
                         </TableCell>
-                        {fullTable && (
-                          <TableCell
-                            className={`${styles.td} ${styles.tdNoWrap}`}
-                          >
-                            {t.tenderNo ? (
-                              <Link
-                                prefetch={false}
-                                href={tenderHref(t.id)}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                {t.tenderNo}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
+                      );
+                    })}
+                    <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                      {t.tenderNo ? (
+                        <Link
+                          prefetch={false}
+                          href={tenderHref(t.id)}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {t.tenderNo}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className={`${styles.td} ${styles.tdMuted}`}>
+                      {t.rowNo}
+                    </TableCell>
+                    {visibleCols.track && (track as string) === "all" && (
+                      <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                        {t.track === "downstream" ? (
+                          <TrackBadge track={t.track} />
+                        ) : (
+                          <span style={{ color: "var(--color-fg3)" }}>
+                            {TRACK_LABELS.upstream}
+                          </span>
                         )}
-                        {fullTable && (
-                          <>
-                            <TableCell
-                              className={`${styles.td} ${styles.tdMuted}`}
-                            >
-                              {t.rowNo}
-                            </TableCell>
-                            {visibleCols.track &&
-                              (track as string) === "all" && (
-                                <TableCell
-                                  className={`${styles.td} ${styles.tdNoWrap}`}
-                                >
-                                  {t.track === "downstream" ? (
-                                    <TrackBadge track={t.track} />
-                                  ) : (
-                                    <span style={{ color: "var(--color-fg3)" }}>
-                                      {TRACK_LABELS.upstream}
-                                    </span>
-                                  )}
-                                </TableCell>
-                              )}
-                            <TableCell className={styles.td}>
-                              {t.area}
-                            </TableCell>
-                            {track !== "downstream" && (
-                              <TableCell
-                                className={`${styles.td} ${styles.tdNoWrap}`}
-                              >
-                                {t.entitas || "—"}
-                              </TableCell>
-                            )}
-                            {visibleCols.period && (
-                              <TableCell className={styles.td}>
-                                {t.period}
-                              </TableCell>
-                            )}
-                            {visibleCols.oe && (
-                              <TableCell
-                                className={`${styles.td} ${styles.tdRight}`}
-                              >
-                                <MoneyValue
-                                  value={t.oe}
-                                  canView={canViewMoney}
-                                />
-                              </TableCell>
-                            )}
-                            {visibleCols.qty && (
-                              <TableCell
-                                className={`${styles.td} ${styles.tdRight}`}
-                              >
-                                {t.qty ?? "—"}
-                              </TableCell>
-                            )}
-                          </>
-                        )}
-                        <TableCell className={`${styles.td} ${styles.tdRight}`}>
-                          <MoneyValue
-                            value={t.nilaiPenawaran}
-                            canView={canViewMoney}
-                          />
-                          {!fullTable && t.oe !== null && (
-                            <small className={styles.packageNumber}>
-                              OE{" "}
-                              <MoneyValue value={t.oe} canView={canViewMoney} />
-                            </small>
-                          )}
-                        </TableCell>
-                        {fullTable && visibleCols.pnl && (
-                          <TableCell className={styles.td}>
-                            {t.pnl ? "Yes" : "—"}
-                          </TableCell>
-                        )}
-                        {fullTable &&
-                          visibleMilestones.map((m) => {
-                            const iso = t.milestones[m.key] ?? null;
-                            const tone = dateTone(iso, t.result, anchor);
-                            const isEditing =
-                              isAdmin &&
-                              editingCell?.tenderId === t.id &&
-                              editingCell.column === m.key;
-                            if (isEditing) {
-                              return (
-                                <TableCell
-                                  key={m.key}
-                                  className={styles.dateCell}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Input
-                                    type="date"
-                                    aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
-                                    autoFocus
-                                    defaultValue={iso ?? ""}
-                                    className={styles.inlineDateInput}
-                                    onChange={(e) =>
-                                      handleQuickMilestone(
-                                        t.id,
-                                        m.key,
-                                        e.target.value,
-                                      )
-                                    }
-                                    onBlur={() => setEditingCell(null)}
-                                  />
-                                </TableCell>
-                              );
-                            }
-                            return (
-                              <TableCell
-                                key={m.key}
-                                className={`${styles.dateCell} ${DATE_TONE_CLASS[tone]} ${isAdmin ? styles.editableCell : ""}`}
-                                title={
-                                  isAdmin ? `Click to edit ${m.label}` : m.label
-                                }
-                              >
-                                {isAdmin ? (
-                                  <Button
-                                    variant="ghost"
-                                    type="button"
-                                    className={styles.cellButton}
-                                    disabled={quickEditPending}
-                                    aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingCell({
-                                        tenderId: t.id,
-                                        column: m.key,
-                                      });
-                                    }}
-                                  >
-                                    {iso ? formatDateID(iso) : "—"}
-                                  </Button>
-                                ) : iso ? (
-                                  formatDateID(iso)
-                                ) : (
-                                  "—"
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                      </TableRow>
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )
+                      </TableCell>
+                    )}
+                    <TableCell className={styles.td}>{t.area}</TableCell>
+                    {track !== "downstream" && (
+                      <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                        {t.entitas || "—"}
+                      </TableCell>
+                    )}
+                    {visibleCols.period && (
+                      <TableCell className={styles.td}>{t.period}</TableCell>
+                    )}
+                    {visibleCols.oe && (
+                      <TableCell className={`${styles.td} ${styles.tdRight}`}>
+                        <MoneyValue value={t.oe} canView={canViewMoney} />
+                      </TableCell>
+                    )}
+                    {visibleCols.qty && (
+                      <TableCell className={`${styles.td} ${styles.tdRight}`}>
+                        {t.qty ?? "—"}
+                      </TableCell>
+                    )}
+                    <TableCell className={`${styles.td} ${styles.tdRight}`}>
+                      <MoneyValue
+                        value={t.nilaiPenawaran}
+                        canView={canViewMoney}
+                      />
+                    </TableCell>
+                    {visibleCols.pnl && (
+                      <TableCell className={styles.td}>
+                        {t.pnl ? "Yes" : "—"}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className={styles.emptyBox}>
             <div className={styles.emptyText}>

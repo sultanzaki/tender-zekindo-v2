@@ -624,3 +624,18 @@
   .wrap > header {flex-wrap:nowrap;align-items:center;}
   .wrap > header > div:first-child {min-width:0;}
 }
+.wrap,.tableWorkspace,.scroll {min-width:0;max-width:100%;}
+.wrap {max-width:1640px;}
+.tableWorkspace .scroll {display:block;overscroll-behavior-x:contain;}
+.tableWorkspace .table {width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;}
+.tableWorkspace .td {white-space:normal;overflow-wrap:anywhere;min-width:76px;max-width:190px;border-bottom:1px solid var(--border);}
+.tableWorkspace .tdRight,.tableWorkspace .dateCell {white-space:nowrap;font-variant-numeric:tabular-nums;}
+.tableWorkspace .dateCell {border-bottom:1px solid var(--border);}
+.tableWorkspace .packageCell {width:245px;max-width:245px;min-width:200px;}
+.tableWorkspace .checkboxCol {min-width:36px;width:36px;}
+.tableWorkspace .colMenuWrap {display:block;margin-left:auto;}
+.tableWorkspace .theadRow th {background:#f8f9fb;}
+@media(max-width:600px){
+  .tableWorkspace .packageCell {width:136px;min-width:136px;max-width:136px;font-size:12px;}
+  .tableWorkspace .bulkBar {display:flex;}
+}

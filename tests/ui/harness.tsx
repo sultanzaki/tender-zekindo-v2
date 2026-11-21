@@ -131,7 +131,7 @@ const components = {
         entitasList: ["ZKI"],
         customers: ["Customer"],
       }}
-      milestoneTypes={[]}
+      milestoneTypes={[{ id: "site", key: "site", label: "Site visit", track: "upstream", showInTable: true, sortOrder: 0 }]}
       anchor="2026-10-22"
       isAdmin
       canViewMoney

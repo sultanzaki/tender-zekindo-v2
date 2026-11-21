@@ -40,6 +40,7 @@ function CreateLink() {
   return (
     <Button asChild>
       <Link
+        prefetch={true}
         href={
           params.get("track") === "downstream"
             ? "/tenders/new?track=downstream"
