@@ -133,13 +133,16 @@ export async function getTenderById(id: string): Promise<Tender | null> {
   const ctx = await requireUser();
   const { data, error } = await supabaseServer()
     .from("tenders")
-    .select("*")
+    .select("*, creator:profiles!tenders_created_by_fkey(name), editor:profiles!tenders_updated_by_fkey(name)")
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(`Failed to load tender: ${error.message}`);
   if (!data) return null;
   if (data.archived_at && ctx.profile.role !== "admin") return null;
-  const [tender] = await withNames([data]);
+  const names = new Map<string, string>();
+  if (data.created_by && data.creator) names.set(data.created_by, data.creator.name);
+  if (data.updated_by && data.editor) names.set(data.updated_by, data.editor.name);
+  const tender = mapRow(data, names);
   return ctx.profile.role === "admin"
     ? tender
     : { ...tender, catatanInternal: null };

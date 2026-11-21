@@ -483,7 +483,7 @@ test("bulk archive confirms intent and failure uses alert feedback", async () =>
 });
 test("edit saves decimal values and an empty milestone order together", async () => {
   const page = await open("edit");
-  await page.getByRole("button", { name: "3 Milestones", exact: true }).click();
+  await page.getByRole("button", { name: "Milestones", exact: true }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("alert").waitFor();

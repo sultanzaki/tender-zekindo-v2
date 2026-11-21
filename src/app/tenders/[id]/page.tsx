@@ -33,7 +33,7 @@ import styles from "@/components/TenderDetail.module.css";
 export const dynamic = "force-dynamic";
 const tones = {
   empty: "var(--zk-gray-300)",
-  past: "#247345",
+  past: "var(--color-fg3)",
   urgent: "var(--zk-error)",
   soon: "var(--zk-warning-text)",
   normal: "var(--color-primary)",
@@ -94,7 +94,7 @@ export default async function Detail({
         ),
       ]
     : [];
-  const historicalLabels = await getMilestoneLabels(historicalKeys);
+  const historicalLabels = historicalKeys.length ? await getMilestoneLabels(historicalKeys) : new Map<string,string>();
   const sections = tree
     ? buildDocumentSections(tree, [
         ...documents.map(
@@ -150,10 +150,10 @@ export default async function Detail({
               ) : (
                 <>
                   <Button asChild variant="outline">
-                    <Link href={`/tenders/${id}/edit`}>Edit tender</Link>
+                    <Link href={`/tenders/${id}/edit?${new URLSearchParams({returnTo})}`}>Edit tender</Link>
                   </Button>
                   <Button asChild variant="default">
-                    <Link href={`/tenders/${id}/edit?section=milestones`}>
+                    <Link href={`/tenders/${id}/edit?${new URLSearchParams({section:"milestones",returnTo})}`}>
                       Edit milestones
                     </Link>
                   </Button>

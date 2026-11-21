@@ -52,7 +52,10 @@ export interface Database {
           customer: string;
         };
         Update: Partial<Database["public"]["Tables"]["tenders"]["Row"]>;
-        Relationships: [];
+        Relationships: [
+          { foreignKeyName: "tenders_created_by_fkey"; columns: ["created_by"]; referencedRelation: "profiles"; referencedColumns: ["id"]; isOneToOne: false },
+          { foreignKeyName: "tenders_updated_by_fkey"; columns: ["updated_by"]; referencedRelation: "profiles"; referencedColumns: ["id"]; isOneToOne: false },
+        ];
       };
       profiles: {
         Row: {

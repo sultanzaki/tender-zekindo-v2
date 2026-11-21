@@ -14,7 +14,7 @@ import type {
   MilestoneType,
   SelectOptionsMap,
 } from "@/lib/types";
-import { PageHeading } from "./PageHeading";
+import edit from "./EditTenderForm.module.css";
 import { TenderFields } from "./TenderFields";
 import { MilestoneEditor } from "./MilestoneEditor";
 import { Modal } from "./Modal";
@@ -50,9 +50,11 @@ export function EditTenderForm({
   milestoneTypes,
   existingTenders,
   startOnMilestones = false,
+  returnTo,
 }: {
   tender: Tender;
   startOnMilestones?: boolean;
+  returnTo?: string;
   selectOptions: SelectOptionsMap;
   milestoneTypes: MilestoneType[];
   existingTenders: { id: string; tenderNo: string | null }[];
@@ -68,6 +70,7 @@ export function EditTenderForm({
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState<"discard" | "archive" | null>(null);
   const router = useRouter();
+  const detailHref = `/tenders/${tender.id}${returnTo ? "?" + new URLSearchParams({ returnTo }) : ""}`;
   const dirty =
     JSON.stringify(values) !== JSON.stringify(initial) ||
     JSON.stringify(order) !== JSON.stringify(initialOrder);
@@ -80,129 +83,131 @@ export function EditTenderForm({
     }
     setError("");
     start(async () => {
-      const result = await updateTender(tender.id, {
-        ...values,
-        milestoneOrder: order,
-      });
+      const result = await updateTender(
+        tender.id,
+        {
+          ...values,
+          milestoneOrder: order,
+        },
+        returnTo,
+      );
       if (result?.error) setError(result.error);
     });
   }
   return (
-    <div className={styles.page}>
-      <PageHeading
-        eyebrow={`${tender.track.toUpperCase()} · ${tender.tenderNo || `TENDER #${tender.rowNo}`}`}
-        title="Edit tender"
-        description="All sections, including milestone order, save together."
-        actions={
-          <>
-            <Button
-              variant="outline"
-              onClick={() =>
-                dirty
-                  ? setConfirm("discard")
-                  : router.push(`/tenders/${tender.id}`)
-              }
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => setConfirm("archive")}
-            >
-              Archive tender
-            </Button>
-          </>
-        }
-      />
-      <div className={styles.steps} aria-label="Edit sections">
-        {SECTIONS.map((label, i) => (
-          <Button
-            variant="ghost"
-            key={label}
-            type="button"
-            className={`${styles.step} ${i === section ? styles.stepActive : ""}`}
-            disabled={pending}
-            aria-pressed={i === section}
-            onClick={() => {
-              setError("");
-              setSection(i);
-            }}
-          >
-            <span className={styles.stepNumber}>{i + 1}</span>
-            <span>{label}</span>
-          </Button>
-        ))}
-      </div>
-      <form
-        className={styles.card}
-        onSubmit={(e) => {
-          e.preventDefault();
-          save();
-        }}
-      >
-        <div className={styles.sectionHeading}>
-          <h2>{SECTIONS[section]}</h2>
-          <span>{dirty ? "Unsaved changes" : "Up to date"}</span>
+    <div className={edit.page}>
+      <header className={edit.header}>
+        <div>
+          <h1>Edit tender</h1>
+          <p>{tender.product || tender.customer}</p>
+          <small>
+            {tender.tenderNo || `Tender #${tender.rowNo}`} · {tender.track}
+          </small>
         </div>
-        <fieldset className={styles.fieldset} disabled={pending}>
-          {section === 0 && (
-            <TenderFields
-              section="details"
-              values={values}
-              onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
-              options={selectOptions}
-              duplicate={findDuplicateTenderNo(
-                values.tenderNo,
-                existingTenders,
-                tender.id,
-              )}
-            />
-          )}
-          {section === 1 && (
-            <TenderFields
-              section="value"
-              values={values}
-              onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
-              options={selectOptions}
-            />
-          )}
-          {section === 2 && (
-            <MilestoneEditor
-              track={tender.track}
-              catalog={[...milestoneTypes, ...extra]}
-              onCreated={(created) => setExtra((prev) => [...prev, created])}
-              order={order}
-              dates={values.milestones}
-              onOrder={setOrder}
-              onDates={(milestones) => setValues((v) => ({ ...v, milestones }))}
-            />
-          )}
-          {section === 3 && (
-            <TenderFields
-              section="outcome"
-              values={values}
-              onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
-              options={selectOptions}
-            />
-          )}
-        </fieldset>
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <div className={styles.footer}>
-          <span className="muted">
-            {dirty
-              ? "Changes are not saved yet."
-              : "Edit any section, then save once."}
-          </span>
-          <Button variant="default" type="submit" disabled={pending || !dirty}>
+        <div className={edit.commands}>
+          <Button
+            variant="outline"
+            disabled={pending}
+            onClick={() =>
+              dirty ? setConfirm("discard") : router.push(detailHref)
+            }
+          >
+            Cancel
+          </Button>
+          <Button form="edit-tender" type="submit" disabled={pending || !dirty}>
             {pending ? "Saving…" : "Save changes"}
           </Button>
         </div>
-      </form>
+      </header>
+      <div className={edit.workspace}>
+        <nav className={edit.sections} aria-label="Edit sections">
+          {SECTIONS.map((label, i) => (
+            <Button
+              variant="ghost"
+              key={label}
+              type="button"
+              disabled={pending}
+              aria-pressed={i === section}
+              onClick={() => {
+                setError("");
+                setSection(i);
+              }}
+            >
+              <span>{label}</span>
+            </Button>
+          ))}
+        </nav>
+        <form
+          id="edit-tender"
+          className={edit.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <div className={styles.sectionHeading}>
+            <h2>{SECTIONS[section]}</h2>
+            <span>{dirty ? "Unsaved changes" : "Up to date"}</span>
+          </div>
+          <fieldset className={styles.fieldset} disabled={pending}>
+            {section === 0 && (
+              <TenderFields
+                section="details"
+                values={values}
+                onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
+                options={selectOptions}
+                duplicate={findDuplicateTenderNo(
+                  values.tenderNo,
+                  existingTenders,
+                  tender.id,
+                )}
+              />
+            )}
+            {section === 1 && (
+              <TenderFields
+                section="value"
+                values={values}
+                onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
+                options={selectOptions}
+              />
+            )}
+            {section === 2 && (
+              <MilestoneEditor
+                track={tender.track}
+                catalog={[...milestoneTypes, ...extra]}
+                onCreated={(created) => setExtra((prev) => [...prev, created])}
+                order={order}
+                dates={values.milestones}
+                onOrder={setOrder}
+                onDates={(milestones) =>
+                  setValues((v) => ({ ...v, milestones }))
+                }
+              />
+            )}
+            {section === 3 && (
+              <TenderFields
+                section="outcome"
+                values={values}
+                onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
+                options={selectOptions}
+              />
+            )}
+          </fieldset>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </form>
+      </div>
+      <Button
+        className={edit.archive}
+        variant="ghost"
+        disabled={pending}
+        onClick={() => setConfirm("archive")}
+      >
+        Archive tender
+      </Button>
       <Modal
         open={confirm !== null}
         title={
@@ -233,7 +238,7 @@ export function EditTenderForm({
             onClick={() => {
               if (confirm === "discard") {
                 setConfirm(null);
-                router.push(`/tenders/${tender.id}`);
+                router.push(detailHref);
               } else {
                 start(async () => {
                   const result = await archiveTender(tender.id);

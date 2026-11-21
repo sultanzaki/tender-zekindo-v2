@@ -182,6 +182,9 @@ export function TenderTableClient({
 }) {
   const router = useRouter();
   const matrixRef = useRef<HTMLDivElement>(null);
+  const [intentHref, setIntentHref] = useState("");
+  const intentTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(intentTimer.current), []);
   const [filters, setFilters] = useState<TenderFilters>(initialFilters);
   // Keyed by column key rather than a fixed union: milestone keys are data now,
   // so an admin-added milestone needs a visibility slot without a code change.
@@ -852,6 +855,12 @@ export function TenderTableClient({
                   <TableRow
                     key={t.id}
                     className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
+                    onPointerEnter={event => {
+                      if (event.pointerType !== "mouse") return;
+                      clearTimeout(intentTimer.current);
+                      intentTimer.current = setTimeout(() => setIntentHref(tenderHref(t.id)), 100);
+                    }}
+                    onPointerLeave={() => clearTimeout(intentTimer.current)}
                     onClick={() => router.push(tenderHref(t.id))}
                   >
                     {isAdmin && (
@@ -871,9 +880,10 @@ export function TenderTableClient({
                       className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}
                     >
                       <Link
-                        prefetch={false}
+                        prefetch={intentHref === tenderHref(t.id)}
                         href={tenderHref(t.id)}
                         title={t.product || t.customer || "View tender"}
+                        onFocus={() => setIntentHref(tenderHref(t.id))}
                         onClick={(event) => event.stopPropagation()}
                       >
                         {t.product || t.customer || "View tender"}

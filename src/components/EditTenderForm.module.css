@@ -1,0 +1,92 @@
+.page {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding: 32px clamp(16px, 3vw, 48px) 48px;
+  min-width: 0;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+}
+.header h1 {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+}
+.header p {
+  font-size: 16px;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.header small {
+  color: var(--muted-foreground);
+  text-transform: capitalize;
+}
+.commands,
+.sections {
+  display: flex;
+  gap: 6px;
+}
+.commands {
+  flex: none;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 52px);
+  padding-top: 24px;
+}
+.sections {
+  align-self: start;
+  flex-direction: column;
+}
+.sections button {
+  justify-content: flex-start;
+  font-weight: 500;
+}
+.sections [aria-pressed="true"] {
+  background: #eaf2ff;
+  color: #174896;
+}
+.form {
+  min-width: 0;
+}
+.page .archive {
+  margin-top: 24px;
+  color: var(--muted-foreground);
+}
+@media (max-width: 760px) {
+  .page {
+    padding: 18px 16px 32px;
+  }
+  .header {
+    display: grid;
+    gap: 12px;
+    padding-bottom: 14px;
+  }
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding-top: 16px;
+  }
+  .sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .page :is(button, select, input:not([type="checkbox"])) {
+    min-height: 44px;
+  }
+  .page button {
+    min-width: 44px;
+  }
+  .page :is(select, input, textarea) {
+    font-size: 16px;
+  }
+}

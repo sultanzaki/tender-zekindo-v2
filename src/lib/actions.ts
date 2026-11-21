@@ -199,6 +199,7 @@ export async function createTender(
 export async function updateTender(
   id: string,
   values: TenderEditFormValues,
+  returnTo?: string,
 ): Promise<ActionError | undefined> {
   const ctx = await requireAdmin();
 
@@ -275,7 +276,8 @@ export async function updateTender(
   revalidatePath("/tenders");
   updateTag(TENDERS_TAG);
   revalidatePath(`/tenders/${id}`);
-  redirect(`/tenders/${id}`);
+  const keepScope = typeof returnTo === "string" && /^\/(tenders|overview)(\?|$)/.test(returnTo);
+  redirect(`/tenders/${id}${keepScope ? "?" + new URLSearchParams({returnTo}) : ""}`);
 }
 
 export async function archiveTender(

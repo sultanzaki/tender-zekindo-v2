@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth/dal";
 import { getTenderFormChoices, getTenderById } from "@/lib/tenders";
 import { getMilestoneTypes } from "@/lib/milestones";
 import { EditTenderForm } from "@/components/EditTenderForm";
+import { safeNextPath } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,13 @@ export default async function EditTenderPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; returnTo?: string }>;
 }) {
   await requireAdmin();
-  const [{ id }, { section }] = await Promise.all([params, searchParams]);
+  const [{ id }, { section, returnTo }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const tender = await getTenderById(id);
   if (!tender) notFound();
 
@@ -29,6 +33,7 @@ export default async function EditTenderPage({
   return (
     <EditTenderForm
       tender={tender}
+      returnTo={returnTo ? safeNextPath(returnTo) : undefined}
       startOnMilestones={section === "milestones"}
       selectOptions={selectOptions}
       milestoneTypes={milestoneTypes}
