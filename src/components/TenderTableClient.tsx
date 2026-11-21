@@ -187,15 +187,13 @@ export function TenderTableClient({
 
   const deferredFilters = useDeferredValue(filters);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const query = tenderQuery(filters, track);
-      window.history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}${query ? `?${query}` : ""}`,
-      );
-    }, 200);
-    return () => clearTimeout(timer);
+    const query = tenderQuery(filters, track);
+    const nextSearch = query ? `?${query}` : "";
+    if (window.location.search !== nextSearch) {
+      // Synchronize during the render's effect so a pending filter timer
+      // cannot replace the URL after the user has opened a tender.
+      window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}`);
+    }
   }, [filters, track]);
   useEffect(() => {
     function restore() {
