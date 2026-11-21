@@ -1,4 +1,14 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Label } from "@/components/ui/label";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { useState } from "react";
 import type { TenderFilters } from "@/lib/types";
 import { readTenderFilters } from "@/lib/table-state";
@@ -31,9 +41,9 @@ export function TableViews({
   const [error, setError] = useState("");
   return (
     <div className="saved-views">
-      <label>
+      <Label>
         Saved views{" "}
-        <select
+        <NativeSelect
           aria-label="Saved views"
           className="control"
           value=""
@@ -50,17 +60,17 @@ export function TableViews({
               );
           }}
         >
-          <option value="">Choose a view…</option>
+          <NativeSelectOption value="">Choose a view…</NativeSelectOption>
           {views.map((v, i) => (
-            <option key={i} value={i}>
+            <NativeSelectOption key={i} value={i}>
               {v.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-      </label>
-      <button className="button button-secondary" onClick={() => setOpen(true)}>
+        </NativeSelect>
+      </Label>
+      <Button variant="outline" onClick={() => setOpen(true)}>
         Save view
-      </button>
+      </Button>
       <Modal
         open={open}
         title="Save current filters"
@@ -86,9 +96,9 @@ export function TableViews({
               );
           }}
         >
-          <label className="field">
+          <Label className="field">
             View name
-            <input
+            <Input
               className="control"
               required
               maxLength={50}
@@ -96,30 +106,26 @@ export function TableViews({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Active opportunities in Jawa"
             />
-          </label>
+          </Label>
           {error && (
-            <p role="alert" className="feedback feedback-error">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           <div className="dialog-actions">
-            <button
+            <Button
+              variant="outline"
               type="button"
-              className="button button-secondary"
               onClick={() => {
                 save(EMPTY);
                 setOpen(false);
               }}
             >
               Clear saved views
-            </button>
-            <button
-              type="submit"
-              className="button button-primary"
-              disabled={!name.trim()}
-            >
+            </Button>
+            <Button variant="default" type="submit" disabled={!name.trim()}>
               Save view
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

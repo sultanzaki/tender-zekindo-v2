@@ -602,7 +602,7 @@ test("real login uses generic credential errors, secure cookies and revokes the 
     .getByText("Incorrect email or password.", { exact: true })
     .waitFor();
   assert.match(
-    await page.locator("p.feedback[role=alert]").textContent(),
+    await page.getByRole("alert").filter({ hasText: "Incorrect email or password" }).textContent(),
     /Incorrect email or password/,
   );
   await page.getByLabel("Email address").fill("unknown@example.test");
@@ -617,7 +617,7 @@ test("real login uses generic credential errors, secure cookies and revokes the 
     () => !document.querySelector('button[type="submit"]').disabled,
   );
   assert.match(
-    await page.locator("p.feedback[role=alert]").textContent(),
+    await page.getByRole("alert").filter({ hasText: "Incorrect email or password" }).textContent(),
     /Incorrect email or password/,
   );
   await page.getByLabel("Email address").fill(viewer.email);
@@ -677,6 +677,7 @@ test("real browser navigation respects session changes, login returns and docume
     waitUntil: "networkidle",
   });
   assert.equal(new URL(page.url()).pathname, "/tenders");
+  await page.getByRole("button", { name: "Toggle navigation" }).click();
   await page
     .getByRole("link", { name: "Analytics", exact: true })
     .last()

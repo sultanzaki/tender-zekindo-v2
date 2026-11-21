@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
 import { build } from "esbuild";
+import postcss from "postcss";
+import tailwind from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 let browser, server, directory, base;
 before(async () => {
@@ -45,6 +47,8 @@ before(async () => {
       },
     ],
   });
+  const themePath = path.resolve("src/app/theme.css");
+  const theme = await postcss([tailwind()]).process(await readFile(themePath, "utf8"), { from: themePath });
   server = createServer(async (req, res) => {
     const file = req.url.split("?")[0];
     if (file === "/harness.js" || file === "/harness.css") {
@@ -52,7 +56,8 @@ before(async () => {
         "Content-Type",
         file.endsWith(".js") ? "text/javascript" : "text/css",
       );
-      res.end(await readFile(path.join(directory, file)));
+      const content = await readFile(path.join(directory, file));
+      res.end(file.endsWith(".css") ? theme.css + content.toString() : content);
     } else {
       res.setHeader("Content-Type", "text/html");
       res.end(
@@ -342,11 +347,11 @@ test("failed user removal and role changes preserve server-confirmed rows", asyn
     .getByRole("button", { name: "Confirm removal", exact: true })
     .click();
   await page.getByRole("alert").waitFor();
-  assert.equal(await row.count(), 1);
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
+  await row.waitFor();
   await row.getByRole("combobox").selectOption("admin");
   await page
     .getByRole("alert")
@@ -380,7 +385,7 @@ test("user creation validates inputs and refreshes after success", async () => {
 });
 test("document folder actions use a dialog and upload errors restore controls", async () => {
   const page = await open("documents");
-  await page.locator("summary").filter({ hasText: "Site Visit" }).click();
+  await page.getByRole("button", { name: /Site Visit/ }).click();
   await page.getByRole("button", { name: "New folder", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Folder name", exact: true })
@@ -598,7 +603,7 @@ test("key screens and admin forms fit narrow phones, tablets and desktop", async
 test("file uploads complete registration after storage transfer", async () => {
   const page = await open("documents");
   await page.goto(page.url() + "&upload=success");
-  await page.locator("summary").filter({ hasText: "Site Visit" }).click();
+  await page.getByRole("button", { name: /Site Visit/ }).click();
   const choosing = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Upload files", exact: true }).click();
   await (

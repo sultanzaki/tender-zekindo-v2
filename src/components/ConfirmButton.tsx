@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
 export function ConfirmButton({
   confirmText,
@@ -10,7 +11,8 @@ export function ConfirmButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <Button
+      variant="ghost"
       type="submit"
       className={className}
       onClick={(e) => {
@@ -18,6 +20,6 @@ export function ConfirmButton({
       }}
     >
       {children}
-    </button>
+    </Button>
   );
 }

@@ -8,7 +8,7 @@ Halaman pertama setelah login adalah **Tender List**. Tim langsung melihat paket
 
 Judul **Tender register** berada di atas satu area kerja yang menyatukan pencarian, filter, dan hasil. Untuk admin, **New tender** berada di sisi kanan judul. Aksi **Export** mengikuti cakupan filter yang sedang aktif.
 
-Navigasi desktop berada dalam sidebar kiri. Grup Workspace memuat tugas harian dan Administration memuat pengelolaan khusus admin. Di HP, logo tetap di atas dan tujuan utama berada di navigasi bawah.
+Navigasi desktop berada dalam sidebar kiri. Grup Workspace memuat tugas harian dan Administration memuat pengelolaan khusus admin. Pada HP, tombol navigasi di samping logo membuka menu samping. Sidebar desktop dapat disembunyikan agar matriks jadwal memperoleh lebih banyak ruang.
 
 ```text
 Tender register                                         + New tender
@@ -30,6 +30,10 @@ Pada lebar 390 px, baris paket memakai dua tingkat. Nama paket dan status di ata
 Baris tender menjadi pola yang dipakai ulang. Nama paket adalah tautan ke detail. Nomor tender muncul di bawah nama paket pada desktop. Customer memiliki kolom tersendiri. Milestone dan tanggal membentuk satu unit, sehingga pengguna bisa langsung membaca *apa yang jatuh tempo dan kapan*. **Hari ini**, **Besok**, dan **No upcoming milestone** ditulis sebagai teks. Tanggal penuh tetap tersedia ketika format singkat bisa menimbulkan ambiguitas. Gunakan angka tabular dan pertahankan perataan tanggal pada desktop.
 
 Di Detail, tampilkan identitas paket dan status, lalu jadwal. Letakkan **Edit milestones** di dekat judul jadwal untuk admin. Saat pengguna kembali ke daftar, pertahankan pencarian, filter, dan urutannya.
+
+## Sistem komponen
+
+Komponen shadcn/ui New York disimpan di `src/components/ui`. Token warna, radius, dan fokus ada di `src/app/theme.css`. Gunakan Geist Sans, ikon Lucide, tombol primary untuk aksi utama, serta outline atau ghost untuk aksi pendamping. Dialog berbasis Radix mengelola fokus. Native Select memakai kontrol pilihan sistem pada HP. ChartContainer membungkus grafik Recharts.
 
 ## Arah visual
 

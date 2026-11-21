@@ -1,4 +1,5 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
 import {
   Bar,
@@ -7,7 +8,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   LabelList,
   Cell,
 } from "recharts";
@@ -52,7 +52,11 @@ export function GroupWinRateChart({
   const height = Math.max(240, sorted.length * 40);
   return (
     <div className={styles.chartWrap} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer
+        config={{ metric: { label: "Win rate" } }}
+        aria-label="Win rate"
+        className="aspect-auto w-full h-full"
+      >
         <BarChart
           data={sorted}
           layout="vertical"
@@ -117,7 +121,7 @@ export function GroupWinRateChart({
             />
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

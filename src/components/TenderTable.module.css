@@ -42,32 +42,6 @@
   position: relative;
 }
 
-.colMenuButton {
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 8px 14px;
-  font-size: 13px;
-  color: var(--color-fg2);
-  cursor: pointer;
-}
-
-.colMenu {
-  position: absolute;
-  left: 0;
-  top: 38px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 12px;
-  width: 260px;
-  max-width: calc(100vw - 32px);
-  z-index: 30;
-  max-height: 360px;
-  overflow-y: auto;
-}
-
 .colMenuItem {
   display: flex;
   align-items: center;
@@ -400,24 +374,6 @@
   padding: 0;
   cursor: pointer;
 }
-.quickViews {
-  display: flex;
-  gap: 4px;
-}
-.quickViews button {
-  border: 1px solid var(--color-border);
-  padding: 8px 14px;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 11px;
-  cursor: pointer;
-  color: var(--color-fg2);
-}
-.quickViews [aria-pressed="true"] {
-  background: var(--zk-blue-50);
-  border-color: var(--zk-blue-200);
-  color: var(--color-primary-dark);
-}
 .mobileCards {
   display: none;
 }
@@ -435,10 +391,6 @@
 }
 .bodyRow:focus-within {
   background: var(--zk-blue-50);
-}
-.colMenu {
-  right: 0;
-  left: auto;
 }
 @media (max-width: 600px) {
   .wrap {
@@ -605,16 +557,12 @@
 }
 .matrixToggle[aria-pressed="true"] { color: var(--color-primary-dark); background: var(--zk-blue-50); }
 @media (max-width: 600px) { .matrixToggle { display: none; } }
-.colMenu[data-align-left="true"] { left: 0; right: auto; }
 
 /* Register commands share a single baseline above the deadline ledger. */
 .wrap .tableWorkspace { margin-top: 20px; border: 0; border-radius: 0; box-shadow: none; }
 .commandBar,.advanced { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .commandBar .search { margin-left: auto; flex: 0 1 185px; min-width: 110px; height: 35px; }
-.commandBar .quickViews { padding: 3px; border-radius: 8px; background: #f1f2f5; }
-.commandBar .quickViews button { color: #555e6d; border: 0; border-radius: 5px; background: transparent; padding: 6px 10px; font-size: 12px; }
-.commandBar .quickViews [aria-pressed="true"] { color: #1f2937; background: white; box-shadow: 0 1px 4px #14254126; }
-.commandBar .filterToggle,.exportAction,.matrixToggle,.colMenuButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--color-border); background: white; color: var(--color-fg2); height: 35px; border-radius: 7px; padding: 0 10px; cursor: pointer; font-size: 12px; font-weight: 500; }
+.commandBar .filterToggle,.exportAction,.matrixToggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--color-border); background: white; color: var(--color-fg2); height: 35px; border-radius: 7px; padding: 0 10px; cursor: pointer; font-size: 12px; font-weight: 500; }
 .advanced { padding: 14px; background: var(--zk-gray-50); border-radius: 9px; }
 .packageNumber { display: block; margin-top: 4px; color: var(--color-fg3); font-size: 11px; font-weight: 400; }
 .scroll { border: 1px solid var(--color-border); border-radius: 10px; }
@@ -639,4 +587,26 @@
   .cardTop,.mobileDeadline { grid-column: 1/-1; }
   .mobileDeadline { margin-top: 7px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--color-divider); background: none; }
   .tenderCard .cardMeta { grid-column: 1/-1; margin-top: 4px; }
+}
+.scopes { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:26px 0 14px; }
+.wrap .tableWorkspace { margin:0; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.tableWorkspace .commandBar { padding:14px; margin:0; border-bottom:1px solid var(--border); }
+.searchField { display:flex; position:relative; align-items:center; flex:1; max-width:330px; }
+.searchField > svg { pointer-events:none; position:absolute; left:11px; width:16px; color:var(--muted-foreground); }
+.commandBar .searchField .search { flex:1; margin:0; width:100%; padding-left:35px; }
+.commandBar .matrixToggle { margin-left:auto; }
+.tableWorkspace .scroll { border:0; border-radius:0; }
+.scroll > [data-slot="table-container"] { overflow:visible; }
+.tableWorkspace .table .th { padding-block:0; height:36px; }
+.tableWorkspace .sortButton { height:32px; padding:0; }
+.division td { color:var(--muted-foreground); font-weight:600; background:var(--muted); font-size:11px; padding:8px 14px; letter-spacing:.015em; }
+.division svg { display:inline; width:14px; height:14px; margin-right:7px; vertical-align:-3px; }
+.tableWorkspace .advanced { margin:0; border-radius:0; border-bottom:1px solid var(--border); }
+@media(max-width:600px) {
+  .scopes { align-items:start; gap:10px; margin-top:16px; }
+  .commandBar .searchField { flex:1; min-width:130px; }
+  .commandBar .filterToggle { order:0; }
+  .mobileCards { gap:0; }
+  .mobileCards .tenderCard { border:0; border-radius:0; border-bottom:1px solid var(--border); }
+  .commandBar .exportAction { margin:0; }
 }

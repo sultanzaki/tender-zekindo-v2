@@ -1,4 +1,8 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Button } from "@/components/ui/button";
+
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createTender } from "@/lib/actions";
@@ -103,12 +107,12 @@ export function NewTenderForm({
         title="New tender"
         description="Capture the essentials now. Refine the schedule as the opportunity progresses."
         actions={
-          <button
-            className="button button-secondary"
+          <Button
+            variant="outline"
             onClick={() => (dirty ? setDiscard(true) : router.push(back))}
           >
             Cancel
-          </button>
+          </Button>
         }
       />
       <div
@@ -116,7 +120,8 @@ export function NewTenderForm({
         aria-label={`Step ${step + 1} of 4: ${STEPS[step]}`}
       >
         {STEPS.map((label, i) => (
-          <button
+          <Button
+            variant="ghost"
             key={label}
             type="button"
             className={`${styles.step} ${i === step ? styles.stepActive : ""}`}
@@ -126,7 +131,7 @@ export function NewTenderForm({
           >
             <span className={styles.stepNumber}>{i + 1}</span>
             <span>{label}</span>
-          </button>
+          </Button>
         ))}
       </div>
       <form
@@ -218,13 +223,13 @@ export function NewTenderForm({
           )}
         </fieldset>
         {error && (
-          <p role="alert" className="feedback feedback-error">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         <div className={styles.footer}>
-          <button
-            className="button button-secondary"
+          <Button
+            variant="outline"
             type="button"
             disabled={step === 0 || pending}
             onClick={() => {
@@ -233,14 +238,10 @@ export function NewTenderForm({
             }}
           >
             Back
-          </button>
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={pending}
-          >
+          </Button>
+          <Button variant="default" type="submit" disabled={pending}>
             {pending ? "Creating…" : step === 3 ? "Create tender" : "Next"}
-          </button>
+          </Button>
         </div>
       </form>
       <Modal
@@ -250,21 +251,18 @@ export function NewTenderForm({
       >
         <p className="muted">Your unsaved entries will be lost.</p>
         <div className="dialog-actions">
-          <button
-            className="button button-secondary"
-            onClick={() => setDiscard(false)}
-          >
+          <Button variant="outline" onClick={() => setDiscard(false)}>
             Keep editing
-          </button>
-          <button
-            className="button button-danger"
+          </Button>
+          <Button
+            variant="destructive"
             onClick={() => {
               setDiscard(false);
               router.push(back);
             }}
           >
             Discard changes
-          </button>
+          </Button>
         </div>
       </Modal>
       <Modal
@@ -276,12 +274,12 @@ export function NewTenderForm({
           Your changes have not been saved. Keep editing to avoid losing them.
         </p>
         <div className="dialog-actions">
-          <button className="button button-secondary" onClick={leave.cancel}>
+          <Button variant="outline" onClick={leave.cancel}>
             Keep editing
-          </button>
-          <button className="button button-danger" onClick={leave.confirm}>
+          </Button>
+          <Button variant="destructive" onClick={leave.confirm}>
             Discard and leave
-          </button>
+          </Button>
         </div>
       </Modal>
     </div>

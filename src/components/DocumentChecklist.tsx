@@ -1,4 +1,10 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { useState, useTransition } from "react";
 import {
@@ -60,21 +66,22 @@ export function DocumentChecklist({
     <div>
       {documents.map((doc) => (
         <div key={doc.documentTypeId} className={styles.row}>
-          <input
-            type="checkbox"
+          <Checkbox
             aria-label={doc.label}
             id={`document-ready-${doc.documentTypeId}`}
             className={styles.checkbox}
             checked={doc.checked}
             disabled={!isAdmin || isPending}
-            onChange={(e) => handleToggle(doc.documentTypeId, e.target.checked)}
+            onCheckedChange={(checked) =>
+              handleToggle(doc.documentTypeId, checked === true)
+            }
           />
-          <label
+          <Label
             htmlFor={`document-ready-${doc.documentTypeId}`}
             className={styles.label}
           >
             {doc.label}
-          </label>
+          </Label>
           {doc.fileUrl && doc.fileName ? (
             <>
               <a
@@ -87,13 +94,14 @@ export function DocumentChecklist({
                 {doc.fileName}
               </a>
               {isAdmin && (
-                <button
+                <Button
+                  variant="ghost"
                   className={styles.removeLink}
                   onClick={() => handleRemoveFile(doc.documentTypeId)}
                   disabled={isPending}
                 >
                   Remove
-                </button>
+                </Button>
               )}
             </>
           ) : null}
@@ -104,7 +112,7 @@ export function DocumentChecklist({
         <>
           {showAdd ? (
             <div className={styles.addRow}>
-              <input
+              <Input
                 className={styles.addInput}
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
@@ -112,14 +120,16 @@ export function DocumentChecklist({
                 aria-label="New document type name"
                 autoFocus
               />
-              <button
+              <Button
+                variant="ghost"
                 className={styles.addButton}
                 onClick={handleAddType}
                 disabled={isPending || !newLabel.trim()}
               >
                 Add
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className={styles.addButton}
                 onClick={() => {
                   setShowAdd(false);
@@ -127,23 +137,24 @@ export function DocumentChecklist({
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
+            <Button
+              variant="ghost"
               className={styles.addToggle}
               onClick={() => setShowAdd(true)}
             >
               + Add document type
-            </button>
+            </Button>
           )}
         </>
       )}
 
       {error && (
-        <div role="alert" className={styles.error}>
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
     </div>
   );

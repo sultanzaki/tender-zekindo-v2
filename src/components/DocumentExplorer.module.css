@@ -19,7 +19,7 @@
   margin-bottom: 12px;
   overflow: hidden;
 }
-.section > summary {
+.section > [data-slot="collapsible-trigger"] {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -28,25 +28,25 @@
   background: var(--zk-gray-50);
   cursor: pointer;
 }
-.section > summary::-webkit-details-marker {
+.section > [data-slot="collapsible-trigger"]::-webkit-details-marker {
   display: none;
 }
-.section > summary:before {
+.section > [data-slot="collapsible-trigger"]:before {
   content: "›";
   font-size: 18px;
   transition: transform 0.15s;
 }
-.section[open] > summary:before {
+.section[data-state="open"] > [data-slot="collapsible-trigger"]:before {
   transform: rotate(90deg);
 }
-.section summary strong {
+.section [data-slot="collapsible-trigger"] strong {
   font-size: 12px;
   font-weight: 500;
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.section summary small {
+.section [data-slot="collapsible-trigger"] small {
   font-size: 9px;
   color: var(--color-fg3);
 }
@@ -71,7 +71,7 @@
   margin: 12px 0;
   min-width: 0;
 }
-.folder > summary {
+.folder > [data-slot="collapsible-trigger"] {
   font-size: 12px;
   cursor: pointer;
   padding: 8px 0;
@@ -135,14 +135,14 @@
   min-width: 0;
 }
 @media (max-width: 600px) {
-  .section > summary {
+  .section > [data-slot="collapsible-trigger"] {
     padding: 12px;
     gap: 8px;
   }
-  .section summary strong {
+  .section [data-slot="collapsible-trigger"] strong {
     font-size: 11px;
   }
-  .section summary small {
+  .section [data-slot="collapsible-trigger"] small {
     font-size: 8px;
   }
   .sectionBody {
@@ -160,6 +160,8 @@
   }
 }
 .section { border-radius: 5px; margin-bottom: 6px; }
-.section[open] { border-left: 3px solid var(--color-primary); }
-.section[open] > summary { background: #eaf2fb; }
+.section[data-state="open"] { border-left: 3px solid var(--color-primary); }
+.section[data-state="open"] > [data-slot="collapsible-trigger"] { background: #eaf2fb; }
 .toolbar button, .actions button { font-size: 12px; min-height: 36px; }
+
+.section > button, .folder > button { width:100%; text-align:left; cursor:pointer; }

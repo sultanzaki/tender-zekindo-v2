@@ -1,10 +1,28 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
+  TableHead,
+  Table,
+  TableHeader,
+  TableRow,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+
+import {
+  Fragment,
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
@@ -12,6 +30,14 @@ import Link from "next/link";
 import { MilestoneDue, OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
 import { Icon } from "./Icon";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  ListFilter,
+  TableProperties,
+  Columns3,
+  CalendarClock,
+  CalendarOff,
+} from "lucide-react";
 import { TableViews } from "./TableViews";
 import { Modal } from "./Modal";
 import { useStoredJSON } from "./useStoredJSON";
@@ -44,7 +70,7 @@ import {
   type SortKey,
 } from "@/lib/tender-logic";
 import { ResultBadge } from "./ResultBadge";
-import shared from "./shared.module.css";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import styles from "./TenderTable.module.css";
 
 const DATE_TONE_CLASS = {
@@ -149,9 +175,10 @@ export function TenderTableClient({
   ) {
     saveCols(update(visibleCols));
   }
-  const [fullTable, setFullTable] = useStoredJSON(`zekindo-full-table:${track}`, false);
-  const [alignMenuLeft, setAlignMenuLeft] = useState(false);
-  const [showColMenu, setShowColMenu] = useState(false);
+  const [fullTable, setFullTable] = useStoredJSON(
+    `zekindo-full-table:${track}`,
+    false,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<{
     key: SortKey;
@@ -162,31 +189,9 @@ export function TenderTableClient({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [quickEditError, setQuickEditError] = useState<string | null>(null);
   const [quickEditPending, startTransition] = useTransition();
-  const menuRef = useRef<HTMLDivElement>(null);
-  const columnToggleRef = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!showColMenu) return;
-    function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node))
-        setShowColMenu(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setShowColMenu(false);
-        columnToggleRef.current?.focus();
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [showColMenu]);
 
   const deferredFilters = useDeferredValue(filters);
   useEffect(() => {
@@ -195,7 +200,11 @@ export function TenderTableClient({
     if (window.location.search !== nextSearch) {
       // Synchronize during the render's effect so a pending filter timer
       // cannot replace the URL after the user has opened a tender.
-      window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}`);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${nextSearch}`,
+      );
     }
   }, [filters, track]);
   useEffect(() => {
@@ -214,18 +223,37 @@ export function TenderTableClient({
     () => filterTenders(tenders, deferredFilters),
     [tenders, deferredFilters],
   );
-  const catalog = useMemo(() => ({
-    upstream: milestoneTypes.filter((milestone) => milestone.track === "upstream"),
-    downstream: milestoneTypes.filter((milestone) => milestone.track === "downstream"),
-  }), [milestoneTypes]);
-  const upcoming = useMemo(() => new Map(tenders.map((tender) => [
-    tender.id,
-    tender.result ? null : nextMilestone(tender, anchor, catalog),
-  ])), [tenders, anchor, catalog]);
+  const catalog = useMemo(
+    () => ({
+      upstream: milestoneTypes.filter(
+        (milestone) => milestone.track === "upstream",
+      ),
+      downstream: milestoneTypes.filter(
+        (milestone) => milestone.track === "downstream",
+      ),
+    }),
+    [milestoneTypes],
+  );
+  const upcoming = useMemo(
+    () =>
+      new Map(
+        tenders.map((tender) => [
+          tender.id,
+          tender.result ? null : nextMilestone(tender, anchor, catalog),
+        ]),
+      ),
+    [tenders, anchor, catalog],
+  );
 
   const sorted = useMemo(
-    () => sort ? sortTenders(filtered, sort.key, sort.direction)
-      : [...filtered].sort((a, b) => (upcoming.get(a.id)?.date ?? "9999").localeCompare(upcoming.get(b.id)?.date ?? "9999")),
+    () =>
+      sort
+        ? sortTenders(filtered, sort.key, sort.direction)
+        : [...filtered].sort((a, b) =>
+            (upcoming.get(a.id)?.date ?? "9999").localeCompare(
+              upcoming.get(b.id)?.date ?? "9999",
+            ),
+          ),
     [filtered, sort, upcoming],
   );
 
@@ -349,7 +377,7 @@ export function TenderTableClient({
     title?: string,
   ) {
     return (
-      <th
+      <TableHead
         key={key}
         scope="col"
         aria-sort={
@@ -362,7 +390,8 @@ export function TenderTableClient({
         className={`${styles.th} ${key === "product" ? styles.stickyIdentity : ""} ${align === "right" ? styles.thRight : ""} ${styles.thSortable}`}
         title={title}
       >
-        <button
+        <Button
+          variant="ghost"
           type="button"
           className={styles.sortButton}
           disabled={!canViewMoney && (key === "oe" || key === "nilaiPenawaran")}
@@ -373,8 +402,8 @@ export function TenderTableClient({
             active={sort?.key === key}
             direction={sort?.direction ?? "asc"}
           />
-        </button>
-      </th>
+        </Button>
+      </TableHead>
     );
   }
 
@@ -382,216 +411,253 @@ export function TenderTableClient({
     <div className={styles.wrap}>
       <OperationsHeading
         title="Tender register"
-        context={<>{filtered.length} of {tenders.length} tenders{sort ? "" : " · Next deadline first"}</>}
-        actions={isAdmin ? (
-          <Link href={track === "downstream" ? "/tenders/new?track=downstream" : "/tenders/new"} className="button button-primary">
-            <Icon name="plus" width={16} height={16} /> New tender
-          </Link>
-        ) : undefined}
+        context={
+          <>
+            {filtered.length} of {tenders.length} tenders
+            {sort ? "" : " · Next deadline first"}
+          </>
+        }
+        actions={
+          isAdmin ? (
+            <Button asChild variant="default">
+              <Link
+                href={
+                  track === "downstream"
+                    ? "/tenders/new?track=downstream"
+                    : "/tenders/new"
+                }
+              >
+                <Icon name="plus" width={16} height={16} /> New tender
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
       {!canViewMoney && (
         <MoneyAccessNotice
           returnTo={`/tenders?${tenderQuery(filters, track)}`}
         />
       )}
-      <TrackSwitch
-        current={track}
-        basePath="/tenders"
-        params={Object.fromEntries(
-          new URLSearchParams(tenderQuery(filters, track)),
-        )}
-      />
-      <div className={`${shared.card} ${styles.tableWorkspace}`}>
+      <div className={styles.scopes}>
+        <Tabs
+          value={filters.result}
+          onValueChange={(result) => changeFilters((f) => ({ ...f, result }))}
+        >
+          <TabsList aria-label="Tender outcomes">
+            <TabsTrigger value="all">All results</TabsTrigger>
+            <TabsTrigger value="__EMPTY__">Active</TabsTrigger>
+            <TabsTrigger value="WIN">Won</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <TrackSwitch
+          current={track}
+          basePath="/tenders"
+          params={Object.fromEntries(
+            new URLSearchParams(tenderQuery(filters, track)),
+          )}
+        />
+      </div>
+      <div className={styles.tableWorkspace}>
         <div className={styles.commandBar}>
-          <div className={styles.quickViews} aria-label="Quick filters">
-            {[
-              ["all", "All results"],
-              ["__EMPTY__", "Active"],
-              ["WIN", "Won"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                aria-pressed={filters.result === value}
-                onClick={() => changeFilters((f) => ({ ...f, result: value }))}
-              >
-                {label}
-              </button>
-            ))}
+          <div className={styles.searchField}>
+            <Icon name="search" />
+            <Input
+              aria-label="Search tenders"
+              type="search"
+              className={styles.search}
+              placeholder="Search tenders…"
+              value={filters.search}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, search: e.target.value }))
+              }
+            />
           </div>
-          <input
-            aria-label="Search tenders"
-            type="search"
-            className={styles.search}
-            placeholder="Search tenders…"
-            value={filters.search}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, search: e.target.value }))
-            }
-          />
-          <button
+          <Button
+            variant="outline"
             type="button"
             className={styles.filterToggle}
             aria-expanded={showFilters}
             onClick={() => setShowFilters((value) => !value)}
           >
-            <Icon name="filters" width={15} height={15} /> {showFilters ? "Hide filters" : "Filters"}
-          </button>
-          <button
+            <ListFilter /> {showFilters ? "Hide filters" : "Filters"}
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             aria-pressed={fullTable}
             className={styles.matrixToggle}
             onClick={() => setFullTable(!fullTable)}
           >
-            Schedule matrix
-          </button>
-          <div className={styles.colMenuWrap} ref={menuRef}>
-            <button
-              ref={columnToggleRef}
-              aria-expanded={showColMenu}
-              aria-controls="table-columns"
-              className={styles.colMenuButton}
-              onClick={(event) => {
-                setAlignMenuLeft(event.currentTarget.getBoundingClientRect().right < 276);
-                setFullTable(true);
-                setShowColMenu((value) => !value);
+            <TableProperties /> Schedule matrix
+          </Button>
+          <div className={styles.colMenuWrap}>
+            <Popover
+              onOpenChange={(open) => {
+                if (open) setFullTable(true);
               }}
             >
-              Columns
-            </button>
-            {showColMenu && (
-              <div id="table-columns" className={styles.colMenu} data-align-left={alignMenuLeft}>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <Columns3 /> Columns
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                collisionPadding={12}
+                aria-label="Visible columns"
+                className="max-h-80 w-60 overflow-y-auto p-3"
+              >
                 {FIELD_TOGGLES.map((c) => (
-                  <label key={c.key} className={styles.colMenuItem}>
-                    <input
-                      type="checkbox"
+                  <Label key={c.key} className={styles.colMenuItem}>
+                    <Checkbox
                       checked={!!visibleCols[c.key]}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         setVisibleCols((v) => ({ ...v, [c.key]: !v[c.key] }))
                       }
                     />
                     {c.label}
-                  </label>
+                  </Label>
                 ))}
                 {milestoneTypes.map((m) => (
-                  <label key={m.key} className={styles.colMenuItem}>
-                    <input
-                      type="checkbox"
+                  <Label key={m.key} className={styles.colMenuItem}>
+                    <Checkbox
                       checked={!!visibleCols[m.key]}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         setVisibleCols((v) => ({ ...v, [m.key]: !v[m.key] }))
                       }
                     />
                     {m.label}
-                  </label>
+                  </Label>
                 ))}
-              </div>
-            )}
+              </PopoverContent>
+            </Popover>
           </div>
-          <a href={exportHref} aria-label="Export to Excel" title="Export to Excel" className={styles.exportAction}><Icon name="download" width={16} height={16}/></a>
+          <Button asChild variant="outline" size="icon">
+            <a
+              href={exportHref}
+              aria-label="Export to Excel"
+              title="Export to Excel"
+              className={styles.exportAction}
+            >
+              <Icon name="download" width={16} height={16} />
+            </a>
+          </Button>
         </div>
-        {showFilters && <div className={styles.advanced}>
-          <select
-            className={styles.select}
-            aria-label="Period"
-            value={filters.period}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, period: e.target.value }))
-            }
-          >
-            <option value="all">All Periods</option>
-            {options.periods.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            aria-label="Area"
-            value={filters.area}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, area: e.target.value }))
-            }
-          >
-            <option value="all">All Areas</option>
-            {options.areas.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            aria-label="Entity"
-            value={filters.entitas}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, entitas: e.target.value }))
-            }
-          >
-            <option value="all">All Entities</option>
-            {options.entitasList.map((en) => (
-              <option key={en} value={en}>
-                {en}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            aria-label="Customer"
-            value={filters.customer}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, customer: e.target.value }))
-            }
-          >
-            <option value="all">All Customers</option>
-            {options.customers.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            aria-label="Result"
-            value={filters.result}
-            onChange={(e) =>
-              changeFilters((f) => ({ ...f, result: e.target.value }))
-            }
-          >
-            <option value="all">All Results</option>
-            <option value="__EMPTY__">(Running / no result)</option>
-            {RESULT_ENUM.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          <TableViews
-            track={track}
-            filters={filters}
-            onApply={(next) => changeFilters(() => next)}
-          />
-          <button className={styles.resetButton} onClick={resetFilters}>Reset filters</button>
-        </div>}
+        {showFilters && (
+          <div className={styles.advanced}>
+            <NativeSelect
+              className={styles.select}
+              aria-label="Period"
+              value={filters.period}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, period: e.target.value }))
+              }
+            >
+              <NativeSelectOption value="all">All Periods</NativeSelectOption>
+              {options.periods.map((p) => (
+                <NativeSelectOption key={p} value={p}>
+                  {p}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className={styles.select}
+              aria-label="Area"
+              value={filters.area}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, area: e.target.value }))
+              }
+            >
+              <NativeSelectOption value="all">All Areas</NativeSelectOption>
+              {options.areas.map((a) => (
+                <NativeSelectOption key={a} value={a}>
+                  {a}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className={styles.select}
+              aria-label="Entity"
+              value={filters.entitas}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, entitas: e.target.value }))
+              }
+            >
+              <NativeSelectOption value="all">All Entities</NativeSelectOption>
+              {options.entitasList.map((en) => (
+                <NativeSelectOption key={en} value={en}>
+                  {en}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className={styles.select}
+              aria-label="Customer"
+              value={filters.customer}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, customer: e.target.value }))
+              }
+            >
+              <NativeSelectOption value="all">All Customers</NativeSelectOption>
+              {options.customers.map((c) => (
+                <NativeSelectOption key={c} value={c}>
+                  {c}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              className={styles.select}
+              aria-label="Result"
+              value={filters.result}
+              onChange={(e) =>
+                changeFilters((f) => ({ ...f, result: e.target.value }))
+              }
+            >
+              <NativeSelectOption value="all">All Results</NativeSelectOption>
+              <NativeSelectOption value="__EMPTY__">
+                (Running / no result)
+              </NativeSelectOption>
+              {RESULT_ENUM.map((r) => (
+                <NativeSelectOption key={r} value={r}>
+                  {r}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <TableViews
+              track={track}
+              filters={filters}
+              onApply={(next) => changeFilters(() => next)}
+            />
+            <Button
+              variant="ghost"
+              className={styles.resetButton}
+              onClick={resetFilters}
+            >
+              Reset filters
+            </Button>
+          </div>
+        )}
 
         {isAdmin && selected.size > 0 && (
           <div className={styles.bulkBar}>
             <span className={styles.bulkCount}>{selected.size} selected</span>
-            <button
+            <Button
+              variant="ghost"
               className={styles.bulkGhost}
               onClick={() => setSelected(new Set())}
               disabled={bulkBusy}
             >
               Clear
-            </button>
+            </Button>
             <span className={styles.bulkSpacer} />
-            <button
+            <Button
+              variant="default"
               className={styles.bulkButton}
               onClick={() => setArchiveConfirm(true)}
               disabled={bulkBusy}
             >
               Archive selected
-            </button>
+            </Button>
           </div>
         )}
 
@@ -602,16 +668,20 @@ export function TenderTableClient({
         )}
 
         {quickEditError && (
-          <div role="alert" className={styles.quickEditError}>
-            {quickEditError}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{quickEditError}</AlertDescription>
+          </Alert>
         )}
 
         <div className={styles.mobileCards}>
           {pageItems.map((tender) => {
             const milestone = upcoming.get(tender.id);
             return (
-              <Link href={tenderHref(tender.id)} key={tender.id} className={styles.tenderCard}>
+              <Link
+                href={tenderHref(tender.id)}
+                key={tender.id}
+                className={styles.tenderCard}
+              >
                 <span className={styles.cardTop}>
                   <span>{tender.tenderNo || `Tender #${tender.rowNo}`}</span>
                   <ResultBadge result={tender.result} />
@@ -619,11 +689,20 @@ export function TenderTableClient({
                 <strong>{tender.product || tender.customer}</strong>
                 <span>{tender.customer}</span>
                 <span className={styles.mobileDeadline}>
-                  <MilestoneDue label={milestone?.label} date={milestone?.date} days={milestone?.diff} emptyLabel={tender.result ? "Closed schedule" : undefined} />
+                  <MilestoneDue
+                    label={milestone?.label}
+                    date={milestone?.date}
+                    days={milestone?.diff}
+                    emptyLabel={tender.result ? "Closed schedule" : undefined}
+                  />
                   <span aria-hidden="true">›</span>
                 </span>
                 <span className={styles.cardMeta}>
-                  Bid: <MoneyValue value={tender.nilaiPenawaran} canView={canViewMoney} />
+                  Bid:{" "}
+                  <MoneyValue
+                    value={tender.nilaiPenawaran}
+                    canView={canViewMoney}
+                  />
                 </span>
               </Link>
             );
@@ -636,256 +715,334 @@ export function TenderTableClient({
             role="region"
             aria-label="Tender table; scroll horizontally for milestone columns"
           >
-            <table className={styles.table} data-matrix={fullTable}>
-              <thead>
-                <tr className={styles.theadRow}>
+            <Table className={styles.table} data-matrix={fullTable}>
+              <TableHeader>
+                <TableRow className={styles.theadRow}>
                   {isAdmin && (
-                    <th className={`${styles.th} ${styles.checkboxCol}`}>
-                      <input
-                        type="checkbox"
+                    <TableHead className={`${styles.th} ${styles.checkboxCol}`}>
+                      <Checkbox
                         className={styles.checkbox}
                         checked={allOnPageSelected}
-                        onChange={toggleAllOnPage}
+                        onCheckedChange={toggleAllOnPage}
                         title="Select every row on this page"
                         aria-label="Select every row on this page"
                       />
-                    </th>
+                    </TableHead>
                   )}
-                  <th scope="col" className={styles.th}>Next milestone</th>
+                  <TableHead scope="col" className={styles.th}>
+                    Next milestone
+                  </TableHead>
                   {sortableHeader("product", "Package")}
                   {sortableHeader("customer", "Customer")}
                   {sortableHeader("result", "Status")}
                   {fullTable && sortableHeader("tenderNo", "Tender No.")}
-                  {fullTable && <>
-                  {sortableHeader("rowNo", "No")}
-                  {visibleCols.track && track === "all" && (
-                    <th scope="col" className={styles.th}>Track</th>
+                  {fullTable && (
+                    <>
+                      {sortableHeader("rowNo", "No")}
+                      {visibleCols.track && track === "all" && (
+                        <TableHead scope="col" className={styles.th}>
+                          Track
+                        </TableHead>
+                      )}
+                      {sortableHeader("area", "Area")}
+                      {track !== "downstream" &&
+                        sortableHeader("entitas", "Entity")}
+                      {visibleCols.period && sortableHeader("period", "Period")}
+                      {visibleCols.oe &&
+                        sortableHeader("oe", "OE (Rp)", "right")}
+                      {visibleCols.qty && sortableHeader("qty", "Qty", "right")}
+                    </>
                   )}
-                  {sortableHeader("area", "Area")}
-                  {track !== "downstream" &&
-                    sortableHeader("entitas", "Entity")}
-                  {visibleCols.period && sortableHeader("period", "Period")}
-                  {visibleCols.oe && sortableHeader("oe", "OE (Rp)", "right")}
-                  {visibleCols.qty && sortableHeader("qty", "Qty", "right")}
-                  </>}
                   {sortableHeader("nilaiPenawaran", "Bid Value", "right")}
                   {fullTable && visibleCols.pnl && sortableHeader("pnl", "P&L")}
-                  {fullTable && visibleMilestones.map((m) =>
-                    sortableHeader(
-                      m.key,
-                      shortHeader(m.label),
-                      "left",
-                      m.label,
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {pageItems.map((t) => (
-                  <tr
-                    key={t.id}
-                    className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
-                    onClick={() => router.push(tenderHref(t.id))}
-                  >
-                    {isAdmin && (
-                      <td
-                        className={`${styles.td} ${styles.checkboxCol}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={selected.has(t.id)}
-                          onChange={() => toggleRow(t.id)}
-                          aria-label={`Select tender ${t.tenderNo || t.id}`}
-                        />
-                      </td>
+                  {fullTable &&
+                    visibleMilestones.map((m) =>
+                      sortableHeader(
+                        m.key,
+                        shortHeader(m.label),
+                        "left",
+                        m.label,
+                      ),
                     )}
-                    <td className={`${styles.td} ${styles.deadlineCell}`}>
-                      <MilestoneDue
-                        label={upcoming.get(t.id)?.label}
-                        date={upcoming.get(t.id)?.date}
-                        days={upcoming.get(t.id)?.diff}
-                        emptyLabel={t.result ? "Closed schedule" : undefined}
-                      />
-                    </td>
-                    <td className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}>
-                      <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>
-                        {t.product || t.customer || "View tender"}
-                      </Link>
-                      {!fullTable && <small className={styles.packageNumber}>{t.tenderNo || `Tender #${t.rowNo}`}</small>}
-                    </td>
-                    <td
-                      className={`${styles.td} ${styles.tdEllipsis}`}
-                      style={{ maxWidth: 220 }}
-                      title={t.customer}
-                    >
-                      {t.customer || "—"}
-                    </td>
-                    <td className={`${styles.td} ${styles.tdNoWrap}`}>
-                      {isAdmin &&
-                      editingCell?.tenderId === t.id &&
-                      editingCell.column === "result" ? (
-                        <select
-                          aria-label={`Edit result for ${t.tenderNo || t.id}`}
-                          autoFocus
-                          defaultValue={t.result ?? ""}
-                          className={styles.inlineSelect}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) =>
-                            handleQuickResult(t.id, e.target.value)
-                          }
-                          onBlur={() => setEditingCell(null)}
-                        >
-                          <option value="">(Running)</option>
-                          {RESULT_ENUM.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                        </select>
-                      ) : isAdmin ? (
-                        <button
-                          type="button"
-                          className={styles.cellButton}
-                          disabled={quickEditPending}
-                          aria-label={`Edit result for ${t.tenderNo || t.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCell({
-                              tenderId: t.id,
-                              column: "result",
-                            });
-                          }}
-                        >
-                          <ResultBadge result={t.result} />
-                        </button>
-                      ) : (
-                        <ResultBadge result={t.result} />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageItems.map((t, index) => (
+                  <Fragment key={t.id}>
+                    {!sort &&
+                      !fullTable &&
+                      (index === 0 ||
+                        Boolean(upcoming.get(t.id)) !==
+                          Boolean(upcoming.get(pageItems[index - 1].id))) && (
+                        <TableRow className={styles.division}>
+                          <TableCell colSpan={isAdmin ? 6 : 5}>
+                            {upcoming.get(t.id) ? (
+                              <>
+                                <CalendarClock /> Upcoming deadlines
+                              </>
+                            ) : (
+                              <>
+                                <CalendarOff /> No upcoming deadline
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </td>
-                    {fullTable && <td className={`${styles.td} ${styles.tdNoWrap}`}>
-                      {t.tenderNo ? <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>{t.tenderNo}</Link> : "—"}
-                    </td>}
-                    {fullTable && <>
-                    <td className={`${styles.td} ${styles.tdMuted}`}>
-                      {t.rowNo}
-                    </td>
-                    {visibleCols.track && (track as string) === "all" && (
-                      <td className={`${styles.td} ${styles.tdNoWrap}`}>
-                        {t.track === "downstream" ? (
-                          <TrackBadge track={t.track} />
-                        ) : (
-                          <span style={{ color: "var(--color-fg3)" }}>
-                            {TRACK_LABELS.upstream}
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    <td className={styles.td}>{t.area}</td>
-                    {track !== "downstream" && (
-                      <td className={`${styles.td} ${styles.tdNoWrap}`}>
-                        {t.entitas || "—"}
-                      </td>
-                    )}
-                    {visibleCols.period && (
-                      <td className={styles.td}>{t.period}</td>
-                    )}
-                    {visibleCols.oe && (
-                      <td className={`${styles.td} ${styles.tdRight}`}>
-                        <MoneyValue value={t.oe} canView={canViewMoney} />
-                      </td>
-                    )}
-                    {visibleCols.qty && (
-                      <td className={`${styles.td} ${styles.tdRight}`}>
-                        {t.qty ?? "—"}
-                      </td>
-                    )}
-                    </>}
-                    <td className={`${styles.td} ${styles.tdRight}`}>
-                      <MoneyValue
-                        value={t.nilaiPenawaran}
-                        canView={canViewMoney}
-                      />
-                    </td>
-                    {fullTable && visibleCols.pnl && (
-                      <td className={styles.td}>{t.pnl ? "Yes" : "—"}</td>
-                    )}
-                    {fullTable && visibleMilestones.map((m) => {
-                      const iso = t.milestones[m.key] ?? null;
-                      const tone = dateTone(iso, t.result, anchor);
-                      const isEditing =
-                        isAdmin &&
-                        editingCell?.tenderId === t.id &&
-                        editingCell.column === m.key;
-                      if (isEditing) {
-                        return (
-                          <td
-                            key={m.key}
-                            className={styles.dateCell}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="date"
-                              aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
-                              autoFocus
-                              defaultValue={iso ?? ""}
-                              className={styles.inlineDateInput}
-                              onChange={(e) =>
-                                handleQuickMilestone(
-                                  t.id,
-                                  m.key,
-                                  e.target.value,
-                                )
-                              }
-                              onBlur={() => setEditingCell(null)}
-                            />
-                          </td>
-                        );
-                      }
-                      return (
-                        <td
-                          key={m.key}
-                          className={`${styles.dateCell} ${DATE_TONE_CLASS[tone]} ${isAdmin ? styles.editableCell : ""}`}
-                          title={isAdmin ? `Click to edit ${m.label}` : m.label}
+                    <TableRow
+                      key={t.id}
+                      className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
+                      onClick={() => router.push(tenderHref(t.id))}
+                    >
+                      {isAdmin && (
+                        <TableCell
+                          className={`${styles.td} ${styles.checkboxCol}`}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {isAdmin ? (
-                            <button
-                              type="button"
-                              className={styles.cellButton}
-                              disabled={quickEditPending}
-                              aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingCell({
-                                  tenderId: t.id,
-                                  column: m.key,
-                                });
-                              }}
+                          <Checkbox
+                            className={styles.checkbox}
+                            checked={selected.has(t.id)}
+                            onCheckedChange={() => toggleRow(t.id)}
+                            aria-label={`Select tender ${t.tenderNo || t.id}`}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell
+                        className={`${styles.td} ${styles.deadlineCell}`}
+                      >
+                        <MilestoneDue
+                          label={upcoming.get(t.id)?.label}
+                          date={upcoming.get(t.id)?.date}
+                          days={upcoming.get(t.id)?.diff}
+                          emptyLabel={t.result ? "Closed schedule" : undefined}
+                        />
+                      </TableCell>
+                      <TableCell
+                        className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}
+                      >
+                        <Link
+                          href={tenderHref(t.id)}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {t.product || t.customer || "View tender"}
+                        </Link>
+                        {!fullTable && (
+                          <small className={styles.packageNumber}>
+                            {t.tenderNo || `Tender #${t.rowNo}`}
+                          </small>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className={`${styles.td} ${styles.tdEllipsis}`}
+                        style={{ maxWidth: 220 }}
+                        title={t.customer}
+                      >
+                        {t.customer || "—"}
+                      </TableCell>
+                      <TableCell className={`${styles.td} ${styles.tdNoWrap}`}>
+                        {isAdmin &&
+                        editingCell?.tenderId === t.id &&
+                        editingCell.column === "result" ? (
+                          <NativeSelect
+                            aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                            autoFocus
+                            defaultValue={t.result ?? ""}
+                            className={styles.inlineSelect}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              handleQuickResult(t.id, e.target.value)
+                            }
+                            onBlur={() => setEditingCell(null)}
+                          >
+                            <NativeSelectOption value="">
+                              (Running)
+                            </NativeSelectOption>
+                            {RESULT_ENUM.map((r) => (
+                              <NativeSelectOption key={r} value={r}>
+                                {r}
+                              </NativeSelectOption>
+                            ))}
+                          </NativeSelect>
+                        ) : isAdmin ? (
+                          <Button
+                            variant="ghost"
+                            type="button"
+                            className={styles.cellButton}
+                            disabled={quickEditPending}
+                            aria-label={`Edit result for ${t.tenderNo || t.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCell({
+                                tenderId: t.id,
+                                column: "result",
+                              });
+                            }}
+                          >
+                            <ResultBadge result={t.result} />
+                          </Button>
+                        ) : (
+                          <ResultBadge result={t.result} />
+                        )}
+                      </TableCell>
+                      {fullTable && (
+                        <TableCell
+                          className={`${styles.td} ${styles.tdNoWrap}`}
+                        >
+                          {t.tenderNo ? (
+                            <Link
+                              href={tenderHref(t.id)}
+                              onClick={(event) => event.stopPropagation()}
                             >
-                              {iso ? formatDateID(iso) : "—"}
-                            </button>
-                          ) : iso ? (
-                            formatDateID(iso)
+                              {t.tenderNo}
+                            </Link>
                           ) : (
                             "—"
                           )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                        </TableCell>
+                      )}
+                      {fullTable && (
+                        <>
+                          <TableCell
+                            className={`${styles.td} ${styles.tdMuted}`}
+                          >
+                            {t.rowNo}
+                          </TableCell>
+                          {visibleCols.track && (track as string) === "all" && (
+                            <TableCell
+                              className={`${styles.td} ${styles.tdNoWrap}`}
+                            >
+                              {t.track === "downstream" ? (
+                                <TrackBadge track={t.track} />
+                              ) : (
+                                <span style={{ color: "var(--color-fg3)" }}>
+                                  {TRACK_LABELS.upstream}
+                                </span>
+                              )}
+                            </TableCell>
+                          )}
+                          <TableCell className={styles.td}>{t.area}</TableCell>
+                          {track !== "downstream" && (
+                            <TableCell
+                              className={`${styles.td} ${styles.tdNoWrap}`}
+                            >
+                              {t.entitas || "—"}
+                            </TableCell>
+                          )}
+                          {visibleCols.period && (
+                            <TableCell className={styles.td}>
+                              {t.period}
+                            </TableCell>
+                          )}
+                          {visibleCols.oe && (
+                            <TableCell
+                              className={`${styles.td} ${styles.tdRight}`}
+                            >
+                              <MoneyValue value={t.oe} canView={canViewMoney} />
+                            </TableCell>
+                          )}
+                          {visibleCols.qty && (
+                            <TableCell
+                              className={`${styles.td} ${styles.tdRight}`}
+                            >
+                              {t.qty ?? "—"}
+                            </TableCell>
+                          )}
+                        </>
+                      )}
+                      <TableCell className={`${styles.td} ${styles.tdRight}`}>
+                        <MoneyValue
+                          value={t.nilaiPenawaran}
+                          canView={canViewMoney}
+                        />
+                      </TableCell>
+                      {fullTable && visibleCols.pnl && (
+                        <TableCell className={styles.td}>
+                          {t.pnl ? "Yes" : "—"}
+                        </TableCell>
+                      )}
+                      {fullTable &&
+                        visibleMilestones.map((m) => {
+                          const iso = t.milestones[m.key] ?? null;
+                          const tone = dateTone(iso, t.result, anchor);
+                          const isEditing =
+                            isAdmin &&
+                            editingCell?.tenderId === t.id &&
+                            editingCell.column === m.key;
+                          if (isEditing) {
+                            return (
+                              <TableCell
+                                key={m.key}
+                                className={styles.dateCell}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Input
+                                  type="date"
+                                  aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
+                                  autoFocus
+                                  defaultValue={iso ?? ""}
+                                  className={styles.inlineDateInput}
+                                  onChange={(e) =>
+                                    handleQuickMilestone(
+                                      t.id,
+                                      m.key,
+                                      e.target.value,
+                                    )
+                                  }
+                                  onBlur={() => setEditingCell(null)}
+                                />
+                              </TableCell>
+                            );
+                          }
+                          return (
+                            <TableCell
+                              key={m.key}
+                              className={`${styles.dateCell} ${DATE_TONE_CLASS[tone]} ${isAdmin ? styles.editableCell : ""}`}
+                              title={
+                                isAdmin ? `Click to edit ${m.label}` : m.label
+                              }
+                            >
+                              {isAdmin ? (
+                                <Button
+                                  variant="ghost"
+                                  type="button"
+                                  className={styles.cellButton}
+                                  disabled={quickEditPending}
+                                  aria-label={`Edit ${m.label} for ${t.tenderNo || t.id}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingCell({
+                                      tenderId: t.id,
+                                      column: m.key,
+                                    });
+                                  }}
+                                >
+                                  {iso ? formatDateID(iso) : "—"}
+                                </Button>
+                              ) : iso ? (
+                                formatDateID(iso)
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                    </TableRow>
+                  </Fragment>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className={styles.emptyBox}>
             <div className={styles.emptyText}>
               No tenders match this filter.
             </div>
-            <button className={styles.emptyReset} onClick={resetFilters}>
+            <Button
+              variant="ghost"
+              className={styles.emptyReset}
+              onClick={resetFilters}
+            >
               Reset filters
-            </button>
+            </Button>
           </div>
         )}
 
@@ -893,7 +1050,7 @@ export function TenderTableClient({
           <div className={styles.pagination}>
             <div className={styles.pageSizeGroup}>
               <span>Rows per page</span>
-              <select
+              <NativeSelect
                 aria-label="Rows per page"
                 className={styles.select}
                 value={pageSize}
@@ -903,30 +1060,32 @@ export function TenderTableClient({
                 }}
               >
                 {PAGE_SIZES.map((size) => (
-                  <option key={size} value={size}>
+                  <NativeSelectOption key={size} value={size}>
                     {size}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className={styles.pageNav}>
-              <button
+              <Button
+                variant="outline"
                 className={styles.pageButton}
                 disabled={safePage <= 1}
                 onClick={() => setPage(Math.max(1, safePage - 1))}
               >
                 Previous
-              </button>
+              </Button>
               <span className={styles.pageLabel}>
                 Page {safePage} of {pageCount}
               </span>
-              <button
+              <Button
+                variant="outline"
                 className={styles.pageButton}
                 disabled={safePage >= pageCount}
                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -943,15 +1102,15 @@ export function TenderTableClient({
           Archive at any time.
         </p>
         <div className="dialog-actions">
-          <button
-            className="button button-secondary"
+          <Button
+            variant="outline"
             onClick={() => setArchiveConfirm(false)}
             disabled={bulkBusy}
           >
             Cancel
-          </button>
-          <button
-            className="button button-primary"
+          </Button>
+          <Button
+            variant="default"
             disabled={bulkBusy}
             onClick={() => {
               setArchiveConfirm(false);
@@ -959,7 +1118,7 @@ export function TenderTableClient({
             }}
           >
             Confirm archive
-          </button>
+          </Button>
         </div>
       </Modal>
     </div>

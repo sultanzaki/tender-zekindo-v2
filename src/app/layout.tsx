@@ -1,4 +1,7 @@
+import { GeistSans } from "geist/font/sans";
+import { cookies } from "next/headers";
 import type { Metadata, Viewport } from "next";
+import "./theme.css";
 import "./globals.css";
 import { TopNav } from "@/components/TopNav";
 import { getAuthContext } from "@/lib/auth/dal";
@@ -36,9 +39,12 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" className={GeistSans.variable}>
       <body>
         <TopNav
+          defaultSidebarOpen={
+            (await cookies()).get("sidebar_state")?.value !== "false"
+          }
           profile={ctx?.profile ?? null}
           notificationCount={notificationCount}
         >

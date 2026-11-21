@@ -1,4 +1,10 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { restoreTender, deleteTenderPermanently } from "@/lib/actions";
@@ -31,8 +37,8 @@ export function ArchiveAction({
   }
   return (
     <>
-      <button
-        className={`button ${action === "restore" ? "button-secondary" : "button-danger"}`}
+      <Button
+        variant={action === "restore" ? "outline" : "destructive"}
         disabled={pending}
         onClick={() => {
           if (action === "restore") run();
@@ -40,7 +46,7 @@ export function ArchiveAction({
         }}
       >
         {pending ? "Working…" : label}
-      </button>
+      </Button>
       <Modal
         open={open}
         title="Permanently delete tender?"
@@ -52,41 +58,41 @@ export function ArchiveAction({
           This removes the tender and its documents. This action cannot be
           undone.
         </p>
-        <label className="field">
+        <Label className="field">
           Type DELETE to confirm
-          <input
+          <Input
             className="control"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             autoComplete="off"
           />
-        </label>
+        </Label>
         {error && (
-          <p role="alert" className="feedback feedback-error">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         <div className="dialog-actions">
-          <button
-            className="button button-secondary"
+          <Button
+            variant="outline"
             onClick={() => setOpen(false)}
             disabled={pending}
           >
             Cancel
-          </button>
-          <button
-            className="button button-danger"
+          </Button>
+          <Button
+            variant="destructive"
             disabled={pending || typed !== "DELETE"}
             onClick={run}
           >
             Delete permanently
-          </button>
+          </Button>
         </div>
       </Modal>
       {error && !open && (
-        <p role="alert" className="feedback feedback-error">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
     </>
   );

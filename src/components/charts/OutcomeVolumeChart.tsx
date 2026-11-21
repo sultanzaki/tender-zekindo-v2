@@ -1,4 +1,5 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
 import {
   Bar,
@@ -8,7 +9,6 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import type { PeriodOutcomeRow } from "@/lib/analytics";
@@ -59,7 +59,11 @@ export function OutcomeVolumeChart({ data }: { data: PeriodOutcomeRow[] }) {
   }
   return (
     <div className={styles.chartWrap}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer
+        config={{ metric: { label: "Outcomes" } }}
+        aria-label="Outcomes"
+        className="aspect-auto w-full h-full"
+      >
         <BarChart
           data={data}
           margin={{ top: 8, right: 16, left: -12, bottom: 0 }}
@@ -96,7 +100,7 @@ export function OutcomeVolumeChart({ data }: { data: PeriodOutcomeRow[] }) {
             />
           ))}
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

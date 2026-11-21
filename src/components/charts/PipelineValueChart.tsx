@@ -1,4 +1,5 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
 import {
   Bar,
@@ -7,7 +8,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   LabelList,
   Cell,
 } from "recharts";
@@ -58,7 +58,11 @@ export function PipelineValueChart({
   const height = Math.max(240, top.length * 40);
   return (
     <div className={styles.chartWrap} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer
+        config={{ metric: { label: "Pipeline value" } }}
+        aria-label="Pipeline value"
+        className="aspect-auto w-full h-full"
+      >
         <BarChart
           data={top}
           layout="vertical"
@@ -119,7 +123,7 @@ export function PipelineValueChart({
             />
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

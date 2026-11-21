@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import shared from "./shared.module.css";
 import { TRACK_LABELS, type Track } from "@/lib/types";
 import styles from "./TrackBadge.module.css";
@@ -11,5 +12,9 @@ import styles from "./TrackBadge.module.css";
  * and the archived table do — so there it needs saying. */
 export function TrackBadge({ track }: { track: Track }) {
   if (track === "upstream") return null;
-  return <span className={`${shared.badge} ${styles.badge}`}>{TRACK_LABELS.downstream}</span>;
+  return (
+    <Badge variant="outline" className={`${shared.badge} ${styles.badge}`}>
+      {TRACK_LABELS.downstream}
+    </Badge>
+  );
 }

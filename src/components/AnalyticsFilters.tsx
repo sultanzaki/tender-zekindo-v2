@@ -1,4 +1,11 @@
 "use client";
+import { Label } from "@/components/ui/label";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Button } from "@/components/ui/button";
+
 import { useRouter, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { TRACKS, TRACK_LABELS, type Track } from "@/lib/types";
@@ -39,22 +46,22 @@ export function AnalyticsFilters({
   }
   return (
     <div className={styles.filterBar} aria-busy={pending}>
-      <label>
+      <Label>
         Track
-        <select
+        <NativeSelect
           className="control"
           value={track}
           disabled={pending}
           onChange={(e) => apply({ track: e.target.value })}
         >
-          <option value="all">Both tracks</option>
+          <NativeSelectOption value="all">Both tracks</NativeSelectOption>
           {TRACKS.map((t) => (
-            <option key={t} value={t}>
+            <NativeSelectOption key={t} value={t}>
               {TRACK_LABELS[t]}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-      </label>
+        </NativeSelect>
+      </Label>
       {(
         [
           { key: "area", label: "Area", value: area, options: areas },
@@ -67,23 +74,25 @@ export function AnalyticsFilters({
           },
         ] as const
       ).map((field) => (
-        <label key={field.key}>
+        <Label key={field.key}>
           {field.label}
-          <select
+          <NativeSelect
             className="control"
             value={field.value}
             disabled={pending}
             onChange={(e) => apply({ [field.key]: e.target.value })}
           >
-            <option value="all">All {field.label.toLowerCase()}s</option>
+            <NativeSelectOption value="all">
+              All {field.label.toLowerCase()}s
+            </NativeSelectOption>
             {field.options.map((value) => (
-              <option key={value}>{value}</option>
+              <NativeSelectOption key={value}>{value}</NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </Label>
       ))}
-      <button
-        className="button button-secondary"
+      <Button
+        variant="outline"
         disabled={
           pending ||
           (track === "all" &&
@@ -96,7 +105,7 @@ export function AnalyticsFilters({
         }
       >
         {pending ? "Applying…" : "Reset filters"}
-      </button>
+      </Button>
     </div>
   );
 }

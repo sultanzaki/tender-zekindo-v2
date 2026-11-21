@@ -1,4 +1,12 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 
 import { useState, useTransition } from "react";
 import { addSelectOption } from "@/lib/actions";
@@ -41,7 +49,10 @@ export function OptionSelect({
   // A value can arrive from the server after mount (e.g. router.refresh), and
   // a value the user typed in a previous session may not be in the list yet.
   // Render both so the select never shows a blank for a populated field.
-  const known = value && !localOptions.includes(value) ? [value, ...localOptions] : localOptions;
+  const known =
+    value && !localOptions.includes(value)
+      ? [value, ...localOptions]
+      : localOptions;
 
   function handleSelectChange(next: string) {
     if (next === ADD_NEW) {
@@ -61,7 +72,9 @@ export function OptionSelect({
         return;
       }
       const newValue = result.value!;
-      setLocalOptions((prev) => (prev.includes(newValue) ? prev : [...prev, newValue].sort()));
+      setLocalOptions((prev) =>
+        prev.includes(newValue) ? prev : [...prev, newValue].sort(),
+      );
       onChange(newValue);
       setAdding(false);
       setDraft("");
@@ -71,7 +84,7 @@ export function OptionSelect({
   if (adding) {
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        <input
+        <Input
           className={className}
           style={{ flex: 1 }}
           aria-label={`New ${label.toLowerCase()}`}
@@ -86,23 +99,16 @@ export function OptionSelect({
             }
           }}
         />
-        <button
+        <Button
+          variant="default"
           type="button"
           onClick={handleAdd}
           disabled={isPending || !draft.trim()}
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            background: "var(--color-primary)",
-            color: "#fff",
-            padding: "0 14px",
-            fontSize: 13,
-            cursor: isPending ? "wait" : "pointer",
-          }}
         >
           {isPending ? "Adding…" : "Add"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           type="button"
           disabled={isPending}
           onClick={() => {
@@ -110,38 +116,37 @@ export function OptionSelect({
             setDraft("");
             setError(null);
           }}
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            background: "none",
-            color: "var(--color-fg2)",
-            padding: "0 14px",
-            fontSize: 13,
-            cursor: "pointer",
-          }}
         >
           Cancel
-        </button>
-        {error && <span role="alert" style={{ color: "var(--zk-error)", fontSize: 12, alignSelf: "center" }}>{error}</span>}
+        </Button>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </div>
     );
   }
 
   return (
-    <select
+    <NativeSelect
       className={className}
       value={value}
       required={required}
       aria-label={label}
       onChange={(e) => handleSelectChange(e.target.value)}
     >
-      <option value="">Select {label.toLowerCase()}</option>
+      <NativeSelectOption value="">
+        Select {label.toLowerCase()}
+      </NativeSelectOption>
       {known.map((option) => (
-        <option key={option} value={option}>
+        <NativeSelectOption key={option} value={option}>
           {option}
-        </option>
+        </NativeSelectOption>
       ))}
-      <option value={ADD_NEW}>+ Add new {label.toLowerCase()}…</option>
-    </select>
+      <NativeSelectOption value={ADD_NEW}>
+        + Add new {label.toLowerCase()}…
+      </NativeSelectOption>
+    </NativeSelect>
   );
 }

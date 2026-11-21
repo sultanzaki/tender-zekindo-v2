@@ -2,11 +2,30 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { logout } from "@/lib/auth/actions";
 import type { Profile } from "@/lib/types";
 import { Icon } from "./Icon";
-import styles from "./TopNav.module.css";
+import { Modal } from "./Modal";
+import {
+  Sidebar,
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
+} from "./ui/sidebar";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Separator } from "./ui/separator";
 const pages = [
   { href: "/tenders", label: "Tenders", icon: "tenders" },
   { href: "/overview", label: "Overview", icon: "overview" },
@@ -21,30 +40,44 @@ const adminPages = [
 function CreateLink() {
   const params = useSearchParams();
   return (
-    <Link
-      className="button button-primary"
-      href={
-        params.get("track") === "downstream"
-          ? "/tenders/new?track=downstream"
-          : "/tenders/new"
-      }
-    >
-      <Icon name="plus" />
-      New tender
-    </Link>
+    <Button asChild>
+      <Link
+        href={
+          params.get("track") === "downstream"
+            ? "/tenders/new?track=downstream"
+            : "/tenders/new"
+        }
+      >
+        <Icon name="plus" />
+        New tender
+      </Link>
+    </Button>
   );
 }
-export function TopNav({
+type NavigationProps = {
+  profile: Profile | null;
+  defaultSidebarOpen?: boolean;
+  notificationCount?: number;
+  children?: React.ReactNode;
+};
+export function TopNav(props: NavigationProps) {
+  const path = usePathname();
+  if (!props.profile || path === "/login") return <>{props.children}</>;
+  return (
+    <SidebarProvider defaultOpen={props.defaultSidebarOpen}>
+      <Workspace {...props} profile={props.profile} />
+    </SidebarProvider>
+  );
+}
+
+function Workspace({
   profile,
   notificationCount = 0,
   children,
-}: {
-  profile: Profile | null;
-  notificationCount?: number;
-  children?: React.ReactNode;
-}) {
+}: NavigationProps & { profile: Profile }) {
   const path = usePathname();
-  const account = useRef<HTMLDialogElement>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { setOpenMobile } = useSidebar();
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -53,208 +86,208 @@ export function TopNav({
         event.metaKey ||
         event.ctrlKey ||
         event.altKey ||
-        account.current?.open
+        document.querySelector('[role="dialog"]')
       )
         return;
       if (
         (event.target as HTMLElement)?.closest(
-          "input, textarea, select, [contenteditable=true]",
+          "input,textarea,select,[contenteditable=true]",
         )
       )
         return;
-      event.preventDefault();
-      const localSearch = document.querySelector<HTMLInputElement>('#main-content input[type="search"]');
-      (localSearch ?? search.current)?.focus();
+      const target =
+        document.querySelector<HTMLInputElement>(
+          '#main-content input[type="search"]',
+        ) ?? search.current;
+      if (target) {
+        event.preventDefault();
+        target.focus();
+      }
     }
     document.addEventListener("keydown", shortcut);
     return () => document.removeEventListener("keydown", shortcut);
   }, []);
-  if (path === "/login" || !profile) return <>{children}</>;
-  const isAdmin = profile?.role === "admin";
-  function active(href: string) {
-    if (href === "/") return path === "/";
-    if (href === "/tenders")
-      return (
-        path.startsWith("/tenders") && !path.startsWith("/tenders/archive")
-      );
-    return path.startsWith(href);
+  const isAdmin = profile.role === "admin";
+  const current = [...adminPages, ...pages].find((p) =>
+    path.startsWith(p.href),
+  );
+  function menu(
+    items: readonly ((typeof pages)[number] | (typeof adminPages)[number])[],
+  ) {
+    return (
+      <SidebarMenu>
+        {items.map((item) => (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+              asChild
+              isActive={current?.href === item.href}
+              tooltip={item.label}
+            >
+              <Link
+                href={
+                  item.href === "/tenders"
+                    ? "/tenders?track=all&result=__EMPTY__"
+                    : item.href
+                }
+                aria-current={current?.href === item.href ? "page" : undefined}
+                onClick={() => setOpenMobile(false)}
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+                {item.href === "/notifications" && notificationCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="ml-auto bg-white tabular-nums"
+                  >
+                    {notificationCount > 99 ? "99+" : notificationCount}
+                  </Badge>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    );
   }
-  const current = [...adminPages, ...pages].find((p) => active(p.href));
   return (
-    <div className={styles.shell}>
+    <>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <aside className={styles.sidebar}>
-        <Link className={styles.brand} href="/">
-          <Image
-            src="/logo.png"
-            alt="Zekindo"
-            width={94}
-            height={32}
-            priority
-          />
-          <strong>Procurement workspace</strong>
-        </Link>
-        <div className={styles.groupTitle}>Workspace</div>
-        <nav aria-label="Main navigation" className={styles.navigation}>
-          {pages.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href === "/tenders" ? "/tenders?track=all&result=__EMPTY__" : p.href}
-              className={styles.navLink}
-              aria-current={active(p.href) ? "page" : undefined}
-            >
-              <Icon name={p.icon} />
-              {p.label}
-              {p.href === "/notifications" && notificationCount > 0 && (
-                <span className={styles.count}>
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
-              )}
-            </Link>
-          ))}
-        </nav>
-        {isAdmin && <nav aria-label="Administration" className={styles.navigation}>
-          <div className={styles.groupTitle}>Administration</div>
-          {adminPages.map(p => <Link key={p.href} href={p.href} className={styles.navLink} aria-current={active(p.href) ? "page" : undefined}><Icon name={p.icon} />{p.label}</Link>)}
-        </nav>}
-        <div className={styles.sidebarFooter}>
-          <button
-            className={styles.accountButton}
-            onClick={() => account.current?.showModal()}
-          >
-            <span className={styles.avatar}>
-              {profile?.name.slice(0, 1).toUpperCase() || "Z"}
-            </span>
-            <span>
-              {profile?.name || "Guest"}
-              <small>
-                {isAdmin ? "Administrator" : "Viewer"}
-              </small>
-            </span>
-            <Icon name="account" />
-          </button>
-        </div>
-      </aside>
-      <div className={styles.workspace}>
-        <header className={styles.header}>
-          <div className={styles.breadcrumb}>
-            <Link className={styles.mobileBrand} href="/"><Image src="/logo.png" width={72} height={25} alt="Zekindo" /></Link>
-            <span>Workspace</span>
-            <span aria-hidden="true">/</span>
-            <strong>{current?.label || "Tender workspace"}</strong>
-          </div>
-          {path !== "/tenders" && <form action="/tenders" className={styles.search} role="search">
-            <Icon name="search" />
-            <input type="hidden" name="track" value="all" />
-            <input
-              ref={search}
-              name="search"
-              aria-label="Search workspace"
-              placeholder="Search tenders, customers…"
-            />
-            <kbd>/</kbd>
-          </form>}
-          {isAdmin && path === "/tenders" ? null : isAdmin ? (
-            <Suspense
-              fallback={
-                <Link className="button button-primary" href="/tenders/new">
-                  New tender
-                </Link>
-              }
-            >
-              <CreateLink />
-            </Suspense>
-          ) : (
-            <button
-              className="button button-secondary"
-              onClick={() => account.current?.showModal()}
-            >
-              Account
-            </button>
-          )}
-        </header>
-        <main id="main-content" className={styles.content} tabIndex={-1}>
-          {children}
-        </main>
-      </div>
-      <nav className={styles.mobileNav} aria-label="Mobile navigation">
-        {pages.map((p) => (
+      <Sidebar variant="inset">
+        <SidebarHeader className="px-5 pt-6 pb-4">
           <Link
-            key={p.href}
-            href={p.href === "/tenders" ? "/tenders?track=all&result=__EMPTY__" : p.href}
-            className={active(p.href) ? styles.mobileActive : ""}
-            aria-current={active(p.href) ? "page" : undefined}
+            href="/"
+            aria-label="Zekindo workspace"
+            onClick={() => setOpenMobile(false)}
           >
-            <Icon name={p.icon} />
-            <span>{p.label}</span>
+            <Image
+              src="/logo.png"
+              alt="Zekindo"
+              width={106}
+              height={36}
+              priority
+            />
           </Link>
-        ))}
-        <button onClick={() => account.current?.showModal()}>
-          <Icon name="account" />
-          <span>Account</span>
-        </button>
-      </nav>
-      <dialog
-        ref={account}
-        className="dialog"
-        aria-labelledby="account-title"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) account.current?.close();
-        }}
-      >
-        <div className="dialog-heading">
-          <h2 id="account-title">{profile?.name || "Workspace access"}</h2>
-          <button
-            className="icon-button"
-            aria-label="Close account"
-            onClick={() => account.current?.close()}
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+            <nav aria-label="Main navigation">{menu(pages)}</nav>
+          </SidebarGroup>
+          {isAdmin && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <nav aria-label="Administration">{menu(adminPages)}</nav>
+            </SidebarGroup>
+          )}
+        </SidebarContent>
+        <SidebarFooter>
+          <Separator />
+          <SidebarMenuButton size="lg" onClick={() => setAccountOpen(true)}>
+            <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+              {profile.name.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="grid text-left">
+              <strong>{profile.name}</strong>
+              <small>{isAdmin ? "Administrator" : "Viewer"}</small>
+            </span>
+          </SidebarMenuButton>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="min-w-0">
+        <header className="flex min-h-14 items-center gap-3 border-b px-4 md:px-6">
+          <SidebarTrigger aria-label="Toggle navigation" />
+          <Separator orientation="vertical" className="my-auto h-5!" />
+          <Link href="/" className="md:hidden">
+            <Image src="/logo.png" width={69} height={24} alt="Zekindo" />
+          </Link>
+          <span className="hidden text-sm text-muted-foreground md:inline">
+            Workspace
+          </span>
+          <span className="hidden text-muted-foreground md:inline">/</span>
+          <span className="hidden text-sm font-medium md:inline">
+            {current?.label}
+          </span>
+          {path !== "/tenders" && (
+            <form
+              action="/tenders"
+              role="search"
+              className="ml-auto hidden md:block"
+            >
+              <input type="hidden" name="track" value="all" />
+              <Input
+                ref={search}
+                name="search"
+                aria-label="Search workspace"
+                placeholder="Search tenders…"
+                className="h-8 w-48"
+              />
+            </form>
+          )}
+          {isAdmin && path !== "/tenders" && (
+            <div className="hidden md:block">
+              <Suspense>
+                <CreateLink />
+              </Suspense>
+            </div>
+          )}
+          <Button
+            className="ml-auto md:hidden"
+            variant="ghost"
+            size="icon"
+            aria-label="Account"
+            onClick={() => setAccountOpen(true)}
           >
-            <Icon name="close" />
-          </button>
+            <Icon name="account" />
+          </Button>
+        </header>
+        <div id="main-content" tabIndex={-1}>
+          {children}
         </div>
-        <p className="muted">
-          {profile?.email || "Sign in to access the workspace."}
-        </p>
-        <nav className={styles.navigation} aria-label="Account actions">
+      </SidebarInset>
+      <Modal
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        title={profile.name}
+      >
+        <p className="text-sm text-muted-foreground">{profile.email}</p>
+        <nav aria-label="Account actions" className="grid gap-2">
           {isAdmin && (
             <>
               <Suspense>
-                <div onClick={() => account.current?.close()}>
+                <div onClick={() => setAccountOpen(false)}>
                   <CreateLink />
                 </div>
               </Suspense>
               {adminPages.map((p) => (
-                <Link
+                <Button
                   key={p.href}
-                  className={styles.navLink}
-                  href={p.href}
-                  onClick={() => account.current?.close()}
+                  variant="ghost"
+                  asChild
+                  className="justify-start"
                 >
-                  <Icon name={p.icon} />
-                  {p.label}
-                </Link>
+                  <Link
+                    href={p.href}
+                    onClick={() => {
+                      setAccountOpen(false);
+                      setOpenMobile(false);
+                    }}
+                  >
+                    <Icon name={p.icon} />
+                    {p.label}
+                  </Link>
+                </Button>
               ))}
             </>
           )}
-          {profile ? (
-            <form action={logout}>
-              <button className="button button-danger" type="submit">
-                Sign out
-              </button>
-            </form>
-          ) : (
-            <Link
-              className="button button-primary"
-              href="/login"
-              onClick={() => account.current?.close()}
-            >
-              Sign in
-            </Link>
-          )}
+          <form action={logout}>
+            <Button type="submit" variant="outline">
+              Sign out
+            </Button>
+          </form>
         </nav>
-      </dialog>
-    </div>
+      </Modal>
+    </>
   );
 }

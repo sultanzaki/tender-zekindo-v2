@@ -1,4 +1,14 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import type {
   SelectOptionsMap,
   TenderFormValues,
@@ -30,14 +40,15 @@ export function TenderFields({
           <fieldset className={styles.trackPicker}>
             <legend>Business track</legend>
             {TRACKS.map((track) => (
-              <button
+              <Button
+                variant="ghost"
                 key={track}
                 type="button"
                 aria-pressed={values.track === track}
                 onClick={() => onChange({ track })}
               >
                 {TRACK_LABELS[track]}
-              </button>
+              </Button>
             ))}
             <p className="muted">
               Track determines the milestone catalog and cannot change after
@@ -46,7 +57,7 @@ export function TenderFields({
           </fieldset>
         )}
         <div className={styles.fieldRow2}>
-          <label className={styles.label}>
+          <Label className={styles.label}>
             Area *
             <OptionSelect
               field="area"
@@ -57,8 +68,8 @@ export function TenderFields({
               required
               onChange={(area) => onChange({ area })}
             />
-          </label>
-          <label className={styles.label}>
+          </Label>
+          <Label className={styles.label}>
             Customer *
             <OptionSelect
               field="customer"
@@ -69,11 +80,11 @@ export function TenderFields({
               required
               onChange={(customer) => onChange({ customer })}
             />
-          </label>
+          </Label>
         </div>
-        <label className={styles.label}>
+        <Label className={styles.label}>
           Tender number
-          <input
+          <Input
             className={styles.input}
             value={values.tenderNo}
             onChange={(e) => onChange({ tenderNo: e.target.value })}
@@ -85,23 +96,23 @@ export function TenderFields({
               saving.
             </span>
           )}
-        </label>
-        <label className={styles.label}>
+        </Label>
+        <Label className={styles.label}>
           Package title
-          <textarea
+          <Textarea
             className={styles.textarea}
             rows={4}
             value={values.product}
             onChange={(e) => onChange({ product: e.target.value })}
             placeholder="Full scope or package title"
           />
-        </label>
+        </Label>
       </div>
     );
   if (section === "value")
     return (
       <div className={styles.fieldColumn}>
-        <label className={styles.label}>
+        <Label className={styles.label}>
           Entity / Consortium
           <OptionSelect
             field="entitas"
@@ -111,7 +122,7 @@ export function TenderFields({
             options={options.entitas}
             onChange={(entitas) => onChange({ entitas })}
           />
-        </label>
+        </Label>
         <div className={styles.fieldRow2}>
           {(
             [
@@ -119,7 +130,7 @@ export function TenderFields({
               ["oe", "OE (Rp)"],
             ] as const
           ).map(([key, label]) => (
-            <label key={key} className={styles.label}>
+            <Label key={key} className={styles.label}>
               {label}
               <NumberInput
                 className={styles.input}
@@ -127,19 +138,19 @@ export function TenderFields({
                 onChange={(value) => onChange({ [key]: value })}
                 placeholder="Leave blank if unknown"
               />
-            </label>
+            </Label>
           ))}
         </div>
-        <label className={styles.label}>
+        <Label className={styles.label}>
           OE note
-          <input
+          <Input
             className={styles.input}
             value={values.oeCatatan}
             onChange={(e) => onChange({ oeCatatan: e.target.value })}
             placeholder="Currency or valuation context"
           />
-        </label>
-        <label className={styles.label}>
+        </Label>
+        <Label className={styles.label}>
           Our bid value (Rp)
           <NumberInput
             className={styles.input}
@@ -147,7 +158,7 @@ export function TenderFields({
             onChange={(nilaiPenawaran) => onChange({ nilaiPenawaran })}
             placeholder="Leave blank if unknown"
           />
-        </label>
+        </Label>
         <p className={styles.hint}>
           Values are in rupiah. Decimal quantities are supported. Unknown values
           stay blank and are excluded from known-value analytics.
@@ -158,63 +169,62 @@ export function TenderFields({
   return (
     <div className={styles.fieldColumn}>
       <div className={styles.fieldRow2}>
-        <label className={styles.label}>
+        <Label className={styles.label}>
           Result
-          <select
+          <NativeSelect
             className={styles.input}
             value={edit.result}
             onChange={(e) => onChange({ result: e.target.value })}
           >
-            <option value="">Active / no result</option>
+            <NativeSelectOption value="">Active / no result</NativeSelectOption>
             {RESULT_ENUM.map((r) => (
-              <option key={r}>{r}</option>
+              <NativeSelectOption key={r}>{r}</NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label className={styles.label}>
+          </NativeSelect>
+        </Label>
+        <Label className={styles.label}>
           Carry over
-          <input
+          <Input
             className={styles.input}
             value={edit.carryOver}
             onChange={(e) => onChange({ carryOver: e.target.value })}
           />
-        </label>
+        </Label>
       </div>
-      <label className={styles.label}>
+      <Label className={styles.label}>
         Remarks
-        <textarea
+        <Textarea
           className={styles.textarea}
           rows={6}
           value={edit.remarks}
           onChange={(e) => onChange({ remarks: e.target.value })}
           placeholder="Working notes, competitor rankings, and next actions"
         />
-      </label>
-      <label className={styles.label}>
+      </Label>
+      <Label className={styles.label}>
         Short status note
-        <input
+        <Input
           className={styles.input}
           value={edit.remark}
           onChange={(e) => onChange({ remark: e.target.value })}
         />
-      </label>
-      <label className={styles.checkLabel}>
-        <input
-          type="checkbox"
+      </Label>
+      <Label className={styles.checkLabel}>
+        <Checkbox
           checked={edit.pnl}
-          onChange={(e) => onChange({ pnl: e.target.checked })}
+          onCheckedChange={(checked) => onChange({ pnl: checked === true })}
         />
         P&L flagged
-      </label>
-      <label className={styles.label}>
+      </Label>
+      <Label className={styles.label}>
         Internal notes · admin only
-        <textarea
+        <Textarea
           className={styles.textarea}
           rows={4}
           value={edit.catatanInternal}
           onChange={(e) => onChange({ catatanInternal: e.target.value })}
         />
-      </label>
+      </Label>
     </div>
   );
 }

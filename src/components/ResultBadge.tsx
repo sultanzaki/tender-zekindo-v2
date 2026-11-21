@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { resultTone } from "@/lib/tender-logic";
 import shared from "./shared.module.css";
 
@@ -10,5 +11,9 @@ const TONE_CLASS = {
 
 export function ResultBadge({ result }: { result: string | null }) {
   const tone = resultTone(result);
-  return <span className={`${shared.badge} ${TONE_CLASS[tone]}`}>{result || "Running"}</span>;
+  return (
+    <Badge variant="outline" className={`${shared.badge} ${TONE_CLASS[tone]}`}>
+      {result || "Running"}
+    </Badge>
+  );
 }

@@ -1,4 +1,23 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Label } from "@/components/ui/label";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -69,15 +88,15 @@ export function ManageUsersClient({
         title="People & access"
         description="Manage accounts, permissions, and password resets."
         actions={
-          <button
-            className="button button-primary"
+          <Button
+            variant="default"
             onClick={() => {
               setError("");
               setCreateOpen(true);
             }}
           >
             Create user
-          </button>
+          </Button>
         }
       />
       <div className={styles.metrics}>
@@ -98,14 +117,14 @@ export function ManageUsersClient({
         </p>
       )}
       {error && !createOpen && !target && (
-        <p className="feedback feedback-error" role="alert">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <section className={styles.panel}>
+      <Card className={`${styles.panel} gap-0 py-0`}>
         <div className={styles.panelHead}>
           <h2>Workspace members</h2>
-          <input
+          <Input
             type="search"
             aria-label="Search users"
             className="control"
@@ -116,26 +135,26 @@ export function ManageUsersClient({
           />
         </div>
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Name & email</th>
-                <th>Access</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className={styles.table}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name & email</TableHead>
+                <TableHead>Access</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.map((u) => (
-                <tr key={u.id}>
-                  <td>
+                <TableRow key={u.id}>
+                  <TableCell>
                     <strong>{u.name}</strong>
                     {u.id === currentUserId && (
                       <span className="muted"> · You</span>
                     )}
                     <div className="muted">{u.email}</div>
-                  </td>
-                  <td>
-                    <select
+                  </TableCell>
+                  <TableCell>
+                    <NativeSelect
                       className="control"
                       aria-label={`Role for ${u.name}`}
                       value={u.role}
@@ -148,14 +167,18 @@ export function ManageUsersClient({
                         )
                       }
                     >
-                      <option value="viewer">Viewer</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td>
+                      <NativeSelectOption value="viewer">
+                        Viewer
+                      </NativeSelectOption>
+                      <NativeSelectOption value="admin">
+                        Admin
+                      </NativeSelectOption>
+                    </NativeSelect>
+                  </TableCell>
+                  <TableCell>
                     <div className="heading-actions">
-                      <button
-                        className="button button-secondary"
+                      <Button
+                        variant="outline"
                         disabled={pending}
                         onClick={() => {
                           setError("");
@@ -164,9 +187,9 @@ export function ManageUsersClient({
                         }}
                       >
                         Reset password
-                      </button>
-                      <button
-                        className="button button-danger"
+                      </Button>
+                      <Button
+                        variant="destructive"
                         disabled={pending || u.id === currentUserId}
                         onClick={() => {
                           setError("");
@@ -174,18 +197,18 @@ export function ManageUsersClient({
                         }}
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {!filtered.length && (
           <p className={styles.empty}>No accounts match this search.</p>
         )}
-      </section>
+      </Card>
       <Modal
         open={createOpen}
         title="Create workspace account"
@@ -210,19 +233,19 @@ export function ManageUsersClient({
           }}
         >
           <div className="form-stack">
-            <label className="field">
+            <Label className="field">
               Name
-              <input
+              <Input
                 className="control"
                 autoComplete="name"
                 required
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
-            </label>
-            <label className="field">
+            </Label>
+            <Label className="field">
               Email
-              <input
+              <Input
                 className="control"
                 autoComplete="email"
                 type="email"
@@ -230,10 +253,10 @@ export function ManageUsersClient({
                 value={draft.email}
                 onChange={(e) => setDraft({ ...draft, email: e.target.value })}
               />
-            </label>
-            <label className="field">
+            </Label>
+            <Label className="field">
               Initial password
-              <input
+              <Input
                 className="control"
                 autoComplete="new-password"
                 type="password"
@@ -244,36 +267,34 @@ export function ManageUsersClient({
                   setDraft({ ...draft, password: e.target.value })
                 }
               />
-            </label>
-            <label className="field">
+            </Label>
+            <Label className="field">
               Role
-              <select
+              <NativeSelect
                 className="control"
                 value={draft.role}
                 onChange={(e) =>
                   setDraft({ ...draft, role: e.target.value as UserRole })
                 }
               >
-                <option value="viewer">Viewer · read-only</option>
-                <option value="admin">
+                <NativeSelectOption value="viewer">
+                  Viewer · read-only
+                </NativeSelectOption>
+                <NativeSelectOption value="admin">
                   Admin · manage all tenders and users
-                </option>
-              </select>
-            </label>
+                </NativeSelectOption>
+              </NativeSelect>
+            </Label>
           </div>
           {error && (
-            <p role="alert" className="feedback feedback-error">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           <div className="dialog-actions">
-            <button
-              type="submit"
-              className="button button-primary"
-              disabled={pending}
-            >
+            <Button variant="default" type="submit" disabled={pending}>
               {pending ? "Creating…" : "Create user"}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -317,9 +338,9 @@ export function ManageUsersClient({
               : "This account will lose access immediately. Existing tender records are retained."}
           </p>
           {target?.action === "reset" && (
-            <label className="field">
+            <Label className="field">
               New password
-              <input
+              <Input
                 type="password"
                 className="control"
                 autoComplete="new-password"
@@ -328,25 +349,25 @@ export function ManageUsersClient({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-            </label>
+            </Label>
           )}
           {error && (
-            <p role="alert" className="feedback feedback-error">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           <div className="dialog-actions">
-            <button
-              className="button button-secondary"
+            <Button
+              variant="outline"
               type="button"
               disabled={pending}
               onClick={() => setTarget(null)}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={target?.action === "remove" ? "destructive" : "default"}
               type="submit"
-              className={`button ${target?.action === "remove" ? "button-danger" : "button-primary"}`}
               disabled={pending}
             >
               {pending
@@ -354,7 +375,7 @@ export function ManageUsersClient({
                 : target?.action === "remove"
                   ? "Confirm removal"
                   : "Set new password"}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

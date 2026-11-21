@@ -1,5 +1,5 @@
-.bar { border-bottom: 1px solid var(--color-border); }
-.group { display: flex; gap: clamp(18px,3vw,32px); }
-.item,.active { display: block; padding: 12px 1px; font-size: 13px; font-weight: 550; color: var(--color-fg3); border-bottom: 2px solid transparent; }
-.active { border-color: var(--color-primary); color: var(--color-primary); }
-.item:hover,.active:hover { text-decoration: none; color: var(--color-primary-dark); }
+.bar { max-width:100%; }
+.group { display:inline-flex; align-items:center; gap:2px; padding:3px; max-width:100%; border:1px solid var(--border); border-radius:8px; background:var(--card); }
+.item,.active { padding:5px 10px; border-radius:5px; font-size:12px; font-weight:500; color:var(--muted-foreground); }
+.group .active { color:var(--accent-foreground); background:var(--accent); }
+.group a:hover { text-decoration:none; background:var(--muted); }

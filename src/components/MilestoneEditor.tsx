@@ -1,4 +1,19 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import { Button } from "@/components/ui/button";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+
 import { useState, useTransition } from "react";
 import { ensureMilestoneTypeByName } from "@/lib/milestone-actions";
 import { findOutOfOrderMilestones } from "@/lib/tender-logic";
@@ -90,17 +105,18 @@ export function MilestoneEditor({
         {selected.map((m, i) => (
           <div key={m.key} className={styles.milestoneRow}>
             <span className={styles.stepNumber}>{i + 1}</span>
-            <label className={styles.label}>
+            <Label className={styles.label}>
               {m.label}
-              <input
+              <Input
                 type="date"
                 className={styles.input}
                 value={dates[m.key] || ""}
                 onChange={(e) => onDates({ ...dates, [m.key]: e.target.value })}
               />
-            </label>
+            </Label>
             <div className={styles.milestoneActions}>
-              <button
+              <Button
+                variant="ghost"
                 className="icon-button"
                 type="button"
                 aria-label={`Move ${m.label} up`}
@@ -108,8 +124,9 @@ export function MilestoneEditor({
                 onClick={() => move(i, -1)}
               >
                 ↑
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className="icon-button"
                 type="button"
                 aria-label={`Move ${m.label} down`}
@@ -117,15 +134,15 @@ export function MilestoneEditor({
                 onClick={() => move(i, 1)}
               >
                 ↓
-              </button>
-              <button
-                className="button button-secondary"
+              </Button>
+              <Button
+                variant="outline"
                 type="button"
                 disabled={pending}
                 onClick={() => onOrder(order.filter((k) => k !== m.key))}
               >
                 Remove
-              </button>
+              </Button>
             </div>
           </div>
         ))}
@@ -137,59 +154,67 @@ export function MilestoneEditor({
         </p>
       )}
       {hidden.length > 0 && (
-        <label className={styles.label}>
+        <Label className={styles.label}>
           Add an existing step
-          <select
+          <NativeSelect
             className={styles.input}
             value=""
             onChange={(e) => {
               if (e.target.value) onOrder([...order, e.target.value]);
             }}
           >
-            <option value="">Choose a milestone…</option>
+            <NativeSelectOption value="">
+              Choose a milestone…
+            </NativeSelectOption>
             {hidden.map((m) => (
-              <option key={m.key} value={m.key}>
+              <NativeSelectOption key={m.key} value={m.key}>
                 {m.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </Label>
       )}
-      <details className={styles.customMilestone}>
-        <summary>Create a custom milestone</summary>
-        <p className="muted">
-          This adds a named step to the {track} catalog, and selects it for this
-          tender.
-        </p>
-        <div className={styles.fieldRowInline}>
-          <input
-            aria-label="Custom milestone name"
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                add();
-              }
-            }}
-            placeholder="e.g. Site visit"
-          />
-          <button
-            className="button button-secondary"
-            type="button"
-            onClick={add}
-            disabled={pending || !name.trim()}
-          >
-            {pending ? "Creating…" : "Create milestone"}
-          </button>
-        </div>
-        {error && (
-          <p role="alert" className="feedback feedback-error">
-            {error}
+      <Collapsible className={styles.customMilestone}>
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="outline">
+            Create a custom milestone
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <p className="muted">
+            This adds a named step to the {track} catalog, and selects it for
+            this tender.
           </p>
-        )}
-      </details>
+          <div className={styles.fieldRowInline}>
+            <Input
+              aria-label="Custom milestone name"
+              className={styles.input}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  add();
+                }
+              }}
+              placeholder="e.g. Site visit"
+            />
+            <Button
+              variant="outline"
+              type="button"
+              onClick={add}
+              disabled={pending || !name.trim()}
+            >
+              {pending ? "Creating…" : "Create milestone"}
+            </Button>
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

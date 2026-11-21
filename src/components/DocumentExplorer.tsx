@@ -1,4 +1,16 @@
 "use client";
+import { Progress } from "./ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -39,15 +51,15 @@ function UploadButton({
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button
-        className="button button-secondary"
+      <Button
+        variant="outline"
         type="button"
         disabled={busy}
         onClick={() => input.current?.click()}
       >
         Upload files
-      </button>
-      <input
+      </Button>
+      <Input
         ref={input}
         type="file"
         multiple
@@ -87,14 +99,15 @@ function Files({
           )}
           <small>{size(file.sizeBytes)}</small>
           {isAdmin && (
-            <button
+            <Button
+              variant="ghost"
               disabled={busy}
               type="button"
               aria-label={`Delete ${file.fileName}`}
               onClick={() => onDelete(file)}
             >
               Delete
-            </button>
+            </Button>
           )}
         </div>
       ))}
@@ -249,74 +262,77 @@ export function DocumentExplorer({
   }
   function folder(node: DocumentTreeNode, depth = 0): React.ReactNode {
     return (
-      <details key={node.folder.id} className={styles.folder}>
-        <summary>
+      <Collapsible key={node.folder.id} className={styles.folder}>
+        <CollapsibleTrigger type="button">
           {node.folder.name}{" "}
           <span className="muted">
             · {node.files.length + node.children.length} items
           </span>
-        </summary>
-        <div className={styles.folderBody}>
-          {isAdmin && (
-            <div className={styles.actions}>
-              <UploadButton
-                busy={busy}
-                onFiles={(files) =>
-                  void handleUpload({ folderId: node.folder.id }, files)
-                }
-              />
-              <button
-                className="button button-secondary"
-                disabled={busy}
-                onClick={() =>
-                  open({
-                    action: "create",
-                    target: { folderId: node.folder.id },
-                  })
-                }
-              >
-                New subfolder
-              </button>
-              <button
-                className="button button-secondary"
-                disabled={busy}
-                onClick={() =>
-                  open({
-                    action: "rename",
-                    id: node.folder.id,
-                    name: node.folder.name,
-                  })
-                }
-              >
-                Rename
-              </button>
-              <button
-                className="button button-danger"
-                disabled={busy}
-                onClick={() =>
-                  open({
-                    action: "delete-folder",
-                    id: node.folder.id,
-                    name: node.folder.name,
-                  })
-                }
-              >
-                Delete folder
-              </button>
-            </div>
-          )}
-          <Files
-            files={node.files}
-            isAdmin={isAdmin}
-            busy={busy}
-            onDelete={deleteFile}
-          />
-          {depth < 30 && node.children.map((child) => folder(child, depth + 1))}
-          {!node.files.length && !node.children.length && (
-            <p className={styles.empty}>This folder is empty.</p>
-          )}
-        </div>
-      </details>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className={styles.folderBody}>
+            {isAdmin && (
+              <div className={styles.actions}>
+                <UploadButton
+                  busy={busy}
+                  onFiles={(files) =>
+                    void handleUpload({ folderId: node.folder.id }, files)
+                  }
+                />
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    open({
+                      action: "create",
+                      target: { folderId: node.folder.id },
+                    })
+                  }
+                >
+                  New subfolder
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    open({
+                      action: "rename",
+                      id: node.folder.id,
+                      name: node.folder.name,
+                    })
+                  }
+                >
+                  Rename
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={busy}
+                  onClick={() =>
+                    open({
+                      action: "delete-folder",
+                      id: node.folder.id,
+                      name: node.folder.name,
+                    })
+                  }
+                >
+                  Delete folder
+                </Button>
+              </div>
+            )}
+            <Files
+              files={node.files}
+              isAdmin={isAdmin}
+              busy={busy}
+              onDelete={deleteFile}
+            />
+            {depth < 30 &&
+              node.children.map((child) => folder(child, depth + 1))}
+            {!node.files.length && !node.children.length && (
+              <p className={styles.empty}>This folder is empty.</p>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     );
   }
   const needle = query.trim().toLowerCase();
@@ -334,15 +350,15 @@ export function DocumentExplorer({
         add files.
       </p>
       <div className={styles.toolbar}>
-        <button
+        <Button
+          variant="outline"
           type="button"
-          className="button button-secondary"
           disabled={busy}
           onClick={() => start(() => router.refresh())}
         >
           Refresh links
-        </button>
-        <input
+        </Button>
+        <Input
           className="control"
           type="search"
           aria-label="Search documents"
@@ -350,8 +366,8 @@ export function DocumentExplorer({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <button
-          className="button button-secondary"
+        <Button
+          variant="outline"
           onClick={() =>
             container.current
               ?.querySelectorAll("details")
@@ -359,9 +375,9 @@ export function DocumentExplorer({
           }
         >
           Expand all
-        </button>
-        <button
-          className="button button-secondary"
+        </Button>
+        <Button
+          variant="outline"
           onClick={() =>
             container.current
               ?.querySelectorAll("details")
@@ -369,12 +385,12 @@ export function DocumentExplorer({
           }
         >
           Collapse all
-        </button>
+        </Button>
       </div>
       {error && !intent && (
-        <p role="alert" className="feedback feedback-error">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       {notice && (
         <p role="status" className="feedback feedback-success">
@@ -387,52 +403,56 @@ export function DocumentExplorer({
             <span>{upload.name}</span>
             <span>{upload.pct}%</span>
           </div>
-          <progress aria-label="File upload" max={100} value={upload.pct} />
+          <Progress aria-label="File upload" value={upload.pct} />
         </div>
       )}
       {visible.map((section) => (
-        <details
-          key={section.id}
+        <Collapsible
+          key={section.id + (needle ? "-search" : "")}
           className={styles.section}
           open={needle ? true : undefined}
         >
-          <summary>
+          <CollapsibleTrigger type="button">
             <strong>{section.title}</strong>
             <small>
               {section.kind} ·{" "}
               {section.rootFiles.length + section.folders.length} items
             </small>
-          </summary>
-          <div className={styles.sectionBody}>
-            {isAdmin && (
-              <div className={styles.actions}>
-                <UploadButton
-                  busy={busy}
-                  onFiles={(files) => void handleUpload(target(section), files)}
-                />
-                <button
-                  className="button button-secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    open({ action: "create", target: target(section) })
-                  }
-                >
-                  New folder
-                </button>
-              </div>
-            )}
-            <Files
-              files={section.rootFiles}
-              isAdmin={isAdmin}
-              busy={busy}
-              onDelete={deleteFile}
-            />
-            {section.folders.map((node) => folder(node))}
-            {!section.rootFiles.length && !section.folders.length && (
-              <p className={styles.empty}>No files in this section.</p>
-            )}
-          </div>
-        </details>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className={styles.sectionBody}>
+              {isAdmin && (
+                <div className={styles.actions}>
+                  <UploadButton
+                    busy={busy}
+                    onFiles={(files) =>
+                      void handleUpload(target(section), files)
+                    }
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      open({ action: "create", target: target(section) })
+                    }
+                  >
+                    New folder
+                  </Button>
+                </div>
+              )}
+              <Files
+                files={section.rootFiles}
+                isAdmin={isAdmin}
+                busy={busy}
+                onDelete={deleteFile}
+              />
+              {section.folders.map((node) => folder(node))}
+              {!section.rootFiles.length && !section.folders.length && (
+                <p className={styles.empty}>No files in this section.</p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       ))}
       {!visible.length && (
         <p className={styles.empty}>No matching document sections.</p>
@@ -458,16 +478,16 @@ export function DocumentExplorer({
         >
           {intent &&
           (intent.action === "create" || intent.action === "rename") ? (
-            <label className="field">
+            <Label className="field">
               Folder name
-              <input
+              <Input
                 className="control"
                 required
                 maxLength={150}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-            </label>
+            </Label>
           ) : (
             <p className="muted">
               Delete “{intent && "name" in intent ? intent.name : ""}”
@@ -478,22 +498,24 @@ export function DocumentExplorer({
             </p>
           )}
           {error && (
-            <p role="alert" className="feedback feedback-error">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           <div className="dialog-actions">
-            <button
+            <Button
+              variant="outline"
               type="button"
-              className="button button-secondary"
               disabled={pending}
               onClick={() => setIntent(null)}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={
+                intent?.action.startsWith("delete") ? "destructive" : "default"
+              }
               type="submit"
-              className={`button ${intent?.action.startsWith("delete") ? "button-danger" : "button-primary"}`}
               disabled={
                 pending ||
                 ((intent?.action === "create" || intent?.action === "rename") &&
@@ -505,7 +527,7 @@ export function DocumentExplorer({
                 : intent?.action.startsWith("delete")
                   ? "Confirm delete"
                   : "Save folder"}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

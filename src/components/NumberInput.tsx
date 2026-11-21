@@ -1,4 +1,5 @@
 "use client";
+import { Input } from "@/components/ui/input";
 
 import { useState } from "react";
 
@@ -28,7 +29,7 @@ export function NumberInput({
   const digits = value;
 
   return (
-    <input
+    <Input
       className={className}
       placeholder={placeholder}
       inputMode="decimal"

@@ -1,4 +1,5 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
 import {
   Line,
@@ -7,7 +8,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import type { PeriodOutcomeRow } from "@/lib/analytics";
@@ -41,7 +41,11 @@ export function WinRateTrendChart({ data }: { data: PeriodOutcomeRow[] }) {
   }
   return (
     <div className={styles.chartWrap}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer
+        config={{ metric: { label: "Win rate" } }}
+        aria-label="Win rate"
+        className="aspect-auto w-full h-full"
+      >
         <LineChart
           data={data}
           margin={{ top: 8, right: 16, left: -12, bottom: 0 }}
@@ -73,7 +77,7 @@ export function WinRateTrendChart({ data }: { data: PeriodOutcomeRow[] }) {
             connectNulls={false}
           />
         </LineChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

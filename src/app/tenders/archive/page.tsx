@@ -1,3 +1,12 @@
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/dal";
 import { ArchiveAction } from "@/components/ArchiveAction";
@@ -29,55 +38,59 @@ export default async function ArchivedTendersPage() {
       >
         &larr; Back to table
       </Link>
-      <div className={shared.card}>
+      <Card className={shared.card}>
         <div className={shared.cardHeader}>
           <h2 className={shared.cardTitle}>Archived tenders</h2>
           <span className={shared.cardMeta}>{tenders.length} archived</span>
         </div>
         {tenders.length > 0 ? (
           <div className={tableStyles.scroll}>
-            <table className={tableStyles.table}>
-              <thead>
-                <tr className={tableStyles.theadRow}>
-                  <th className={tableStyles.th}>Area</th>
-                  <th className={tableStyles.th}>Tender No.</th>
-                  <th className={tableStyles.th}>Customer</th>
-                  <th className={tableStyles.th}>Package</th>
-                  <th className={tableStyles.th}>Archived</th>
-                  <th className={tableStyles.th}></th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className={tableStyles.table}>
+              <TableHeader>
+                <TableRow className={tableStyles.theadRow}>
+                  <TableHead className={tableStyles.th}>Area</TableHead>
+                  <TableHead className={tableStyles.th}>Tender No.</TableHead>
+                  <TableHead className={tableStyles.th}>Customer</TableHead>
+                  <TableHead className={tableStyles.th}>Package</TableHead>
+                  <TableHead className={tableStyles.th}>Archived</TableHead>
+                  <TableHead className={tableStyles.th}></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {tenders.map((t) => (
-                  <tr
+                  <TableRow
                     key={t.id}
                     className={tableStyles.bodyRow}
                     style={{ cursor: "default" }}
                   >
-                    <td className={tableStyles.td}>{t.area}</td>
-                    <td className={`${tableStyles.td} ${tableStyles.tdNoWrap}`}>
+                    <TableCell className={tableStyles.td}>{t.area}</TableCell>
+                    <TableCell
+                      className={`${tableStyles.td} ${tableStyles.tdNoWrap}`}
+                    >
                       {t.tenderNo || "—"} <TrackBadge track={t.track} />
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={`${tableStyles.td} ${tableStyles.tdEllipsis}`}
                       style={{ maxWidth: 200 }}
                       title={t.customer}
                     >
                       <Link href={`/tenders/${t.id}`}>{t.customer}</Link>
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={`${tableStyles.td} ${tableStyles.tdEllipsis}`}
                       style={{ maxWidth: 320 }}
                       title={t.product ?? undefined}
                     >
                       {t.product || "—"}
-                    </td>
-                    <td className={`${tableStyles.td} ${tableStyles.tdNoWrap}`}>
+                    </TableCell>
+                    <TableCell
+                      className={`${tableStyles.td} ${tableStyles.tdNoWrap}`}
+                    >
                       {t.archivedAt
                         ? formatDateID(t.archivedAt.slice(0, 10))
                         : "—"}
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={`${tableStyles.td} ${tableStyles.tdNoWrap}`}
                       style={{ textAlign: "right" }}
                     >
@@ -85,18 +98,18 @@ export default async function ArchivedTendersPage() {
                         <ArchiveAction tenderId={t.id} action="restore" />
                         <ArchiveAction tenderId={t.id} action="delete" />
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className={tableStyles.emptyBox}>
             <div className={tableStyles.emptyText}>No archived tenders.</div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Button } from "./ui/button";
 import Link from "next/link";
 import { TRACKS, TRACK_LABELS, type Track } from "@/lib/types";
 import styles from "./TrackSwitch.module.css";
@@ -34,14 +35,20 @@ export function TrackSwitch({
           const qs = query.toString();
           const active = track === current;
           return (
-            <Link
+            <Button
               key={track}
-              href={qs ? `${basePath}?${qs}` : basePath}
-              className={active ? styles.active : styles.item}
-              aria-current={active ? "page" : undefined}
+              asChild
+              size="sm"
+              variant={active ? "secondary" : "ghost"}
             >
-              {track === "all" ? "All tenders" : TRACK_LABELS[track]}
-            </Link>
+              <Link
+                href={qs ? `${basePath}?${qs}` : basePath}
+                className={active ? styles.active : styles.item}
+                aria-current={active ? "page" : undefined}
+              >
+                {track === "all" ? "All tenders" : TRACK_LABELS[track]}
+              </Link>
+            </Button>
           );
         })}
       </div>

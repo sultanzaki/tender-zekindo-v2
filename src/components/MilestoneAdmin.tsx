@@ -1,4 +1,11 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from "@/components/ui/card";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -43,13 +50,14 @@ export function MilestoneAdmin({ sections }: { sections: MilestoneSection[] }) {
       />
       <div className={workspace.pills} aria-label="Catalog track">
         {sections.map((section) => (
-          <button
+          <Button
+            variant="ghost"
             key={section.track}
             aria-pressed={track === section.track}
             onClick={() => setTrack(section.track)}
           >
             {TRACK_LABELS[section.track]}
-          </button>
+          </Button>
         ))}
       </div>
       {sections
@@ -126,7 +134,7 @@ function Section({ section }: { section: MilestoneSection }) {
         style={{ opacity: isArchived ? 0.55 : 1 }}
       >
         <span className={styles.index}>{index + 1}.</span>
-        <input
+        <Input
           className={styles.name}
           value={draft}
           disabled={busy || isArchived}
@@ -137,7 +145,8 @@ function Section({ section }: { section: MilestoneSection }) {
         <div className={styles.controls}>
           {!isArchived && (
             <>
-              <button
+              <Button
+                variant="ghost"
                 className={styles.button}
                 disabled={busy || index === 0}
                 title="Move up in the default order"
@@ -145,8 +154,9 @@ function Section({ section }: { section: MilestoneSection }) {
                 onClick={() => run(m.id, () => moveMilestoneType(m.id, "up"))}
               >
                 ↑
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className={styles.button}
                 disabled={busy || index === list.length - 1}
                 title="Move down in the default order"
@@ -154,41 +164,43 @@ function Section({ section }: { section: MilestoneSection }) {
                 onClick={() => run(m.id, () => moveMilestoneType(m.id, "down"))}
               >
                 ↓
-              </button>
-              <label className={styles.inTable}>
-                <input
-                  type="checkbox"
+              </Button>
+              <Label className={styles.inTable}>
+                <Checkbox
                   checked={m.showInTable}
                   disabled={busy}
-                  onChange={(e) =>
+                  onCheckedChange={(checked) =>
                     run(m.id, () =>
-                      setMilestoneTableVisibility(m.id, e.target.checked),
+                      setMilestoneTableVisibility(m.id, checked === true),
                     )
                   }
                 />
                 In table
-              </label>
+              </Label>
             </>
           )}
 
-          <button
+          <Button
+            variant="ghost"
             className={styles.button}
             disabled={busy || !dirty || isArchived}
             onClick={() => run(m.id, () => renameMilestoneType(m.id, draft))}
           >
             Save name
-          </button>
+          </Button>
 
           {isArchived ? (
-            <button
+            <Button
+              variant="ghost"
               className={styles.button}
               disabled={busy}
               onClick={() => run(m.id, () => restoreMilestoneType(m.id))}
             >
               Restore
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="ghost"
               className={styles.button}
               disabled={busy}
               onClick={() => {
@@ -196,7 +208,7 @@ function Section({ section }: { section: MilestoneSection }) {
               }}
             >
               Archive
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -204,7 +216,7 @@ function Section({ section }: { section: MilestoneSection }) {
   }
 
   return (
-    <div className={shared.card} style={{ marginBottom: 24 }}>
+    <Card className={shared.card} style={{ marginBottom: 24 }}>
       <Modal
         open={archiveTarget !== null}
         title="Archive milestone?"
@@ -216,14 +228,11 @@ function Section({ section }: { section: MilestoneSection }) {
           step can be restored.
         </p>
         <div className="dialog-actions">
-          <button
-            className="button button-secondary"
-            onClick={() => setArchiveTarget(null)}
-          >
+          <Button variant="outline" onClick={() => setArchiveTarget(null)}>
             Cancel
-          </button>
-          <button
-            className="button button-danger"
+          </Button>
+          <Button
+            variant="destructive"
             onClick={() => {
               if (archiveTarget)
                 run(archiveTarget.id, () =>
@@ -233,7 +242,7 @@ function Section({ section }: { section: MilestoneSection }) {
             }}
           >
             Confirm archive
-          </button>
+          </Button>
         </div>
       </Modal>
       <div className={shared.cardHeader}>
@@ -246,7 +255,7 @@ function Section({ section }: { section: MilestoneSection }) {
 
       <div className={styles.body}>
         <div className={styles.addRow}>
-          <input
+          <Input
             className={styles.input}
             style={{ flex: 1 }}
             placeholder={`New ${trackLabel.toLowerCase()} milestone name, e.g. Site Visit`}
@@ -256,27 +265,30 @@ function Section({ section }: { section: MilestoneSection }) {
               if (e.key === "Enter" && busyId === null) handleAdd();
             }}
           />
-          <button
+          <Button
+            variant="ghost"
             className={styles.buttonPrimary}
             disabled={busyId !== null || !newLabel.trim()}
             onClick={handleAdd}
           >
             Add milestone
-          </button>
+          </Button>
         </div>
 
         {loadError && (
-          <div role="alert" className={styles.errorBanner}>
-            Could not load the {trackLabel.toLowerCase()} catalog: {loadError}
-            <br />
-            Contact your administrator or try refreshing the page.
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              Could not load the {trackLabel.toLowerCase()} catalog: {loadError}
+              <br />
+              Contact your administrator or try refreshing the page.
+            </AlertDescription>
+          </Alert>
         )}
 
         {message && (
-          <div role="alert" className={styles.message}>
-            {message}
-          </div>
+          <Alert variant="default">
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
         )}
 
         <div className={styles.note}>
@@ -305,6 +317,6 @@ function Section({ section }: { section: MilestoneSection }) {
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

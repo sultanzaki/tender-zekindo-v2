@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useId, useRef } from "react";
-import { Icon } from "./Icon";
+import { useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+
 export function Modal({
   open,
   title,
@@ -12,37 +13,30 @@ export function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const id = useId();
-  useEffect(() => {
-    if (open && !ref.current?.open) ref.current?.showModal();
-    if (!open && ref.current?.open) ref.current?.close();
-  }, [open]);
+  const opener = useRef<HTMLElement | null>(null);
   return (
-    <dialog
-      ref={ref}
-      className="dialog"
-      aria-labelledby={id}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
-      <div className="dialog-heading">
-        <h2 id={id}>{title}</h2>
-        <button
-          type="button"
-          aria-label="Close dialog"
-          className="icon-button"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
-      {children}
-    </dialog>
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-h-[85dvh] overflow-y-auto"
+        onOpenAutoFocus={() => {
+          opener.current = document.activeElement as HTMLElement;
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          opener.current?.focus();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle className="pr-6">{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -6,7 +6,7 @@ Claude Design handoff bundle described below (`project/`, `chats/`).
 
 ## Workspace
 
-The workspace uses the Zekindo logo, blue accents, a persistent desktop sidebar and bottom navigation on phones.
+The workspace uses the Zekindo logo, blue accents, a collapsible shadcn/ui sidebar and a navigation sheet on phones.
 
 | Route                   | Workflow                                                                   |
 | ----------------------- | -------------------------------------------------------------------------- |
@@ -166,7 +166,7 @@ is the authorization boundary, not Postgres RLS.
   sample size (`62% (n=13)`) so a thin bar never gets read as a strong
   signal.
 
-The responsive workspace uses a desktop sidebar and mobile bottom navigation.
+The responsive workspace uses a desktop sidebar and a mobile navigation sheet.
 Tender rows become readable cards on phones; the desktop table keeps its own
 horizontal scroll for milestone columns. Navigation, account tools and dialogs
 remain keyboard-accessible across desktop, tablet and mobile layouts.

@@ -1,4 +1,5 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
 import {
   Bar,
@@ -8,7 +9,6 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { LOSS_CATEGORIES } from "@/lib/tender-logic";
@@ -75,7 +75,11 @@ export function LossReasonTrendChart({
   const flat = toFlatRows(data);
   return (
     <div className={styles.chartWrap}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer
+        config={{ metric: { label: "Loss reasons" } }}
+        aria-label="Loss reasons"
+        className="aspect-auto w-full h-full"
+      >
         <BarChart
           data={flat}
           margin={{ top: 8, right: 16, left: -12, bottom: 0 }}
@@ -112,7 +116,7 @@ export function LossReasonTrendChart({
             />
           ))}
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 }

@@ -1,4 +1,11 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 import { useActionState, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,16 +30,16 @@ export function LoginForm({ next }: { next: string }) {
         </Link>
         <span>Tender workspace</span>
       </div>
-      <section className={styles.card}>
+      <Card className={styles.card}>
         <h1 className={styles.title}>Sign in to Zekindo</h1>
         <p className={styles.subtitle}>
           Use your workspace email and password.
         </p>
         <form action={action} className={styles.fieldColumn}>
           <input type="hidden" name="next" value={next} />
-          <label className="field">
+          <Label className="field">
             Email address
-            <input
+            <Input
               className="control"
               type="email"
               name="email"
@@ -44,11 +51,11 @@ export function LoginForm({ next }: { next: string }) {
               disabled={pending}
               placeholder="you@zekindo.co.id"
             />
-          </label>
+          </Label>
           <div className="field">
-            <label htmlFor="login-password">Password</label>
+            <Label htmlFor="login-password">Password</Label>
             <div className={styles.passwordField}>
-              <input
+              <Input
                 className="control"
                 type={show ? "text" : "password"}
                 name="password"
@@ -59,33 +66,30 @@ export function LoginForm({ next }: { next: string }) {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={pending}
               />
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => setShow(!show)}
                 aria-label={show ? "Hide password" : "Show password"}
               >
                 {show ? "Hide" : "Show"}
-              </button>
+              </Button>
             </div>
           </div>
           {state?.error && (
-            <p role="alert" className="feedback feedback-error">
-              {state.error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
           )}
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={pending}
-          >
+          <Button variant="default" type="submit" disabled={pending}>
             {pending ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
         <p className={styles.help}>
           Need an account or a password reset? Contact your workspace
           administrator.
         </p>
-      </section>
+      </Card>
       <footer className={styles.footer}>PT Zeus Kimiatama Indonesia</footer>
     </main>
   );

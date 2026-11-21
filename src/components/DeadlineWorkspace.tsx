@@ -1,4 +1,12 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
+
 import { useState } from "react";
 import Link from "next/link";
 import type { DeadlineRow, StalledRow } from "@/lib/tender-logic";
@@ -73,13 +81,13 @@ export function DeadlineWorkspace({
         description="Milestone dates across both tracks. Calendar entries are all-day events."
         actions={
           view !== "followup" && (
-            <button
-              className="button button-secondary"
+            <Button
+              variant="outline"
               disabled={!upcoming.length}
               onClick={download}
             >
               Download calendar
-            </button>
+            </Button>
           )
         }
       />
@@ -98,7 +106,8 @@ export function DeadlineWorkspace({
       </div>
       <div className={styles.pills} aria-label="Deadline views">
         {VIEWS.map(([key, label]) => (
-          <button
+          <Button
+            variant="ghost"
             key={key}
             aria-pressed={view === key}
             onClick={() => {
@@ -107,10 +116,10 @@ export function DeadlineWorkspace({
             }}
           >
             {label}
-          </button>
+          </Button>
         ))}
       </div>
-      <section className={styles.panel}>
+      <Card className={`${styles.panel} gap-0 py-0`}>
         <div className={styles.panelHead}>
           <div>
             <h2>
@@ -124,7 +133,7 @@ export function DeadlineWorkspace({
                 : "Nearest milestone per active tender, ordered by date."}
             </p>
           </div>
-          <select
+          <NativeSelect
             aria-label="Deadline track"
             className="control"
             style={{ maxWidth: 180 }}
@@ -134,11 +143,13 @@ export function DeadlineWorkspace({
               updateURL(view, e.target.value);
             }}
           >
-            <option value="all">Both tracks</option>
-            <option value="upstream">Upstream</option>
-            <option value="downstream">Downstream</option>
-          </select>
-          <input
+            <NativeSelectOption value="all">Both tracks</NativeSelectOption>
+            <NativeSelectOption value="upstream">Upstream</NativeSelectOption>
+            <NativeSelectOption value="downstream">
+              Downstream
+            </NativeSelectOption>
+          </NativeSelect>
+          <Input
             type="search"
             aria-label="Search deadlines"
             className="control"
@@ -196,7 +207,7 @@ export function DeadlineWorkspace({
             Nothing matches this view. Try another view or clear your search.
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

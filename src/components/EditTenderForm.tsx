@@ -1,4 +1,8 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { Button } from "@/components/ui/button";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { archiveTender, updateTender } from "@/lib/actions";
@@ -91,8 +95,8 @@ export function EditTenderForm({
         description="All sections, including milestone order, save together."
         actions={
           <>
-            <button
-              className="button button-secondary"
+            <Button
+              variant="outline"
               onClick={() =>
                 dirty
                   ? setConfirm("discard")
@@ -100,20 +104,21 @@ export function EditTenderForm({
               }
             >
               Cancel
-            </button>
-            <button
-              className="button button-danger"
+            </Button>
+            <Button
+              variant="destructive"
               disabled={pending}
               onClick={() => setConfirm("archive")}
             >
               Archive tender
-            </button>
+            </Button>
           </>
         }
       />
       <div className={styles.steps} aria-label="Edit sections">
         {SECTIONS.map((label, i) => (
-          <button
+          <Button
+            variant="ghost"
             key={label}
             type="button"
             className={`${styles.step} ${i === section ? styles.stepActive : ""}`}
@@ -126,7 +131,7 @@ export function EditTenderForm({
           >
             <span className={styles.stepNumber}>{i + 1}</span>
             <span>{label}</span>
-          </button>
+          </Button>
         ))}
       </div>
       <form
@@ -183,9 +188,9 @@ export function EditTenderForm({
           )}
         </fieldset>
         {error && (
-          <p role="alert" className="feedback feedback-error">
-            {error}
-          </p>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         <div className={styles.footer}>
           <span className="muted">
@@ -193,13 +198,9 @@ export function EditTenderForm({
               ? "Changes are not saved yet."
               : "Edit any section, then save once."}
           </span>
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={pending || !dirty}
-          >
+          <Button variant="default" type="submit" disabled={pending || !dirty}>
             {pending ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </form>
       <Modal
@@ -219,15 +220,15 @@ export function EditTenderForm({
             : "Your edits have not been saved."}
         </p>
         <div className="dialog-actions">
-          <button
-            className="button button-secondary"
+          <Button
+            variant="outline"
             disabled={pending}
             onClick={() => setConfirm(null)}
           >
             Keep editing
-          </button>
-          <button
-            className="button button-danger"
+          </Button>
+          <Button
+            variant="destructive"
             disabled={pending}
             onClick={() => {
               if (confirm === "discard") {
@@ -249,7 +250,7 @@ export function EditTenderForm({
               : confirm === "archive"
                 ? "Confirm archive"
                 : "Discard changes"}
-          </button>
+          </Button>
         </div>
       </Modal>
       <Modal
@@ -261,12 +262,12 @@ export function EditTenderForm({
           Your changes have not been saved. Keep editing to avoid losing them.
         </p>
         <div className="dialog-actions">
-          <button className="button button-secondary" onClick={leave.cancel}>
+          <Button variant="outline" onClick={leave.cancel}>
             Keep editing
-          </button>
-          <button className="button button-danger" onClick={leave.confirm}>
+          </Button>
+          <Button variant="destructive" onClick={leave.confirm}>
             Discard and leave
-          </button>
+          </Button>
         </div>
       </Modal>
     </div>

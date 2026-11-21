@@ -1,6 +1,7 @@
 "use client";
+import { ChartContainer } from "@/components/ui/chart";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { STATUS_COLORS } from "./chartColors";
 import type { StatusBreakdown } from "@/lib/analytics";
@@ -47,7 +48,11 @@ export function TenderStatusDonut({ data }: { data: StatusBreakdown[] }) {
   return (
     <div className={styles.donutRow}>
       <div className={styles.donutChart}>
-        <ResponsiveContainer width="100%" height={200}>
+        <ChartContainer
+          config={{ metric: { label: "Tender status" } }}
+          aria-label="Tender status"
+          className="aspect-auto w-full h-[200px]"
+        >
           <PieChart>
             <Pie
               isAnimationActive={false}
@@ -71,7 +76,7 @@ export function TenderStatusDonut({ data }: { data: StatusBreakdown[] }) {
             </Pie>
             <Tooltip content={DonutTooltip} />
           </PieChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </div>
 
       <div

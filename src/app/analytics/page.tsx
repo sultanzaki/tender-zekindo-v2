@@ -1,3 +1,19 @@
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { OperationsHeading } from "@/components/TenderOperations";
 import { requireUser } from "@/lib/auth/dal";
 import { MoneyValue, MoneyAccessNotice } from "@/components/MoneyValue";
@@ -114,20 +130,22 @@ export default async function AnalyticsDashboardPage({
     customer === "all" ? null : `Customer: ${customer}`,
   ].filter((v): v is string => !!v);
 
-  const coverage = periods.length > 1 ? `${periods[0]}–${periods.at(-1)}` : (periods[0] ?? "No periods");
+  const coverage =
+    periods.length > 1
+      ? `${periods[0]}–${periods.at(-1)}`
+      : (periods[0] ?? "No periods");
   return (
     <div className={styles.page}>
       <OperationsHeading
         title="Tender analytics"
         actions={
-          <a
-            href={`/tenders/export?${exportParams}`}
-            className="button button-secondary"
-          >
-            Export this scope
-          </a>
+          <Button asChild variant="outline">
+            <a href={`/tenders/export?${exportParams}`}>Export this scope</a>
+          </Button>
         }
-        context={[`${tenders.length} tenders`, coverage, ...activeFilters].join(" · ")}
+        context={[`${tenders.length} tenders`, coverage, ...activeFilters].join(
+          " · ",
+        )}
       />
       <AnalyticsFilters
         areas={options.areas}
@@ -145,7 +163,10 @@ export default async function AnalyticsDashboardPage({
 
       {
         <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-          <div className={shared.card} style={{ overflow: "hidden" }}>
+          <Card
+            className={`${shared.card} gap-0 py-0`}
+            style={{ overflow: "hidden" }}
+          >
             <div className={shared.cardHeader}>
               <h2 className={shared.cardTitle}>Win Rate Trend</h2>
               <span className={shared.cardMeta}>
@@ -153,9 +174,12 @@ export default async function AnalyticsDashboardPage({
               </span>
             </div>
             <WinRateTrendChart data={outcomeRows} />
-          </div>
+          </Card>
 
-          <div className={shared.card} style={{ overflow: "hidden" }}>
+          <Card
+            className={`${shared.card} gap-0 py-0`}
+            style={{ overflow: "hidden" }}
+          >
             <div className={shared.cardHeader}>
               <h2 className={shared.cardTitle}>Outcome Volume</h2>
               <span className={shared.cardMeta}>
@@ -163,7 +187,7 @@ export default async function AnalyticsDashboardPage({
               </span>
             </div>
             <OutcomeVolumeChart data={outcomeRows} />
-          </div>
+          </Card>
         </div>
       }
 
@@ -186,7 +210,7 @@ export default async function AnalyticsDashboardPage({
         )}
       </div>
 
-      <div
+      <Card
         className={shared.card}
         style={{ marginBottom: 20, overflow: "hidden" }}
       >
@@ -197,10 +221,13 @@ export default async function AnalyticsDashboardPage({
           </span>
         </div>
         <LossReasonTrendChart data={lossRows} />
-      </div>
+      </Card>
 
       <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-        <div className={shared.card} style={{ overflow: "hidden" }}>
+        <Card
+          className={`${shared.card} gap-0 py-0`}
+          style={{ overflow: "hidden" }}
+        >
           <div className={shared.cardHeader}>
             <h2 className={shared.cardTitle}>Tender Status</h2>
             <span className={shared.cardMeta}>
@@ -208,19 +235,25 @@ export default async function AnalyticsDashboardPage({
             </span>
           </div>
           <TenderStatusDonut data={statusData} />
-        </div>
+        </Card>
 
-        <div className={shared.card} style={{ overflow: "hidden" }}>
+        <Card
+          className={`${shared.card} gap-0 py-0`}
+          style={{ overflow: "hidden" }}
+        >
           <div className={shared.cardHeader}>
             <h2 className={shared.cardTitle}>Track Comparison</h2>
             <span className={shared.cardMeta}>Upstream vs downstream</span>
           </div>
           <TrackComparisonChart data={trackData} canViewMoney={canViewMoney} />
-        </div>
+        </Card>
       </div>
 
       <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-        <div className={shared.card} style={{ overflow: "hidden" }}>
+        <Card
+          className={`${shared.card} gap-0 py-0`}
+          style={{ overflow: "hidden" }}
+        >
           <div className={shared.cardHeader}>
             <h2 className={shared.cardTitle}>Win Rate by Area</h2>
             <span className={shared.cardMeta}>
@@ -231,9 +264,12 @@ export default async function AnalyticsDashboardPage({
             data={winRateByArea}
             emptyMessage="Not enough decided tenders per area yet."
           />
-        </div>
+        </Card>
 
-        <div className={shared.card} style={{ overflow: "hidden" }}>
+        <Card
+          className={`${shared.card} gap-0 py-0`}
+          style={{ overflow: "hidden" }}
+        >
           <div className={shared.cardHeader}>
             <h2 className={shared.cardTitle}>Win Rate by Entity</h2>
             <span className={shared.cardMeta}>
@@ -244,11 +280,14 @@ export default async function AnalyticsDashboardPage({
             data={winRateByEntitas}
             emptyMessage="Not enough decided tenders per entity yet."
           />
-        </div>
+        </Card>
       </div>
 
       {
-        <div className={shared.card} style={{ overflow: "hidden" }}>
+        <Card
+          className={`${shared.card} gap-0 py-0`}
+          style={{ overflow: "hidden" }}
+        >
           <div className={shared.cardHeader}>
             <h2 className={shared.cardTitle}>Pipeline Value by Area</h2>
             <span className={shared.cardMeta}>
@@ -265,9 +304,9 @@ export default async function AnalyticsDashboardPage({
               <MoneyValue canView={false} />
             </div>
           )}
-        </div>
+        </Card>
       }
-      <section className={shared.card} style={{ marginBottom: 24 }}>
+      <Card className={shared.card} style={{ marginBottom: 24 }}>
         <div className={shared.cardHeader}>
           <h2 className={shared.cardTitle}>Customer performance</h2>
           <span className={shared.cardMeta}>
@@ -278,48 +317,45 @@ export default async function AnalyticsDashboardPage({
           data={winRateByGroup(tenders, (t) => t.customer)}
           emptyMessage="Not enough decided tenders per customer yet."
         />
-      </section>
-      <details className={shared.card}>
-        <summary
-          style={{
-            padding: 20,
-            cursor: "pointer",
-            fontWeight: 500,
-            fontSize: 13,
-          }}
-        >
-          View underlying outcome data
-        </summary>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption>Exact counts for the selected scope</caption>
-            <thead>
-              <tr>
-                <th>Period</th>
-                <th>Won</th>
-                <th>Lost</th>
-                <th>Other outcomes</th>
-                <th>Decided</th>
-                <th>Win rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {outcomeRows.map((row) => (
-                <tr key={row.period}>
-                  <td>{row.period}</td>
-                  <td>{row.win}</td>
-                  <td>{row.loss}</td>
-                  <td>{row.other}</td>
-                  <td>{row.decided}</td>
-                  <td>
-                    {row.winRatePct === null ? "—" : `${row.winRatePct}%`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      </Card>
+      <Collapsible className={shared.card}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="m-2">
+            View underlying outcome data
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className={styles.tableWrap}>
+            <Table className={styles.table}>
+              <caption>Exact counts for the selected scope</caption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Won</TableHead>
+                  <TableHead>Lost</TableHead>
+                  <TableHead>Other outcomes</TableHead>
+                  <TableHead>Decided</TableHead>
+                  <TableHead>Win rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {outcomeRows.map((row) => (
+                  <TableRow key={row.period}>
+                    <TableCell>{row.period}</TableCell>
+                    <TableCell>{row.win}</TableCell>
+                    <TableCell>{row.loss}</TableCell>
+                    <TableCell>{row.other}</TableCell>
+                    <TableCell>{row.decided}</TableCell>
+                    <TableCell>
+                      {row.winRatePct === null ? "—" : `${row.winRatePct}%`}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

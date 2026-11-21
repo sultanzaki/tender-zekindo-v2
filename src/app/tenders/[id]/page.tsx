@@ -1,3 +1,6 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
@@ -52,9 +55,10 @@ export default async function Detail({
     [tender.track]: catalog,
   });
   const today = todayISO();
-  const next = tender.result || tender.archivedAt
-    ? null
-    : nextMilestone(tender, today, { [tender.track]: catalog });
+  const next =
+    tender.result || tender.archivedAt
+      ? null
+      : nextMilestone(tender, today, { [tender.track]: catalog });
   const tab =
     query.tab === "documents"
       ? "documents"
@@ -62,11 +66,16 @@ export default async function Detail({
         ? "activity"
         : "overview";
   const requestedReturn = safeNextPath(query.returnTo);
-  const fromOverview = query.returnTo === requestedReturn &&
-    (requestedReturn === "/overview" || requestedReturn.startsWith("/overview?track="));
-  const returnTo = fromOverview || requestedReturn.startsWith("/tenders")
-    ? requestedReturn
-    : tender.track === "downstream" ? "/tenders?track=downstream" : "/tenders";
+  const fromOverview =
+    query.returnTo === requestedReturn &&
+    (requestedReturn === "/overview" ||
+      requestedReturn.startsWith("/overview?track="));
+  const returnTo =
+    fromOverview || requestedReturn.startsWith("/tenders")
+      ? requestedReturn
+      : tender.track === "downstream"
+        ? "/tenders?track=downstream"
+        : "/tenders";
   const tabHref = (value: string) =>
     `/tenders/${id}?${new URLSearchParams({ tab: value, returnTo })}`;
   const [documents, tree] =
@@ -128,20 +137,63 @@ export default async function Detail({
       <div className={styles.identity}>
         <OperationsHeading
           title={tender.product || tender.customer}
-          context={<>{tender.customer} · {tender.area} · {tender.tenderNo || `Tender #${tender.rowNo}`}</>}
-          actions={isAdmin ? (
-            tender.archivedAt ? <ArchiveAction tenderId={id} action="restore" /> : (
-              <>
-                <Link href={`/tenders/${id}/edit`} className="button button-secondary">Edit tender</Link>
-                <Link href={`/tenders/${id}/edit?section=milestones`} className="button button-primary">Edit milestones</Link>
-              </>
-            )
-          ) : undefined}
+          context={
+            <>
+              {tender.customer} · {tender.area} ·{" "}
+              {tender.tenderNo || `Tender #${tender.rowNo}`}
+            </>
+          }
+          actions={
+            isAdmin ? (
+              tender.archivedAt ? (
+                <ArchiveAction tenderId={id} action="restore" />
+              ) : (
+                <>
+                  <Button asChild variant="outline">
+                    <Link href={`/tenders/${id}/edit`}>Edit tender</Link>
+                  </Button>
+                  <Button asChild variant="default">
+                    <Link href={`/tenders/${id}/edit?section=milestones`}>
+                      Edit milestones
+                    </Link>
+                  </Button>
+                </>
+              )
+            ) : undefined
+          }
         />
         <dl className={styles.handoff}>
-          <div><dt>Status</dt><dd><ResultBadge result={tender.result} /></dd></div>
-          <div><dt>Next milestone</dt><dd><MilestoneDue label={next?.label} date={next?.date} days={next?.diff} emptyLabel={tender.result || tender.archivedAt ? "Closed schedule" : undefined} /></dd></div>
-          <div><dt>Track</dt><dd>{tender.track === "upstream" ? "Upstream" : <TrackBadge track={tender.track} />}</dd></div>
+          <div>
+            <dt>Status</dt>
+            <dd>
+              <ResultBadge result={tender.result} />
+            </dd>
+          </div>
+          <div>
+            <dt>Next milestone</dt>
+            <dd>
+              <MilestoneDue
+                label={next?.label}
+                date={next?.date}
+                days={next?.diff}
+                emptyLabel={
+                  tender.result || tender.archivedAt
+                    ? "Closed schedule"
+                    : undefined
+                }
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>Track</dt>
+            <dd>
+              {tender.track === "upstream" ? (
+                "Upstream"
+              ) : (
+                <TrackBadge track={tender.track} />
+              )}
+            </dd>
+          </div>
         </dl>
       </div>
       {tender.archivedAt && (
@@ -168,7 +220,7 @@ export default async function Detail({
       {tab === "overview" && (
         <>
           <div className={workspace.grid}>
-            <section className={workspace.panel}>
+            <Card className={`${workspace.panel} gap-0 py-0`}>
               <div className={workspace.panelHead}>
                 <div>
                   <h2>Milestone timeline</h2>
@@ -178,7 +230,7 @@ export default async function Detail({
                   </p>
                 </div>
               </div>
-              <div className={styles.panel}>
+              <CardContent className={styles.panel}>
                 {milestones.map((m, i) => (
                   <div key={m.key} className={styles.timelineRow}>
                     <div className={styles.timelineRail}>
@@ -193,11 +245,20 @@ export default async function Detail({
                         <div className={styles.timelineLine} />
                       )}
                     </div>
-                    <div className={styles.timelineBody} data-next={next?.key === m.key}>
+                    <div
+                      className={styles.timelineBody}
+                      data-next={next?.key === m.key}
+                    >
                       <div className={styles.timelineLabel}>{m.label}</div>
                       <div className={styles.timelineDate}>
-                        {m.date ? <time dateTime={m.date}>{formatDateID(m.date)}</time> : "Not scheduled"}
-                        {next?.key === m.key && <strong className={styles.nextTag}>Next</strong>}
+                        {m.date ? (
+                          <time dateTime={m.date}>{formatDateID(m.date)}</time>
+                        ) : (
+                          "Not scheduled"
+                        )}
+                        {next?.key === m.key && (
+                          <strong className={styles.nextTag}>Next</strong>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -207,24 +268,44 @@ export default async function Detail({
                     No milestones selected for this tender.
                   </p>
                 )}
-              </div>
-            </section>
+              </CardContent>
+            </Card>
             <div className={styles.sidePanels}>
-              <section className={workspace.panel}>
-                <div className={workspace.panelHead}><h2>Value & entity</h2></div>
+              <Card className={`${workspace.panel} gap-0 py-0`}>
+                <div className={workspace.panelHead}>
+                  <h2>Value & entity</h2>
+                </div>
                 <dl className={styles.facts}>
-                  <div><dt>Entity / Consortium</dt><dd>{tender.entitas || "—"}</dd></div>
-                  <div><dt>Quantity</dt><dd>{tender.qty?.toLocaleString("id-ID") ?? "—"}</dd></div>
-                  <div><dt>OE value</dt><dd><MoneyValue value={tender.oe} canView /></dd></div>
-                  <div><dt>Our bid value</dt><dd><MoneyValue value={tender.nilaiPenawaran} canView /></dd></div>
+                  <div>
+                    <dt>Entity / Consortium</dt>
+                    <dd>{tender.entitas || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Quantity</dt>
+                    <dd>{tender.qty?.toLocaleString("id-ID") ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>OE value</dt>
+                    <dd>
+                      <MoneyValue value={tender.oe} canView />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Our bid value</dt>
+                    <dd>
+                      <MoneyValue value={tender.nilaiPenawaran} canView />
+                    </dd>
+                  </div>
                 </dl>
-                {tender.oeCatatan && <p className={styles.factNote}>{tender.oeCatatan}</p>}
-              </section>
-              <section className={workspace.panel}>
+                {tender.oeCatatan && (
+                  <p className={styles.factNote}>{tender.oeCatatan}</p>
+                )}
+              </Card>
+              <Card className={`${workspace.panel} gap-0 py-0`}>
                 <div className={workspace.panelHead}>
                   <h2>Remarks & context</h2>
                 </div>
-                <div className={styles.panel}>
+                <CardContent className={styles.panel}>
                   {tender.carryOver && (
                     <p className={styles.carryOverBadge}>{tender.carryOver}</p>
                   )}
@@ -237,27 +318,27 @@ export default async function Detail({
                       <p className={styles.remarksText}>{tender.remark}</p>
                     </>
                   )}
-                </div>
-              </section>
+                </CardContent>
+              </Card>
               {isAdmin && (
-                <section className={workspace.panel}>
+                <Card className={`${workspace.panel} gap-0 py-0`}>
                   <div className={workspace.panelHead}>
                     <h2>
                       Internal notes <span className="muted">· admin only</span>
                     </h2>
                   </div>
-                  <div className={styles.panel}>
+                  <CardContent className={styles.panel}>
                     <p className={styles.remarksText}>
                       {tender.catatanInternal || "No internal notes."}
                     </p>
-                  </div>
-                </section>
+                  </CardContent>
+                </Card>
               )}
-              <section className={workspace.panel}>
+              <Card className={`${workspace.panel} gap-0 py-0`}>
                 <div className={workspace.panelHead}>
                   <h2>Tender record</h2>
                 </div>
-                <div className={styles.panel}>
+                <CardContent className={styles.panel}>
                   <p className="muted">
                     {tender.pnl ? "P&L flagged" : "No P&L flag"}
                     <br />
@@ -269,36 +350,33 @@ export default async function Detail({
                       ? ` by ${tender.updatedByName}`
                       : ""}
                   </p>
-                  <Link
-                    href={tabHref("documents")}
-                    className="button button-secondary"
-                  >
-                    Open documents →
-                  </Link>
-                </div>
-              </section>
+                  <Button asChild variant="outline">
+                    <Link href={tabHref("documents")}>Open documents →</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </>
       )}
       {tab === "documents" && (
         <div className={workspace.grid}>
-          <section className={workspace.panel}>
+          <Card className={`${workspace.panel} gap-0 py-0`}>
             <div className={workspace.panelHead}>
               <div>
                 <h2>Document workspace</h2>
                 <p>Files organized by checklist item and milestone.</p>
               </div>
             </div>
-            <div className={styles.panel}>
+            <CardContent className={styles.panel}>
               <DocumentExplorer
                 tenderId={id}
                 sections={sections}
                 isAdmin={isAdmin}
               />
-            </div>
-          </section>
-          <section className={workspace.panel}>
+            </CardContent>
+          </Card>
+          <Card className={`${workspace.panel} gap-0 py-0`}>
             <div className={workspace.panelHead}>
               <div>
                 <h2>Readiness checklist</h2>
@@ -308,18 +386,18 @@ export default async function Detail({
                 </p>
               </div>
             </div>
-            <div className={styles.panel}>
+            <CardContent className={styles.panel}>
               <DocumentChecklist
                 tenderId={id}
                 documents={documents}
                 isAdmin={isAdmin}
               />
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         </div>
       )}
       {tab === "activity" && activity && (
-        <section className={workspace.panel}>
+        <Card className={`${workspace.panel} gap-0 py-0`}>
           <div className={workspace.panelHead}>
             <div>
               <h2>Activity history</h2>
@@ -327,9 +405,9 @@ export default async function Detail({
             </div>
           </div>
           {activity.error && (
-            <p className="feedback feedback-error" role="alert">
-              {activity.error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{activity.error}</AlertDescription>
+            </Alert>
           )}
           {activity.events.map((event) => (
             <div key={event.id} className={workspace.row}>
@@ -359,7 +437,7 @@ export default async function Detail({
           {!activity.events.length && !activity.error && (
             <div className={workspace.empty}>No activity recorded yet.</div>
           )}
-        </section>
+        </Card>
       )}
     </div>
   );

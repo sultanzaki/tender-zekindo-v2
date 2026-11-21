@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { MoneyValue } from "../MoneyValue";
 import styles from "./charts.module.css";
 
@@ -22,7 +23,7 @@ export function KpiCards({
   return (
     <div className={styles.kpiGrid}>
       {!data.hidePipeline && (
-        <div className={styles.kpiCard}>
+        <Card className={styles.kpiCard}>
           <div className={styles.kpiLabel}>Pipeline Value</div>
           <div className={styles.kpiValue}>
             <MoneyValue
@@ -32,21 +33,21 @@ export function KpiCards({
             />
           </div>
           <div className={styles.kpiCaption}>Known OE of active tenders</div>
-        </div>
+        </Card>
       )}
-      <div className={styles.kpiCard}>
+      <Card className={styles.kpiCard}>
         <div className={styles.kpiLabel}>Win Value</div>
         <div className={styles.kpiValue}>
           <MoneyValue value={data.winValue} canView={canViewMoney} compact />
         </div>
         <div className={styles.kpiCaption}>Known bid value of won tenders</div>
-      </div>
-      <div className={styles.kpiCard}>
+      </Card>
+      <Card className={styles.kpiCard}>
         <div className={styles.kpiLabel}>Running Tenders</div>
         <div className={styles.kpiValue}>{data.runningCount}</div>
         <div className={styles.kpiCaption}>No result recorded yet</div>
-      </div>
-      <div className={styles.kpiCard}>
+      </Card>
+      <Card className={styles.kpiCard}>
         <div className={styles.kpiLabel}>Win Rate</div>
         <div className={styles.kpiValue}>
           {data.winRatePct !== null ? `${data.winRatePct}%` : "—"}
@@ -54,7 +55,7 @@ export function KpiCards({
         <div className={styles.kpiCaption}>
           {data.winCount} won of {data.decidedCount} decided
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
