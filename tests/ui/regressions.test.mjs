@@ -309,14 +309,15 @@ test("schedule matrix opens on desktop and phone and contains long package names
     await matrix.getByRole("columnheader", {name:"Site visit"}).waitFor();
     const link = matrix.getByRole("link", {name:"Package 1", exact:true});
     assert.match(await link.getAttribute("href"), /^\/tenders\/0/);
-    const fits = await link.evaluate(el => {
+    assert.equal(await link.getAttribute("title"), "Package 1");
+    const truncated = await link.evaluate(el => {
+      const height = el.offsetHeight;
       el.textContent = "UnbrokenPackageReference".repeat(12);
-      const cell = el.closest("td").getBoundingClientRect();
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      return [...range.getClientRects()].every(r => r.right <= cell.right + 1 && r.left >= cell.left - 1);
+      const style = getComputedStyle(el);
+      return el.scrollWidth > el.clientWidth && el.offsetHeight === height &&
+        style.textOverflow === "ellipsis" && style.overflowX === "hidden";
     });
-    assert.ok(fits, `package overflows at ${width}`);
+    assert.ok(truncated, `expected a single truncated line at ${width}px`);
     if (width === 390) assert.ok(await matrix.evaluate(el => el.scrollWidth > el.clientWidth));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.close();

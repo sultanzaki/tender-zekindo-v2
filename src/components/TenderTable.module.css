@@ -495,7 +495,14 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.packageCell a { color: var(--color-fg1); font-weight: 600; }
+.packageCell a {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-fg1);
+  font-weight: 600;
+}
 .deadlineCell { min-width: 165px; max-width: 210px; }
 .tdRight { font-variant-numeric: tabular-nums; }
 .search:focus-visible,

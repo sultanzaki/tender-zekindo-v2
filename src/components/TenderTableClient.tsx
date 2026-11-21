@@ -802,6 +802,7 @@ export function TenderTableClient({
                       <Link
                         prefetch={false}
                         href={tenderHref(t.id)}
+                        title={t.product || t.customer || "View tender"}
                         onClick={(event) => event.stopPropagation()}
                       >
                         {t.product || t.customer || "View tender"}
