@@ -15,7 +15,7 @@
 
   /* Neutrals */
   --zk-gray-0: #ffffff;
-  --zk-gray-50: #f7fbfd;
+  --zk-gray-50: #f5f7fa;
   --zk-gray-100: #f0f4f8;
   --zk-gray-200: #e0e8ee;
   --zk-gray-300: #c8d6df;
@@ -48,14 +48,14 @@
   --color-bg-tint: var(--zk-blue-50);
   --color-surface: var(--zk-gray-0);
 
-  --color-fg1: #163442;
-  --color-fg2: #49606c;
-  --color-fg3: #5b707c;
+  --color-fg1: #132238;
+  --color-fg2: #25354d;
+  --color-fg3: #52637a;
   --color-fg-on-primary: var(--zk-gray-0);
 
-  --color-border: #e2e9ef;
+  --color-border: #dce4ee;
   --color-border-focus: var(--zk-blue-400);
-  --color-divider: var(--zk-gray-200);
+  --color-divider: #e6ebf2;
 
   /* ─── Typography Vars ─── */
   --font-sans: var(--font-poppins), "Segoe UI", system-ui, sans-serif;

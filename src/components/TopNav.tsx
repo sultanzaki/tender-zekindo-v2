@@ -175,7 +175,7 @@ export function TopNav({
             />
             <kbd>/</kbd>
           </form>
-          {isAdmin ? (
+          {isAdmin && path === "/tenders" ? null : isAdmin ? (
             <Suspense
               fallback={
                 <Link className="button button-primary" href="/tenders/new">

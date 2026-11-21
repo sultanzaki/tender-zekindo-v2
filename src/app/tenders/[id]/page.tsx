@@ -15,10 +15,11 @@ import {
   formatDateID,
   dateTone,
   todayISO,
+  nextMilestone,
 } from "@/lib/tender-logic";
 import { safeNextPath } from "@/lib/validation";
-import { PageHeading } from "@/components/PageHeading";
-import { MoneyValue, MoneyAccessNotice } from "@/components/MoneyValue";
+import { MilestoneDue, OperationsHeading } from "@/components/TenderOperations";
+import { MoneyValue } from "@/components/MoneyValue";
 import { ResultBadge } from "@/components/ResultBadge";
 import { TrackBadge } from "@/components/TrackBadge";
 import { DocumentChecklist } from "@/components/DocumentChecklist";
@@ -50,18 +51,22 @@ export default async function Detail({
   const milestones = resolveTenderMilestones(tender, {
     [tender.track]: catalog,
   });
+  const today = todayISO();
+  const next = tender.result || tender.archivedAt
+    ? null
+    : nextMilestone(tender, today, { [tender.track]: catalog });
   const tab =
     query.tab === "documents"
       ? "documents"
       : query.tab === "activity" && isAdmin
         ? "activity"
         : "overview";
-  const returnTo =
-    query.returnTo && safeNextPath(query.returnTo).startsWith("/tenders")
-      ? safeNextPath(query.returnTo)
-      : tender.track === "downstream"
-        ? "/tenders?track=downstream"
-        : "/tenders";
+  const requestedReturn = safeNextPath(query.returnTo);
+  const fromOverview = query.returnTo === requestedReturn &&
+    (requestedReturn === "/" || requestedReturn.startsWith("/?track="));
+  const returnTo = fromOverview || requestedReturn.startsWith("/tenders")
+    ? requestedReturn
+    : tender.track === "downstream" ? "/tenders?track=downstream" : "/tenders";
   const tabHref = (value: string) =>
     `/tenders/${id}?${new URLSearchParams({ tab: value, returnTo })}`;
   const [documents, tree] =
@@ -118,43 +123,36 @@ export default async function Detail({
   return (
     <div className={workspace.page}>
       <Link href={returnTo} className={styles.backLink}>
-        ← Back to table
+        ← {fromOverview ? "Overview" : "Tenders"}
       </Link>
-      <PageHeading
-        eyebrow={`${tender.tenderNo || `TENDER #${tender.rowNo}`} · ${tender.period}`}
-        title={tender.product || tender.customer}
-        description={
-          <>
-            {tender.customer} · {tender.area}
-          </>
-        }
-        actions={
-          <>
-            <TrackBadge track={tender.track} />
-            <ResultBadge result={tender.result} />
-            {isAdmin &&
-              (tender.archivedAt ? (
-                <ArchiveAction tenderId={id} action="restore" />
-              ) : (
-                <Link
-                  href={`/tenders/${id}/edit`}
-                  className="button button-primary"
-                >
-                  Edit tender
-                </Link>
-              ))}
-          </>
-        }
-      />
+      <div className={styles.identity}>
+        <OperationsHeading
+          title={tender.product || tender.customer}
+          context={<>{tender.customer} · {tender.area} · {tender.tenderNo || `Tender #${tender.rowNo}`}</>}
+          actions={isAdmin ? (
+            tender.archivedAt ? <ArchiveAction tenderId={id} action="restore" /> : (
+              <>
+                <Link href={`/tenders/${id}/edit`} className="button button-secondary">Edit tender</Link>
+                <Link href={`/tenders/${id}/edit?section=milestones`} className="button button-primary">Edit milestones</Link>
+              </>
+            )
+          ) : undefined}
+        />
+        <dl className={styles.handoff}>
+          <div><dt>Status</dt><dd><ResultBadge result={tender.result} /></dd></div>
+          <div><dt>Next milestone</dt><dd><MilestoneDue label={next?.label} date={next?.date} days={next?.diff} emptyLabel={tender.result || tender.archivedAt ? "Closed schedule" : undefined} /></dd></div>
+          <div><dt>Track</dt><dd>{tender.track === "upstream" ? "Upstream" : <TrackBadge track={tender.track} />}</dd></div>
+        </dl>
+      </div>
       {tender.archivedAt && (
         <p className={workspace.note}>
           Archived on {formatDateID(tender.archivedAt.slice(0, 10))}. Restore
           this tender to include it in active views.
         </p>
       )}
-      <nav className={workspace.pills} aria-label="Tender sections">
+      <nav className={styles.sectionTabs} aria-label="Tender sections">
         {[
-          ["overview", "Overview"],
+          ["overview", "Schedule"],
           ["documents", "Documents"],
           ...(isAdmin ? [["activity", "Activity"]] : []),
         ].map(([key, label]) => (
@@ -169,37 +167,6 @@ export default async function Detail({
       </nav>
       {tab === "overview" && (
         <>
-          {!ctx && <MoneyAccessNotice returnTo={tabHref("overview")} />}
-          <div className={workspace.metrics}>
-            {(
-              [
-                ["Entity / Consortium", tender.entitas || "—"],
-                ["Quantity", tender.qty?.toLocaleString("id-ID") ?? "—"],
-                [
-                  "OE value",
-                  <MoneyValue key="oe" value={tender.oe} canView={!!ctx} />,
-                ],
-                [
-                  "Our bid value",
-                  <MoneyValue
-                    key="bid"
-                    value={tender.nilaiPenawaran}
-                    canView={!!ctx}
-                  />,
-                ],
-              ] as const
-            ).map(([label, value]) => (
-              <div key={label} className={workspace.metric}>
-                <span className={workspace.metricLabel}>{label}</span>
-                <strong className={styles.detailValue}>{value}</strong>
-                {label === "OE value" && tender.oeCatatan && (
-                  <span className={workspace.metricFoot}>
-                    {tender.oeCatatan}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
           <div className={workspace.grid}>
             <section className={workspace.panel}>
               <div className={workspace.panelHead}>
@@ -219,17 +186,18 @@ export default async function Detail({
                         className={styles.timelineDot}
                         style={{
                           background:
-                            tones[dateTone(m.date, tender.result, todayISO())],
+                            tones[dateTone(m.date, tender.result, today)],
                         }}
                       />
                       {i < milestones.length - 1 && (
                         <div className={styles.timelineLine} />
                       )}
                     </div>
-                    <div className={styles.timelineBody}>
+                    <div className={styles.timelineBody} data-next={next?.key === m.key}>
                       <div className={styles.timelineLabel}>{m.label}</div>
                       <div className={styles.timelineDate}>
-                        {m.date ? formatDateID(m.date) : "Not scheduled"}
+                        {m.date ? <time dateTime={m.date}>{formatDateID(m.date)}</time> : "Not scheduled"}
+                        {next?.key === m.key && <strong className={styles.nextTag}>Next</strong>}
                       </div>
                     </div>
                   </div>
@@ -242,6 +210,16 @@ export default async function Detail({
               </div>
             </section>
             <div className={styles.sidePanels}>
+              <section className={workspace.panel}>
+                <div className={workspace.panelHead}><h2>Value & entity</h2></div>
+                <dl className={styles.facts}>
+                  <div><dt>Entity / Consortium</dt><dd>{tender.entitas || "—"}</dd></div>
+                  <div><dt>Quantity</dt><dd>{tender.qty?.toLocaleString("id-ID") ?? "—"}</dd></div>
+                  <div><dt>OE value</dt><dd><MoneyValue value={tender.oe} canView /></dd></div>
+                  <div><dt>Our bid value</dt><dd><MoneyValue value={tender.nilaiPenawaran} canView /></dd></div>
+                </dl>
+                {tender.oeCatatan && <p className={styles.factNote}>{tender.oeCatatan}</p>}
+              </section>
               <section className={workspace.panel}>
                 <div className={workspace.panelHead}>
                   <h2>Remarks & context</h2>

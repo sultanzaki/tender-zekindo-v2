@@ -9,7 +9,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
-import { PageHeading } from "./PageHeading";
+import { MilestoneDue, OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
 import { TableViews } from "./TableViews";
 import { Modal } from "./Modal";
@@ -37,6 +37,7 @@ import {
   dateTone,
   filterTenders,
   formatDateID,
+  nextMilestone,
   sortTenders,
   type SortDirection,
   type SortKey,
@@ -148,6 +149,7 @@ export function TenderTableClient({
     saveCols(update(visibleCols));
   }
   const [showColMenu, setShowColMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<{
     key: SortKey;
     direction: SortDirection;
@@ -225,6 +227,15 @@ export function TenderTableClient({
     () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
     [sorted, safePage, pageSize],
   );
+
+  const catalog = useMemo(() => ({
+    upstream: milestoneTypes.filter((milestone) => milestone.track === "upstream"),
+    downstream: milestoneTypes.filter((milestone) => milestone.track === "downstream"),
+  }), [milestoneTypes]);
+  const upcoming = new Map(pageItems.map((tender) => [
+    tender.id,
+    tender.result ? null : nextMilestone(tender, anchor, catalog),
+  ]));
 
   const visibleMilestones = milestoneTypes.filter((m) => visibleCols[m.key]);
 
@@ -346,7 +357,7 @@ export function TenderTableClient({
               : "descending"
             : "none"
         }
-        className={`${styles.th} ${key === "tenderNo" ? styles.stickyIdentity : ""} ${align === "right" ? styles.thRight : ""} ${styles.thSortable}`}
+        className={`${styles.th} ${key === "product" ? styles.stickyIdentity : ""} ${align === "right" ? styles.thRight : ""} ${styles.thSortable}`}
         title={title}
       >
         <button
@@ -367,15 +378,13 @@ export function TenderTableClient({
 
   return (
     <div className={styles.wrap}>
-      <PageHeading
-        eyebrow="TENDER WORKSPACE"
+      <OperationsHeading
         title="Tenders"
-        description="Find opportunities, track progress, and keep the next step moving."
-        actions={
-          <a href={exportHref} className="button button-primary">
-            Export to Excel
-          </a>
-        }
+        actions={isAdmin ? (
+          <Link href={track === "downstream" ? "/tenders/new?track=downstream" : "/tenders/new"} className="button button-primary">
+            <span aria-hidden="true">+</span> New tender
+          </Link>
+        ) : undefined}
       />
       {!canViewMoney && (
         <MoneyAccessNotice
@@ -389,30 +398,30 @@ export function TenderTableClient({
           new URLSearchParams(tenderQuery(filters, track)),
         )}
       />
-      <div className={styles.viewBar}>
-        <div className={styles.quickViews} aria-label="Quick filters">
-          {[
-            ["all", "All results"],
-            ["__EMPTY__", "Active"],
-            ["WIN", "Won"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              aria-pressed={filters.result === value}
-              onClick={() => changeFilters((f) => ({ ...f, result: value }))}
-            >
-              {label}
-            </button>
-          ))}
+      <div className={`${shared.card} ${styles.tableWorkspace}`}>
+        <div className={styles.viewBar}>
+          <div className={styles.quickViews} aria-label="Quick filters">
+            {[
+              ["all", "All results"],
+              ["__EMPTY__", "Active"],
+              ["WIN", "Won"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                aria-pressed={filters.result === value}
+                onClick={() => changeFilters((f) => ({ ...f, result: value }))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <TableViews
+            track={track}
+            filters={filters}
+            onApply={(next) => changeFilters(() => next)}
+          />
         </div>
-        <TableViews
-          track={track}
-          filters={filters}
-          onApply={(next) => changeFilters(() => next)}
-        />
-      </div>
-      <div className={shared.card} style={{ overflow: "visible" }}>
-        <div className={styles.toolbar}>
+        <div className={styles.toolbar} data-filter-open={showFilters}>
           <input
             aria-label="Search tenders"
             type="search"
@@ -423,6 +432,14 @@ export function TenderTableClient({
               changeFilters((f) => ({ ...f, search: e.target.value }))
             }
           />
+          <button
+            type="button"
+            className={styles.filterToggle}
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters((value) => !value)}
+          >
+            {showFilters ? "Hide filters" : "Filters"}
+          </button>
           <select
             className={styles.select}
             aria-label="Period"
@@ -538,7 +555,7 @@ export function TenderTableClient({
               </div>
             )}
           </div>
-          <button className={styles.resetButton} onClick={resetFilters}>
+          <button className={`${styles.resetButton} ${styles.clearFilters}`} onClick={resetFilters}>
             Reset filters
           </button>
 
@@ -547,6 +564,7 @@ export function TenderTableClient({
               Archive
             </Link>
           )}
+          <a href={exportHref} className={styles.resetButton}>Export to Excel</a>
           <span className={styles.resultCount} role="status">
             {filtered.length} of {tenders.length} tenders
           </span>
@@ -586,28 +604,26 @@ export function TenderTableClient({
         )}
 
         <div className={styles.mobileCards}>
-          {pageItems.map((t) => (
-            <Link
-              href={tenderHref(t.id)}
-              key={t.id}
-              className={styles.tenderCard}
-            >
-              <span className={styles.cardTop}>
-                <span>{t.tenderNo || `Tender #${t.rowNo}`}</span>
-                <ResultBadge result={t.result} />
-              </span>
-              <strong>{t.product || t.customer}</strong>
-              <span>{t.customer}</span>
-              <span className={styles.cardMeta}>
-                <TrackBadge track={t.track} />
-                {t.area} · {t.period}
-              </span>
-              <span className={styles.cardMeta}>
-                Bid:{" "}
-                <MoneyValue value={t.nilaiPenawaran} canView={canViewMoney} />
-              </span>
-            </Link>
-          ))}
+          {pageItems.map((tender) => {
+            const milestone = upcoming.get(tender.id);
+            return (
+              <Link href={tenderHref(tender.id)} key={tender.id} className={styles.tenderCard}>
+                <span className={styles.cardTop}>
+                  <span>{tender.tenderNo || `Tender #${tender.rowNo}`}</span>
+                  <ResultBadge result={tender.result} />
+                </span>
+                <strong>{tender.product || tender.customer}</strong>
+                <span>{tender.customer}</span>
+                <span className={styles.mobileDeadline}>
+                  <MilestoneDue label={milestone?.label} date={milestone?.date} days={milestone?.diff} emptyLabel={tender.result ? "Closed schedule" : undefined} />
+                  <span aria-hidden="true">›</span>
+                </span>
+                <span className={styles.cardMeta}>
+                  Bid: <MoneyValue value={tender.nilaiPenawaran} canView={canViewMoney} />
+                </span>
+              </Link>
+            );
+          })}
         </div>
         {pageItems.length > 0 ? (
           <div
@@ -631,17 +647,16 @@ export function TenderTableClient({
                       />
                     </th>
                   )}
+                  {sortableHeader("product", "Package")}
+                  {sortableHeader("customer", "Customer")}
+                  {sortableHeader("result", "Status")}
+                  <th scope="col" className={styles.th}>Next milestone</th>
+                  {sortableHeader("tenderNo", "Tender No.")}
                   {sortableHeader("rowNo", "No")}
-                  {visibleCols.track && (track as string) === "all" && (
-                    <th className={styles.th} title="Upstream or downstream">
-                      Track
-                    </th>
+                  {visibleCols.track && track === "all" && (
+                    <th scope="col" className={styles.th}>Track</th>
                   )}
                   {sortableHeader("area", "Area")}
-                  {sortableHeader("tenderNo", "Tender No.")}
-                  {sortableHeader("customer", "Customer")}
-                  {sortableHeader("product", "Package")}
-                  {sortableHeader("result", "Result")}
                   {track !== "downstream" &&
                     sortableHeader("entitas", "Entity")}
                   {visibleCols.period && sortableHeader("period", "Period")}
@@ -680,30 +695,9 @@ export function TenderTableClient({
                         />
                       </td>
                     )}
-                    <td className={`${styles.td} ${styles.tdMuted}`}>
-                      {t.rowNo}
-                    </td>
-                    {visibleCols.track && (track as string) === "all" && (
-                      <td className={`${styles.td} ${styles.tdNoWrap}`}>
-                        {t.track === "downstream" ? (
-                          <TrackBadge track={t.track} />
-                        ) : (
-                          <span style={{ color: "var(--color-fg3)" }}>
-                            {TRACK_LABELS.upstream}
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    <td className={styles.td}>{t.area}</td>
-                    <td
-                      className={`${styles.td} ${styles.tdNoWrap} ${styles.stickyIdentity}`}
-                      style={{ color: "var(--color-fg2)" }}
-                    >
-                      <Link
-                        href={tenderHref(t.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {t.tenderNo || "View tender"}
+                    <td className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}>
+                      <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>
+                        {t.product || t.customer || "View tender"}
                       </Link>
                     </td>
                     <td
@@ -712,13 +706,6 @@ export function TenderTableClient({
                       title={t.customer}
                     >
                       {t.customer || "—"}
-                    </td>
-                    <td
-                      className={`${styles.td} ${styles.tdEllipsis}`}
-                      style={{ maxWidth: 340 }}
-                      title={t.product ?? undefined}
-                    >
-                      {t.product || "—"}
                     </td>
                     <td className={`${styles.td} ${styles.tdNoWrap}`}>
                       {isAdmin &&
@@ -762,6 +749,32 @@ export function TenderTableClient({
                         <ResultBadge result={t.result} />
                       )}
                     </td>
+                    <td className={`${styles.td} ${styles.deadlineCell}`}>
+                      <MilestoneDue
+                        label={upcoming.get(t.id)?.label}
+                        date={upcoming.get(t.id)?.date}
+                        days={upcoming.get(t.id)?.diff}
+                        emptyLabel={t.result ? "Closed schedule" : undefined}
+                      />
+                    </td>
+                    <td className={`${styles.td} ${styles.tdNoWrap}`}>
+                      {t.tenderNo ? <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>{t.tenderNo}</Link> : "—"}
+                    </td>
+                    <td className={`${styles.td} ${styles.tdMuted}`}>
+                      {t.rowNo}
+                    </td>
+                    {visibleCols.track && (track as string) === "all" && (
+                      <td className={`${styles.td} ${styles.tdNoWrap}`}>
+                        {t.track === "downstream" ? (
+                          <TrackBadge track={t.track} />
+                        ) : (
+                          <span style={{ color: "var(--color-fg3)" }}>
+                            {TRACK_LABELS.upstream}
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    <td className={styles.td}>{t.area}</td>
                     {track !== "downstream" && (
                       <td className={`${styles.td} ${styles.tdNoWrap}`}>
                         {t.entitas || "—"}

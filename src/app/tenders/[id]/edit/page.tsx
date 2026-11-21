@@ -6,9 +6,12 @@ import { EditTenderForm } from "@/components/EditTenderForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditTenderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditTenderPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ section?: string }>;
+}) {
   await requireAdmin();
-  const { id } = await params;
+  const [{ id }, { section }] = await Promise.all([params, searchParams]);
   const tender = await getTenderById(id);
   if (!tender) notFound();
 
@@ -25,6 +28,7 @@ export default async function EditTenderPage({ params }: { params: Promise<{ id:
   return (
     <EditTenderForm
       tender={tender}
+      startOnMilestones={section === "milestones"}
       selectOptions={selectOptions}
       milestoneTypes={milestoneTypes}
       existingTenders={existingTenders}

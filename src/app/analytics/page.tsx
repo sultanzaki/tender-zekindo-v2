@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/PageHeading";
+import { OperationsHeading } from "@/components/TenderOperations";
 import { requireUser } from "@/lib/auth/dal";
 import { MoneyValue, MoneyAccessNotice } from "@/components/MoneyValue";
 import styles from "@/components/Workspace.module.css";
@@ -114,10 +114,10 @@ export default async function AnalyticsDashboardPage({
     customer === "all" ? null : `Customer: ${customer}`,
   ].filter((v): v is string => !!v);
 
+  const coverage = periods.length > 1 ? `${periods[0]}–${periods.at(-1)}` : (periods[0] ?? "No periods");
   return (
     <div className={styles.page}>
-      <PageHeading
-        eyebrow="PERFORMANCE & INSIGHTS"
+      <OperationsHeading
         title="Tender analytics"
         actions={
           <a
@@ -127,12 +127,7 @@ export default async function AnalyticsDashboardPage({
             Export this scope
           </a>
         }
-        description={
-          <>
-            Explore outcomes, customer performance, and known pipeline value.{" "}
-            {activeFilters.join(" · ")} · {tenders.length} tenders
-          </>
-        }
+        context={[`${tenders.length} tenders`, coverage, ...activeFilters].join(" · ")}
       />
       <AnalyticsFilters
         areas={options.areas}
@@ -147,24 +142,6 @@ export default async function AnalyticsDashboardPage({
       {!canViewMoney && (
         <MoneyAccessNotice returnTo={`/analytics?${exportParams}`} />
       )}
-      <KpiCards data={kpiData} canViewMoney={canViewMoney} />
-      <div className={styles.note}>
-        Win rate = WIN ÷ (WIN + LOSS). Canceled, withdrawn, retender, and
-        no-info outcomes are excluded. Pipeline = known OE of active tenders
-        only.{" "}
-        {canViewMoney && (
-          <>
-            {tenders.filter((t) => !t.result && t.oe === null).length} active
-            tenders have no OE;{" "}
-            {
-              tenders.filter(
-                (t) => t.result === "WIN" && t.nilaiPenawaran === null,
-              ).length
-            }{" "}
-            won tenders have no recorded bid value.
-          </>
-        )}
-      </div>
 
       {
         <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
@@ -189,6 +166,25 @@ export default async function AnalyticsDashboardPage({
           </div>
         </div>
       }
+
+      <KpiCards data={kpiData} canViewMoney={canViewMoney} />
+      <div className={styles.note}>
+        Win rate = WIN ÷ (WIN + LOSS). Canceled, withdrawn, retender, and
+        no-info outcomes are excluded. Pipeline = known OE of active tenders
+        only.{" "}
+        {canViewMoney && (
+          <>
+            {tenders.filter((t) => !t.result && t.oe === null).length} active
+            tenders have no OE;{" "}
+            {
+              tenders.filter(
+                (t) => t.result === "WIN" && t.nilaiPenawaran === null,
+              ).length
+            }{" "}
+            won tenders have no recorded bid value.
+          </>
+        )}
+      </div>
 
       <div
         className={shared.card}
@@ -275,7 +271,7 @@ export default async function AnalyticsDashboardPage({
         <div className={shared.cardHeader}>
           <h2 className={shared.cardTitle}>Customer performance</h2>
           <span className={shared.cardMeta}>
-            At least 3 decided tenders · largest samples first
+            Win rate · At least 3 decided tenders per customer
           </span>
         </div>
         <GroupWinRateChart

@@ -1,32 +1,24 @@
 import Link from "next/link";
 import { getAllTenders } from "@/lib/tenders";
 import { requireUser } from "@/lib/auth/dal";
-import { MoneyValue, MoneyAccessNotice } from "@/components/MoneyValue";
 import { getMilestoneCatalog } from "@/lib/milestones";
-import {
-  computeDeadlines,
-  computeStalled,
-  todayISO,
-  formatDateID,
-} from "@/lib/tender-logic";
+import { computeDeadlines, computeStalled, formatDateID, todayISO } from "@/lib/tender-logic";
 import { overallWinRate, totalPipelineValue } from "@/lib/analytics";
-import { PageHeading } from "@/components/PageHeading";
-import { TrackBadge } from "@/components/TrackBadge";
 import { Icon } from "@/components/Icon";
+import { MoneyValue } from "@/components/MoneyValue";
+import { MilestoneDue, OperationsHeading } from "@/components/TenderOperations";
 import type { Track } from "@/lib/types";
-import styles from "@/components/Workspace.module.css";
+import styles from "./Overview.module.css";
+
 export const dynamic = "force-dynamic";
-export default async function Overview({
-  searchParams,
-}: {
+
+export default async function Overview({ searchParams }: {
   searchParams: Promise<{ track?: string }>;
 }) {
-  const ctx = await requireUser();
+  await requireUser();
   const params = await searchParams;
   const track: Track | "all" =
-    params.track === "upstream" || params.track === "downstream"
-      ? params.track
-      : "all";
+    params.track === "upstream" || params.track === "downstream" ? params.track : "all";
   const [tenders, catalog] = await Promise.all([
     getAllTenders({ track }),
     getMilestoneCatalog(),
@@ -34,240 +26,90 @@ export default async function Overview({
   const today = todayISO();
   const deadlines = computeDeadlines(tenders, today, catalog);
   const followups = computeStalled(tenders, today, catalog);
-  const running = tenders.filter((t) => !t.result);
-  const winRate = overallWinRate(tenders);
-  const updated = [...tenders]
-    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
-    .slice(0, 5);
-  const known = running.filter((t) => t.oe !== null).length;
-  const list = (extra: Record<string, string> = {}) => {
-    const query = new URLSearchParams({
-      ...(track !== "upstream" ? { track } : {}),
-      ...extra,
-    });
-    return `/tenders${query.size ? `?${query}` : ""}`;
-  };
-  const analyticsHref =
-    track === "all" ? "/analytics" : `/analytics?track=${track}`;
-  const deadlineHref = (view = "all") =>
-    `/notifications?${new URLSearchParams({ view, ...(track !== "all" ? { track } : {}) })}`;
+  const active = tenders.filter((tender) => !tender.result);
+  const rate = overallWinRate(tenders);
+  const known = active.filter((tender) => tender.oe !== null).length;
+  const queueHref = (view: string) =>
+    `/notifications?${new URLSearchParams({ view, ...(track === "all" ? {} : { track }) })}`;
+  const overviewHref = track === "all" ? "/" : `/?track=${track}`;
+  const tenderHref = (id: string) => `/tenders/${id}?${new URLSearchParams({ returnTo: overviewHref })}`;
+  const analyticsHref = track === "all" ? "/analytics" : `/analytics?track=${track}`;
+
   return (
     <div className={styles.page}>
-      <PageHeading
-        eyebrow="WORKSPACE OVERVIEW"
-        title="Your tender workday, at a glance."
-        description={
-          <>
-            Priorities, upcoming milestones, and the latest tender updates.{" "}
-            <span>{formatDateID(today)} · WIB</span>
-          </>
-        }
-        actions={
-          <Link href={analyticsHref} className="button button-secondary">
-            <Icon name="analytics" />
-            Explore analytics
-          </Link>
-        }
+      <OperationsHeading
+        title="Overview"
+        context={<time dateTime={today}>{formatDateID(today)} · WIB</time>}
+        actions={<Link className="button button-secondary" href={`/tenders?track=${track}`}>Open tenders <Icon name="arrow" width={14} height={14} /></Link>}
       />
-      <nav className={styles.pills} aria-label="Overview track">
-        {[
-          ["all", "All tenders"],
-          ["upstream", "Upstream"],
-          ["downstream", "Downstream"],
-        ].map(([value, label]) => (
-          <Link
-            key={value}
-            href={value === "all" ? "/" : `/?track=${value}`}
-            aria-current={track === value ? "page" : undefined}
-          >
+      <nav className={styles.scope} aria-label="Overview track">
+        {([["all", "All tracks"], ["upstream", "Upstream"], ["downstream", "Downstream"]] as const).map(([value, label]) => (
+          <Link key={value} href={value === "all" ? "/" : `/?track=${value}`} aria-current={track === value ? "page" : undefined}>
             {label}
           </Link>
         ))}
       </nav>
-      <div className={styles.metrics}>
-        {[
-          {
-            label: "Active tenders",
-            value: running.length,
-            foot: `${tenders.length} tenders in this scope`,
-            href: list({ result: "__EMPTY__" }),
-          },
-          {
-            label: "Due in 7 days",
-            value: deadlines.filter((d) => d.days <= 7).length,
-            foot: "Next milestone per active tender",
-            href: deadlineHref("week"),
-          },
-          {
-            label: "Needs follow-up",
-            value: followups.length,
-            foot: "Active, no upcoming milestone",
-            href: deadlineHref("followup"),
-          },
-          {
-            label: "Win rate",
-            value: winRate.pct === null ? "—" : `${winRate.pct}%`,
-            foot: `${winRate.win} wins / ${winRate.decided} decided tenders`,
-            href: analyticsHref,
-          },
-        ].map((metric) => (
-          <Link className={styles.metric} key={metric.label} href={metric.href}>
-            <span className={styles.metricLabel}>
-              {metric.label}
-              <Icon name="arrow" width={13} height={13} />
-            </span>
-            <strong className={styles.metricValue}>{metric.value}</strong>
-            <span className={styles.metricFoot}>{metric.foot}</span>
-          </Link>
-        ))}
+
+      <div className={styles.board}>
+        <section className={styles.queue} aria-labelledby="deadlines">
+          <header className={styles.sectionHead}>
+            <div><h2 id="deadlines">Upcoming deadlines</h2><p>{deadlines.length} tenders · Next 14 days</p></div>
+            <Link href={queueHref("all")}>All deadlines <Icon name="arrow" width={14} height={14} /></Link>
+          </header>
+          {deadlines.length > 0 ? (
+            <>
+              <div className={styles.columnLabels} aria-hidden="true"><span>Package</span><span>Milestone / due</span></div>
+              <ul className={styles.list}>
+                {deadlines.slice(0, 6).map((item, index) => (
+                  <li key={item.tenderId} className={index === 0 ? styles.first : undefined}>
+                    <Link className={styles.dueRow} href={tenderHref(item.tenderId)}>
+                      <span className={styles.identity}>
+                        <strong>{item.product === "—" ? item.customer : item.product}</strong>
+                        <small>{item.customer}</small>
+                      </span>
+                      <MilestoneDue label={item.milestoneLabel} date={item.dateIso} days={item.days} />
+                      <span className={styles.arrow} aria-hidden="true">›</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : <p className={styles.empty}>No milestones due in the next 14 days.</p>}
+        </section>
+
+        <section className={styles.queue} aria-labelledby="followups">
+          <header className={styles.sectionHead}>
+            <div><h2 id="followups">Follow-up queue</h2><p>{followups.length} active tenders without a next date</p></div>
+            <Link href={queueHref("followup")}>View queue <Icon name="arrow" width={14} height={14} /></Link>
+          </header>
+          {followups.length > 0 ? (
+            <ul className={styles.list}>
+              {followups.slice(0, 4).map((item) => (
+                <li key={item.tenderId}>
+                  <Link className={styles.followRow} href={tenderHref(item.tenderId)}>
+                    <span className={styles.identity}>
+                      <strong>{item.product === "—" ? item.customer : item.product}</strong>
+                      <small>{item.customer}</small>
+                      <small>{item.lastMilestoneLabel && item.lastMilestoneDateFormatted ? `Last: ${item.lastMilestoneLabel} · ${item.lastMilestoneDateFormatted}` : "No milestone recorded"}</small>
+                    </span>
+                    <span className={styles.arrow} aria-hidden="true">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : <p className={styles.empty}>No tenders in the follow-up queue.</p>}
+        </section>
       </div>
-      <div className={styles.grid}>
-        <div className={styles.stack}>
-          <section className={styles.panel}>
-            <div className={styles.panelHead}>
-              <div>
-                <h2>Upcoming milestones</h2>
-                <p>Nearest deadline per tender · next 14 days</p>
-              </div>
-              <Link href={deadlineHref()}>View all →</Link>
-            </div>
-            {deadlines.length ? (
-              deadlines.slice(0, 6).map((d) => (
-                <Link
-                  className={styles.row}
-                  href={`/tenders/${d.tenderId}`}
-                  key={d.tenderId}
-                >
-                  <span
-                    className={`${styles.day} ${d.urgent ? styles.urgent : ""}`}
-                  >
-                    {d.days === 0 ? "0" : d.days}
-                    <small>{d.days === 0 ? "TODAY" : "DAYS"}</small>
-                  </span>
-                  <span className={styles.rowMain}>
-                    <span className={styles.rowTitle}>{d.customer}</span>
-                    <span className={styles.rowSub}>{d.product}</span>
-                  </span>
-                  <span className={styles.rowMeta}>
-                    {d.milestoneLabel}
-                    <br />
-                    {d.dateFormatted}
-                  </span>
-                </Link>
-              ))
-            ) : (
-              <div className={styles.empty}>
-                No deadlines in the next 14 days. Review active tenders to keep
-                their schedules up to date.
-              </div>
-            )}
-          </section>
-          <section className={styles.panel}>
-            <div className={styles.panelHead}>
-              <div>
-                <h2>Recently updated tenders</h2>
-                <p>Latest saved changes across this workspace</p>
-              </div>
-              <Link href={list()}>Open tenders →</Link>
-            </div>
-            {updated.map((t) => (
-              <Link href={`/tenders/${t.id}`} key={t.id} className={styles.row}>
-                <span className={styles.rowMain}>
-                  <span className={styles.rowTitle}>
-                    {t.tenderNo || t.customer} <TrackBadge track={t.track} />
-                  </span>
-                  <span className={styles.rowSub}>
-                    {t.product || t.customer}
-                  </span>
-                </span>
-                <span className={styles.rowMeta}>
-                  {t.updatedAt ? formatDateID(t.updatedAt.slice(0, 10)) : "—"}
-                </span>
-              </Link>
-            ))}
-            {!updated.length && (
-              <div className={styles.empty}>No tenders yet.</div>
-            )}
-          </section>
-        </div>
-        <div className={styles.stack}>
-          <section className={styles.panel}>
-            <div className={styles.panelHead}>
-              <div>
-                <h2>Pipeline snapshot</h2>
-                <p>Active opportunities in the selected scope</p>
-              </div>
-            </div>
-            <div className={styles.insight}>
-              <div>
-                <p>Known pipeline value · OE</p>
-                <strong>
-                  <MoneyValue
-                    value={totalPipelineValue(tenders)}
-                    canView={!!ctx}
-                  />
-                </strong>
-                {ctx ? (
-                  <p>
-                    {known} of {running.length} active tenders have an OE value.
-                  </p>
-                ) : (
-                  <MoneyAccessNotice
-                    returnTo={track === "all" ? "/" : `/?track=${track}`}
-                  />
-                )}
-              </div>
-            </div>
-            <div className={styles.insight}>
-              <div>
-                <strong>{followups.length}</strong>
-                <p>
-                  tenders have no scheduled next step. They may be awaiting a
-                  result or need updated dates.
-                </p>
-              </div>
-              <Link href={deadlineHref("followup")}>Review →</Link>
-            </div>
-            <div className={styles.insight}>
-              <div>
-                <strong>{deadlines.filter((d) => d.days <= 3).length}</strong>
-                <p>milestones are due within 3 days.</p>
-              </div>
-              <Link href={deadlineHref("urgent")}>Open →</Link>
-            </div>
-          </section>
-          <section className={styles.panel}>
-            <div className={styles.panelHead}>
-              <div>
-                <h2>Follow-up queue</h2>
-                <p>Most recently active tenders without a next date</p>
-              </div>
-            </div>
-            {followups.slice(0, 5).map((t) => (
-              <Link
-                href={`/tenders/${t.tenderId}`}
-                key={t.tenderId}
-                className={styles.row}
-              >
-                <span className={styles.rowMain}>
-                  <span className={styles.rowTitle}>{t.customer}</span>
-                  <span className={styles.rowSub}>{t.product}</span>
-                </span>
-                <span className={styles.rowMeta}>
-                  {t.lastMilestoneLabel || "No dates set"}
-                  <br />
-                  {t.lastMilestoneDateFormatted}
-                </span>
-              </Link>
-            ))}
-            {!followups.length && (
-              <div className={styles.empty}>
-                Every active tender has an upcoming milestone.
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
+
+      <section className={styles.summary} aria-labelledby="pipeline">
+        <h2 id="pipeline">Pipeline context</h2>
+        <dl>
+          <div><dt>Active tenders</dt><dd>{active.length}</dd></div>
+          <div><dt>Known pipeline · {known} tenders with OE</dt><dd><MoneyValue value={known ? totalPipelineValue(tenders) : null} canView /></dd></div>
+          <div><dt>Win rate · {rate.decided} decided</dt><dd>{rate.pct === null ? "—" : `${rate.pct}%`}</dd></div>
+        </dl>
+        <Link href={analyticsHref}>Analytics <Icon name="arrow" width={14} height={14} /></Link>
+      </section>
     </div>
   );
 }

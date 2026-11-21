@@ -45,8 +45,10 @@ export function EditTenderForm({
   selectOptions,
   milestoneTypes,
   existingTenders,
+  startOnMilestones = false,
 }: {
   tender: Tender;
+  startOnMilestones?: boolean;
   selectOptions: SelectOptionsMap;
   milestoneTypes: MilestoneType[];
   existingTenders: { id: string; tenderNo: string | null }[];
@@ -57,7 +59,7 @@ export function EditTenderForm({
   const [extra, setExtra] = useState<MilestoneType[]>([]);
   const [values, setValues] = useState(initial);
   const [order, setOrder] = useState(initialOrder);
-  const [section, setSection] = useState(0);
+  const [section, setSection] = useState(startOnMilestones ? 2 : 0);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState<"discard" | "archive" | null>(null);
