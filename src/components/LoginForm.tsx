@@ -92,7 +92,7 @@ export function LoginForm({ next }: { next: string }) {
         </section>
         <footer className={styles.footer}>PT Zeus Kimiatama Indonesia</footer>
       </div>
-      <div aria-hidden="true" className={styles.plant} />
+      <div aria-hidden="true" className={styles.offshore} />
     </main>
   );
 }
