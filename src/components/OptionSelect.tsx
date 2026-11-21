@@ -87,6 +87,12 @@ export function OptionSelect({
         <Input
           className={className}
           style={{ flex: 1 }}
+          id={`tender-${field}`}
+          ref={(input) => {
+            input?.setCustomValidity(
+              "Add this option or cancel before continuing.",
+            );
+          }}
           aria-label={`New ${label.toLowerCase()}`}
           autoFocus
           value={draft}
@@ -130,6 +136,7 @@ export function OptionSelect({
 
   return (
     <NativeSelect
+      id={`tender-${field}`}
       className={className}
       value={value}
       required={required}

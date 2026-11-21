@@ -156,6 +156,11 @@ export interface Tender {
   updatedAt: string;
 }
 
+export type RegisterTender = Pick<Tender,
+  "id" | "rowNo" | "track" | "period" | "area" | "tenderNo" | "customer" | "product" |
+  "entitas" | "qty" | "oe" | "milestones" | "milestoneOrder" | "result" | "pnl" | "nilaiPenawaran"
+>;
+
 /** A row of the global milestone catalog (`milestone_types`) — milestones are
  * admin-manageable now. See src/lib/milestones.ts and migration
  * 0006_dynamic_milestones.sql. */

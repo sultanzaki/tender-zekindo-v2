@@ -213,7 +213,7 @@ function Workspace({
               />
             </form>
           )}
-          {isAdmin && path !== "/tenders" && (
+          {isAdmin && path !== "/tenders" && path !== "/tenders/new" && (
             <div className="hidden md:block">
               <Suspense>
                 <CreateLink />

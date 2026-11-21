@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import type { Metadata, Viewport } from "next";
 import "./theme.css";
 import "./globals.css";
-import { TopNav } from "@/components/TopNav";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getAuthContext } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
@@ -27,14 +27,18 @@ export default async function RootLayout({
   return (
     <html lang="en" className={GeistSans.variable}>
       <body>
-        <TopNav
-          defaultSidebarOpen={
-            (await cookies()).get("sidebar_state")?.value !== "false"
-          }
-          profile={ctx?.profile ?? null}
-        >
-          {children}
-        </TopNav>
+        {ctx ? (
+          <WorkspaceShell
+            defaultSidebarOpen={
+              (await cookies()).get("sidebar_state")?.value !== "false"
+            }
+            profile={ctx.profile}
+          >
+            {children}
+          </WorkspaceShell>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );

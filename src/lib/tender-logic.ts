@@ -1,9 +1,12 @@
+
 import {
   DOWNSTREAM_MILESTONE_DEFS,
   MILESTONE_DEFS,
   type MilestoneType,
   type Milestones,
   type Tender,
+  type RegisterTender,
+  type FilterOptions,
   type Track,
 } from "./types";
 
@@ -92,7 +95,7 @@ export interface TenderMilestone {
  * means this tender uses exactly those keys, in that order; an empty array
  * selects no milestones. Hidden dates stay in `tenders.milestones`. */
 export function resolveTenderMilestones(
-  tender: Tender,
+  tender: RegisterTender,
   catalog?: MilestoneCatalog,
 ): TenderMilestone[] {
   const forTrack = catalog?.[tender.track];
@@ -180,7 +183,7 @@ export interface NextMilestone {
 }
 
 export function nextMilestone(
-  tender: Tender,
+  tender: RegisterTender,
   anchor: string,
   catalog?: MilestoneCatalog,
 ): NextMilestone | null {
@@ -375,7 +378,7 @@ export type SortKey = string;
 
 export type SortDirection = "asc" | "desc";
 
-function getSortValue(t: Tender, key: SortKey): string | number | null {
+function getSortValue(t: RegisterTender, key: SortKey): string | number | null {
   if (!FIELD_SORT_KEYS.has(key)) return t.milestones[key] ?? null;
   switch (key) {
     case "rowNo":
@@ -409,11 +412,11 @@ function getSortValue(t: Tender, key: SortKey): string | number | null {
 
 /** Nulls always sort last, regardless of direction — sensible default for a
  * "which of these still needs a date" table rather than a strict total order. */
-export function sortTenders(
-  tenders: Tender[],
+export function sortTenders<T extends RegisterTender>(
+  tenders: T[],
   key: SortKey,
   direction: SortDirection,
-): Tender[] {
+): T[] {
   const withValue = tenders.map((t) => ({ t, v: getSortValue(t, key) }));
   const known = withValue.filter(
     (x) => x.v !== null && x.v !== undefined && x.v !== "",
@@ -489,8 +492,8 @@ export function deadlineBucket(days: number | undefined) {
   return "later";
 }
 
-export function filterTenders(
-  tenders: Tender[],
+export function filterTenders<T extends RegisterTender>(
+  tenders: T[],
   filters: {
     period: string;
     area: string;
@@ -499,7 +502,7 @@ export function filterTenders(
     result: string;
     search: string;
   },
-): Tender[] {
+): T[] {
   const search = (filters.search || "").trim().toLowerCase();
   return tenders.filter((t) => {
     if (filters.period !== "all" && t.period !== filters.period) return false;
@@ -520,4 +523,13 @@ export function filterTenders(
     }
     return true;
   });
+}
+
+export function getFilterOptions(tenders: RegisterTender[]): FilterOptions {
+  return {
+    periods: periodsSorted(tenders.map((t) => t.period)),
+    areas: distinctSorted(tenders.map((t) => t.area)),
+    customers: distinctSorted(tenders.map((t) => t.customer)),
+    entitasList: distinctSorted(tenders.map((t) => t.entitas)),
+  };
 }

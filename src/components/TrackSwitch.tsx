@@ -1,16 +1,8 @@
 import { Button } from "./ui/button";
-import Link from "next/link";
+
 import { TRACKS, TRACK_LABELS, type Track } from "@/lib/types";
 import styles from "./TrackSwitch.module.css";
 
-/** Upstream / downstream selector.
- *
- * A server component that renders plain links, so switching costs no client
- * JavaScript at all, every choice is bookmarkable, and the Back button works.
- * That is the same reasoning as the analytics filters.
- *
- * The page's other query parameters are carried across, so switching track
- * never silently drops what you already filtered or searched for. */
 export function TrackSwitch({
   current,
   basePath,
@@ -41,13 +33,30 @@ export function TrackSwitch({
               size="sm"
               variant={active ? "secondary" : "ghost"}
             >
-              <Link
+              <a
                 href={qs ? `${basePath}?${qs}` : basePath}
+                onClick={(event) => {
+                  if (
+                    event.button ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  if (!active)
+                    window.history.pushState(
+                      null,
+                      "",
+                      event.currentTarget.href,
+                    );
+                }}
                 className={active ? styles.active : styles.item}
                 aria-current={active ? "page" : undefined}
               >
                 {track === "all" ? "All tenders" : TRACK_LABELS[track]}
-              </Link>
+              </a>
             </Button>
           );
         })}

@@ -3,10 +3,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createTender } from "@/lib/actions";
-import { findDuplicateTenderNo, formatRupiah } from "@/lib/tender-logic";
+import {
+  findDuplicateTenderNo,
+  formatDateID,
+  formatRupiah,
+} from "@/lib/tender-logic";
 import { validateTender } from "@/lib/validation";
 import type {
   MilestoneType,
@@ -61,11 +65,37 @@ export function NewTenderForm({
   const [discard, setDiscard] = useState(false);
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
-  const dirty = Object.entries(values).some(
-    ([k, v]) =>
-      k !== "track" &&
-      (typeof v === "string" ? !!v : Object.keys(v).length > 0),
+  const [dates, setDates] = useState<Record<Track, Record<string, string>>>({
+    upstream: {},
+    downstream: {},
+  });
+  const selectedDates = dates[values.track];
+  const currentValues = { ...values, milestones: selectedDates };
+  const catalog = [
+    ...catalogs[values.track],
+    ...extra.filter((m) => m.track === values.track),
+  ];
+  const scheduleChanged = (["upstream", "downstream"] as const).some(
+    (track) =>
+      orders[track].join("|") !== catalogs[track].map((m) => m.key).join("|") ||
+      Object.values(dates[track]).some(Boolean),
   );
+  const dirty =
+    scheduleChanged ||
+    values.track !== initialTrack ||
+    Object.entries(values).some(
+      ([key, value]) =>
+        key !== "track" && typeof value === "string" && value !== "",
+    );
+  const heading = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (step !== previousStep.current) {
+      previousStep.current = step;
+      heading.current?.focus({ preventScroll: true });
+      heading.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [step]);
   const leave = useUnsavedChanges(dirty && !pending);
   const back =
     values.track === "downstream" ? "/tenders?track=downstream" : "/tenders";
@@ -77,7 +107,7 @@ export function NewTenderForm({
       return;
     }
     if (step === 1) {
-      const issue = validateTender(values);
+      const issue = validateTender(currentValues);
       if (issue) {
         setError(issue);
         return;
@@ -86,7 +116,7 @@ export function NewTenderForm({
     setStep(Math.min(3, step + 1));
   }
   function submit() {
-    const issue = validateTender(values);
+    const issue = validateTender(currentValues);
     if (issue) {
       setError(issue);
       return;
@@ -94,18 +124,16 @@ export function NewTenderForm({
     setError("");
     start(async () => {
       const result = await createTender({
-        ...values,
+        ...currentValues,
         milestoneOrder: orders[values.track],
       });
       if (result?.error) setError(result.error);
     });
   }
   return (
-    <div className={styles.page}>
+    <div className={styles.createPage}>
       <PageHeading
-        eyebrow="CREATE OPPORTUNITY"
         title="New tender"
-        description="Capture the essentials now. Refine the schedule as the opportunity progresses."
         actions={
           <Button
             variant="outline"
@@ -126,7 +154,10 @@ export function NewTenderForm({
             type="button"
             className={`${styles.step} ${i === step ? styles.stepActive : ""}`}
             disabled={pending || i > step}
-            onClick={() => setStep(i)}
+            onClick={() => {
+              setError("");
+              setStep(i);
+            }}
             aria-current={i === step ? "step" : undefined}
           >
             <span className={styles.stepNumber}>{i + 1}</span>
@@ -144,7 +175,9 @@ export function NewTenderForm({
         }}
       >
         <div className={styles.sectionHeading}>
-          <h2>{STEPS[step]}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {STEPS[step]}
+          </h2>
           <span>Step {step + 1} of 4</span>
         </div>
         <fieldset disabled={pending} className={styles.fieldset}>
@@ -173,17 +206,16 @@ export function NewTenderForm({
             <MilestoneEditor
               key={values.track}
               track={values.track}
-              catalog={[
-                ...catalogs[values.track],
-                ...extra.filter((m) => m.track === values.track),
-              ]}
+              catalog={catalog}
               onCreated={(created) => setExtra((prev) => [...prev, created])}
               order={orders[values.track]}
-              dates={values.milestones}
+              dates={selectedDates}
               onOrder={(order) =>
                 setOrders((o) => ({ ...o, [values.track]: order }))
               }
-              onDates={(milestones) => setValues((v) => ({ ...v, milestones }))}
+              onDates={(milestones) =>
+                setDates((d) => ({ ...d, [values.track]: milestones }))
+              }
             />
           )}
           {step === 3 && (
@@ -201,6 +233,7 @@ export function NewTenderForm({
                   ["Package", values.product || "—"],
                   ["Entity", values.entitas || "—"],
                   ["Quantity", values.qty || "—"],
+                  ["OE note", values.oeCatatan || "—"],
                   ["OE", values.oe ? formatRupiah(values.oe) : "—"],
                   [
                     "Bid value",
@@ -210,7 +243,7 @@ export function NewTenderForm({
                   ],
                   [
                     "Milestones",
-                    `${orders[values.track].length} selected · ${orders[values.track].filter((k) => values.milestones[k]).length} dates set`,
+                    `${orders[values.track].length} selected · ${orders[values.track].filter((k) => selectedDates[k]).length} dates set`,
                   ],
                 ].map(([key, value]) => (
                   <div key={key}>
@@ -219,6 +252,25 @@ export function NewTenderForm({
                   </div>
                 ))}
               </dl>
+              {orders[values.track].length > 0 && (
+                <details className={styles.reviewSchedule}>
+                  <summary>Review milestone dates</summary>
+                  <dl>
+                    {orders[values.track].map((key) => (
+                      <div key={key}>
+                        <dt>
+                          {catalog.find((m) => m.key === key)?.label ?? key}
+                        </dt>
+                        <dd>
+                          {selectedDates[key]
+                            ? formatDateID(selectedDates[key])
+                            : "Not scheduled"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
+              )}
             </div>
           )}
         </fieldset>

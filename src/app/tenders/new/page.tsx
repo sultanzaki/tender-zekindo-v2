@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/auth/dal";
-import { getAllTenders, getSelectOptions } from "@/lib/tenders";
+import { getTenderFormChoices } from "@/lib/tenders";
 import { getMilestoneTypes } from "@/lib/milestones";
 import { NewTenderForm } from "@/components/NewTenderForm";
 import { trackFromParam } from "@/lib/types";
@@ -20,19 +20,17 @@ export default async function NewTenderPage({
   // Both catalogs, so the picker can swap the milestone list without a round
   // trip and without losing anything already typed. Tender numbers from both
   // tracks are offered, so a number reused across tracks is still caught.
-  const tenders = await getAllTenders({ includeArchived: true, track: "all" });
-  const [selectOptions, upstreamCatalog, downstreamCatalog] = await Promise.all([
-    getSelectOptions(tenders),
+  const [choices, upstreamCatalog, downstreamCatalog] = await Promise.all([
+    getTenderFormChoices("all"),
     getMilestoneTypes("upstream"),
     getMilestoneTypes("downstream"),
   ]);
-  const existingTenders = tenders.map((t) => ({ id: t.id, tenderNo: t.tenderNo }));
   return (
     <NewTenderForm
       initialTrack={initialTrack}
-      selectOptions={selectOptions}
+      selectOptions={choices.selectOptions}
       catalogs={{ upstream: upstreamCatalog, downstream: downstreamCatalog }}
-      existingTenders={existingTenders}
+      existingTenders={choices.existingTenders}
     />
   );
 }

@@ -3,8 +3,8 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { supabaseServer } from "./supabase-server";
 import type { TenderRow } from "./database.types";
-import type { FilterOptions, SelectOptionsMap, Tender, Track } from "./types";
-import { distinctSorted, periodsSorted } from "./tender-logic";
+import type { SelectOptionsMap, Tender, Track } from "./types";
+import { distinctSorted } from "./tender-logic";
 import { getProfilesByIds } from "./users";
 import { rowTrack } from "./milestones";
 import { TENDERS_TAG } from "./cache-tags";
@@ -145,20 +145,49 @@ export async function getTenderById(id: string): Promise<Tender | null> {
     : { ...tender, catatanInternal: null };
 }
 
-export function getFilterOptions(tenders: Tender[]): FilterOptions {
-  return {
-    periods: periodsSorted(tenders.map((t) => t.period)),
-    areas: distinctSorted(tenders.map((t) => t.area)),
-    customers: distinctSorted(tenders.map((t) => t.customer)),
-    entitasList: distinctSorted(tenders.map((t) => t.entitas)),
-  };
+export { getFilterOptions } from "./tender-logic";
+
+type FormReference = Pick<
+  TenderRow,
+  "id" | "tender_no" | "area" | "customer" | "entitas"
+>;
+const getFormReferences = unstable_cache(
+  async (track: Track | "all") => {
+    const rows: FormReference[] = [];
+    const limit = 1000;
+    for (let start = 0; ; start += limit) {
+      let query = supabaseServer()
+        .from("tenders")
+        .select("id,tender_no,area,customer,entitas")
+        .order("id")
+        .range(start, start + limit - 1);
+      if (track !== "all") query = query.eq("track", track);
+      const { data, error } = await query;
+      if (error)
+        throw new Error(`Could not load tender choices: ${error.message}`);
+      rows.push(...(data ?? []));
+      if (!data || data.length < limit) return rows;
+    }
+  },
+  ["tenders:form-references", process.env.SUPABASE_URL || "unconfigured"],
+  { tags: [TENDERS_TAG], revalidate: 30 },
+);
+
+export async function getTenderFormChoices(track: Track | "all") {
+  await requireAdmin();
+  const rows = await getFormReferences(track);
+  const selectOptions = await getSelectOptions(rows);
+  const existingTenders = rows
+    .filter((row) => row.tender_no)
+    .map((row) => ({ id: row.id, tenderNo: row.tender_no }));
+  return { selectOptions, existingTenders };
 }
 
 /** Dropdown options for every extendable field (Area, Customer, Entity):
  * existing tender values plus anything an admin added via
  * addSelectOption(), even if no tender uses it yet. */
 export async function getSelectOptions(
-  tenders: Tender[],
+  tenders: Pick<Tender, "area" | "customer" | "entitas">[],
 ): Promise<SelectOptionsMap> {
   await requireUser();
   const { data, error } = await supabaseServer()

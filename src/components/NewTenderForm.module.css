@@ -282,10 +282,147 @@
   }
 }
 @media (min-width: 901px) {
-  .page { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; max-width: 1260px; }
-  .page > :global(.page-heading) { grid-column: 1 / -1; }
-  .steps { flex-direction: column; align-self: start; position: sticky; top: 84px; background: transparent; padding: 0; gap: 6px; }
-  .step { min-height: 44px; font-size: 13px; }
-  .stepActive { background: #e2edf9; box-shadow: inset 3px 0 #245ca6; }
-  .card { min-width: 0; }
+  .page {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 22px;
+    max-width: 1260px;
+  }
+  .page > :global(.page-heading) {
+    grid-column: 1 / -1;
+  }
+  .steps {
+    flex-direction: column;
+    align-self: start;
+    position: sticky;
+    top: 84px;
+    background: transparent;
+    padding: 0;
+    gap: 6px;
+  }
+  .step {
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .stepActive {
+    background: #e2edf9;
+    box-shadow: inset 3px 0 #245ca6;
+  }
+  .card {
+    min-width: 0;
+  }
+}
+
+.createPage {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 3.5vw, 44px) 48px;
+}
+.createPage > :global(.page-heading) {
+  margin-bottom: 20px;
+}
+.createPage .steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  position: static;
+  padding: 0;
+  gap: 0;
+  background: transparent;
+  margin: 0 0 20px;
+}
+.createPage .step {
+  min-width: 0;
+  justify-content: flex-start;
+  border-radius: 0;
+  border-bottom: 2px solid var(--border);
+  padding: 10px 6px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  white-space: normal;
+  height: auto;
+}
+.createPage .step[aria-current] {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.createPage .stepNumber {
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+}
+.createPage .stepActive .stepNumber {
+  background: var(--primary);
+  color: white;
+}
+.createPage .card {
+  padding: clamp(16px, 3vw, 32px);
+  border-radius: 12px;
+}
+.createPage .sectionHeading h2 {
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+.label {
+  align-items: stretch;
+  text-align: left;
+  line-height: 1.4;
+}
+.label > :global([data-slot="native-select-wrapper"]) {
+  width: 100%;
+}
+.label select.input {
+  padding: 7px 32px 7px 12px;
+}
+.createPage .fieldColumn {
+  gap: 17px;
+}
+.createPage .trackPicker p {
+  margin-top: 7px;
+  font-size: 12px;
+}
+.createPage .trackPicker button {
+  padding: 7px 14px;
+}
+.createPage .review dl > div {
+  padding-block: 9px;
+}
+.reviewSchedule {
+  margin-top: 18px;
+  font-size: 13px;
+}
+.reviewSchedule summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+@media (max-width: 650px) {
+  .createPage {
+    padding: 20px 14px 32px;
+  }
+  .createPage .step {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    line-height: 1.25;
+    font-size: 11px;
+  }
+  .createPage .sectionHeading {
+    margin-bottom: 18px;
+  }
+  .createPage .fieldRow2 {
+    gap: 14px;
+  }
+  .createPage .milestoneRow {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: start;
+  }
+  .createPage .milestoneActions {
+    grid-column: 2;
+    margin: 0;
+  }
+  .createPage .milestoneRow input {
+    max-width: none;
+  }
 }

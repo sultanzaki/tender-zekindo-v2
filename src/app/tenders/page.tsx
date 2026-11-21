@@ -1,55 +1,61 @@
 import { requireUser } from "@/lib/auth/dal";
-import { getAllTenders, getFilterOptions } from "@/lib/tenders";
-import { getMilestoneTypes, getMilestoneCatalog } from "@/lib/milestones";
+import { getAllTenders } from "@/lib/tenders";
+import { getMilestoneCatalog } from "@/lib/milestones";
 import { todayISO } from "@/lib/tender-logic";
-import { flatParams, trackFromParam } from "@/lib/types";
-import { TenderTableClient } from "@/components/TenderTableClient";
-import { readTenderFilters } from "@/lib/table-state";
+import { RegisterWorkspace } from "@/components/RegisterWorkspace";
 
 export const dynamic = "force-dynamic";
 
-export default async function TenderTablePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function TenderTablePage() {
   const ctx = await requireUser();
-  const sp = await searchParams;
-  const track = sp.track === "all" ? "all" : trackFromParam(sp.track);
-
-  const [tenders, milestoneTypes] = await Promise.all([
-    getAllTenders({ track }),
-    track === "all"
-      ? getMilestoneCatalog().then((c) => [
-          ...(c.upstream ?? []),
-          ...(c.downstream ?? []),
-        ])
-      : getMilestoneTypes(track),
+  const [rows, catalog] = await Promise.all([
+    getAllTenders(),
+    getMilestoneCatalog(),
   ]);
-  const options = getFilterOptions(tenders);
   return (
-    <>
-      <TenderTableClient
-        key={track}
-        tenders={tenders.map((t) => ({
-          ...t,
-          catatanInternal: null,
-          remarks: null,
-          remark: null,
-          oeCatatan: null,
-          createdByName: null,
-          updatedByName: null,
-        }))}
-        initialFilters={readTenderFilters(
-          new URLSearchParams(flatParams(sp) as Record<string, string>),
-        )}
-        options={options}
-        milestoneTypes={milestoneTypes}
-        anchor={todayISO()}
-        isAdmin={ctx?.profile.role === "admin"}
-        canViewMoney={!!ctx}
-        track={track}
-      />
-    </>
+    <RegisterWorkspace
+      rows={rows.map(
+        ({
+          id,
+          rowNo,
+          track,
+          period,
+          area,
+          tenderNo,
+          customer,
+          product,
+          entitas,
+          qty,
+          oe,
+          milestoneOrder,
+          result,
+          pnl,
+          nilaiPenawaran,
+          milestones,
+        }) => ({
+          id,
+          rowNo,
+          track,
+          period,
+          area,
+          tenderNo,
+          customer,
+          product,
+          entitas,
+          qty,
+          oe,
+          milestoneOrder,
+          result,
+          pnl,
+          nilaiPenawaran,
+          milestones: Object.fromEntries(
+            Object.entries(milestones).filter(([, date]) => date != null),
+          ),
+        }),
+      )}
+      catalog={[...(catalog.upstream ?? []), ...(catalog.downstream ?? [])]}
+      anchor={todayISO()}
+      isAdmin={ctx.profile.role === "admin"}
+    />
   );
 }

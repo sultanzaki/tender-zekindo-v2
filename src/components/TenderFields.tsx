@@ -57,8 +57,8 @@ export function TenderFields({
           </fieldset>
         )}
         <div className={styles.fieldRow2}>
-          <Label className={styles.label}>
-            Area *
+          <div className={styles.label}>
+            <Label htmlFor="tender-area">Area *</Label>
             <OptionSelect
               field="area"
               label="Area"
@@ -68,9 +68,9 @@ export function TenderFields({
               required
               onChange={(area) => onChange({ area })}
             />
-          </Label>
-          <Label className={styles.label}>
-            Customer *
+          </div>
+          <div className={styles.label}>
+            <Label htmlFor="tender-customer">Customer *</Label>
             <OptionSelect
               field="customer"
               label="Customer"
@@ -80,7 +80,7 @@ export function TenderFields({
               required
               onChange={(customer) => onChange({ customer })}
             />
-          </Label>
+          </div>
         </div>
         <Label className={styles.label}>
           Tender number
@@ -112,8 +112,8 @@ export function TenderFields({
   if (section === "value")
     return (
       <div className={styles.fieldColumn}>
-        <Label className={styles.label}>
-          Entity / Consortium
+        <div className={styles.label}>
+          <Label htmlFor="tender-entitas">Entity / Consortium</Label>
           <OptionSelect
             field="entitas"
             label="Entity / Consortium"
@@ -122,7 +122,7 @@ export function TenderFields({
             options={options.entitas}
             onChange={(entitas) => onChange({ entitas })}
           />
-        </Label>
+        </div>
         <div className={styles.fieldRow2}>
           {(
             [

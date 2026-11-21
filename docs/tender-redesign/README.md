@@ -4,6 +4,8 @@
 | --- | --- | --- |
 | Tender dan prioritas deadline | [Desktop](workspace-1440.png) | [HP](workspace-390.png) |
 | Analytics · Performance | [Desktop](analytics-1440.png) | [HP](analytics-390.png) |
+| Masuk | [Desktop](login-1440.png) | [HP](login-390.png) |
+| Tambah tender | [Desktop](new-1440.png) | [HP](new-390.png) |
 
 Kartu deadline menyaring tabel pada halaman yang sama. Tautan Overview lama membuka register dengan track yang sesuai.
 

@@ -16,6 +16,7 @@ before(async () => {
     entryPoints: ["tests/ui/harness.tsx"],
     outdir: directory,
     bundle: true,
+    loader: { ".avif": "file" },
     format: "esm",
     jsx: "automatic",
     plugins: [

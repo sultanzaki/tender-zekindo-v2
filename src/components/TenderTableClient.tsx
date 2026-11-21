@@ -57,7 +57,7 @@ import {
   RESULT_ENUM,
   type FilterOptions,
   type MilestoneType,
-  type Tender,
+  type RegisterTender,
   type TenderFilters,
   type Track,
   TRACK_LABELS,
@@ -178,7 +178,7 @@ export function TenderTableClient({
   track,
   initialFilters = DEFAULT_FILTERS,
 }: {
-  tenders: Tender[];
+  tenders: RegisterTender[];
   options: FilterOptions;
   milestoneTypes: MilestoneType[];
   anchor: string;
@@ -329,7 +329,7 @@ export function TenderTableClient({
     [sorted, safePage, pageSize],
   );
 
-  function scheduleCell(tender: Tender) {
+  function scheduleCell(tender: RegisterTender) {
     const next = upcoming.get(tender.id);
     if (next)
       return (
