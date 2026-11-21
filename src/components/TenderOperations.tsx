@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { formatDateID, REMINDER_DAYS } from "@/lib/tender-logic";
 import styles from "./TenderOperations.module.css";
 
+const monthName = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" });
+
 export function OperationsHeading({
   title,
   context,
@@ -37,11 +39,15 @@ export function MilestoneDue({
 
   return (
     <span className={styles.due} data-urgent={days !== undefined && days <= REMINDER_DAYS}>
-      <strong>{label}</strong>
+      <time className={styles.dateStamp} dateTime={date} aria-label={formatDateID(date) ?? date}>
+        <span>{monthName.format(new Date(date))}</span>
+        <strong>{date.slice(8, 10)}</strong>
+      </time>
+      <span className={styles.dateText}><strong>{label}</strong>
       <span>
-        <time dateTime={date}>{formatDateID(date)}</time>
+        {formatDateID(date)}
         {days === 0 ? <b>Today</b> : days === 1 ? <b>Tomorrow</b> : null}
-      </span>
+      </span></span>
     </span>
   );
 }

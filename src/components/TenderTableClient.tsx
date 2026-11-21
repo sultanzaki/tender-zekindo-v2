@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { MilestoneDue, OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
+import { Icon } from "./Icon";
 import { TableViews } from "./TableViews";
 import { Modal } from "./Modal";
 import { useStoredJSON } from "./useStoredJSON";
@@ -381,10 +382,10 @@ export function TenderTableClient({
     <div className={styles.wrap}>
       <OperationsHeading
         title="Tender register"
-        context={sort ? undefined : "Ordered by next deadline"}
+        context={<>{filtered.length} of {tenders.length} tenders{sort ? "" : " · Next deadline first"}</>}
         actions={isAdmin ? (
           <Link href={track === "downstream" ? "/tenders/new?track=downstream" : "/tenders/new"} className="button button-primary">
-            <span aria-hidden="true">+</span> New tender
+            <Icon name="plus" width={16} height={16} /> New tender
           </Link>
         ) : undefined}
       />
@@ -401,7 +402,7 @@ export function TenderTableClient({
         )}
       />
       <div className={`${shared.card} ${styles.tableWorkspace}`}>
-        <div className={styles.viewBar}>
+        <div className={styles.commandBar}>
           <div className={styles.quickViews} aria-label="Quick filters">
             {[
               ["all", "All results"],
@@ -417,18 +418,11 @@ export function TenderTableClient({
               </button>
             ))}
           </div>
-          <TableViews
-            track={track}
-            filters={filters}
-            onApply={(next) => changeFilters(() => next)}
-          />
-        </div>
-        <div className={styles.toolbar} data-filter-open={showFilters}>
           <input
             aria-label="Search tenders"
             type="search"
             className={styles.search}
-            placeholder="Search number, package, customer, area…"
+            placeholder="Search tenders…"
             value={filters.search}
             onChange={(e) =>
               changeFilters((f) => ({ ...f, search: e.target.value }))
@@ -440,8 +434,62 @@ export function TenderTableClient({
             aria-expanded={showFilters}
             onClick={() => setShowFilters((value) => !value)}
           >
-            {showFilters ? "Hide filters" : "Filters"}
+            <Icon name="filters" width={15} height={15} /> {showFilters ? "Hide filters" : "Filters"}
           </button>
+          <button
+            type="button"
+            aria-pressed={fullTable}
+            className={styles.matrixToggle}
+            onClick={() => setFullTable(!fullTable)}
+          >
+            Schedule matrix
+          </button>
+          <div className={styles.colMenuWrap} ref={menuRef}>
+            <button
+              ref={columnToggleRef}
+              aria-expanded={showColMenu}
+              aria-controls="table-columns"
+              className={styles.colMenuButton}
+              onClick={(event) => {
+                setAlignMenuLeft(event.currentTarget.getBoundingClientRect().right < 276);
+                setFullTable(true);
+                setShowColMenu((value) => !value);
+              }}
+            >
+              Columns
+            </button>
+            {showColMenu && (
+              <div id="table-columns" className={styles.colMenu} data-align-left={alignMenuLeft}>
+                {FIELD_TOGGLES.map((c) => (
+                  <label key={c.key} className={styles.colMenuItem}>
+                    <input
+                      type="checkbox"
+                      checked={!!visibleCols[c.key]}
+                      onChange={() =>
+                        setVisibleCols((v) => ({ ...v, [c.key]: !v[c.key] }))
+                      }
+                    />
+                    {c.label}
+                  </label>
+                ))}
+                {milestoneTypes.map((m) => (
+                  <label key={m.key} className={styles.colMenuItem}>
+                    <input
+                      type="checkbox"
+                      checked={!!visibleCols[m.key]}
+                      onChange={() =>
+                        setVisibleCols((v) => ({ ...v, [m.key]: !v[m.key] }))
+                      }
+                    />
+                    {m.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <a href={exportHref} aria-label="Export to Excel" title="Export to Excel" className={styles.exportAction}><Icon name="download" width={16} height={16}/></a>
+        </div>
+        {showFilters && <div className={styles.advanced}>
           <select
             className={styles.select}
             aria-label="Period"
@@ -518,71 +566,13 @@ export function TenderTableClient({
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            aria-pressed={fullTable}
-            className={styles.matrixToggle}
-            onClick={() => setFullTable(!fullTable)}
-          >
-            Schedule matrix
-          </button>
-          <div className={styles.colMenuWrap} ref={menuRef}>
-            <button
-              ref={columnToggleRef}
-              aria-expanded={showColMenu}
-              aria-controls="table-columns"
-              className={styles.colMenuButton}
-              onClick={(event) => {
-                setAlignMenuLeft(event.currentTarget.getBoundingClientRect().right < 276);
-                setFullTable(true);
-                setShowColMenu((value) => !value);
-              }}
-            >
-              Columns
-            </button>
-            {showColMenu && (
-              <div id="table-columns" className={styles.colMenu} data-align-left={alignMenuLeft}>
-                {FIELD_TOGGLES.map((c) => (
-                  <label key={c.key} className={styles.colMenuItem}>
-                    <input
-                      type="checkbox"
-                      checked={!!visibleCols[c.key]}
-                      onChange={() =>
-                        setVisibleCols((v) => ({ ...v, [c.key]: !v[c.key] }))
-                      }
-                    />
-                    {c.label}
-                  </label>
-                ))}
-                {milestoneTypes.map((m) => (
-                  <label key={m.key} className={styles.colMenuItem}>
-                    <input
-                      type="checkbox"
-                      checked={!!visibleCols[m.key]}
-                      onChange={() =>
-                        setVisibleCols((v) => ({ ...v, [m.key]: !v[m.key] }))
-                      }
-                    />
-                    {m.label}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          <button className={`${styles.resetButton} ${styles.clearFilters}`} onClick={resetFilters}>
-            Reset filters
-          </button>
-
-          {isAdmin && (
-            <Link href="/tenders/archive" className={styles.resetButton}>
-              Archive
-            </Link>
-          )}
-          <a href={exportHref} className={styles.resetButton}>Export to Excel</a>
-          <span className={styles.resultCount} role="status">
-            {filtered.length} of {tenders.length} tenders
-          </span>
-        </div>
+          <TableViews
+            track={track}
+            filters={filters}
+            onApply={(next) => changeFilters(() => next)}
+          />
+          <button className={styles.resetButton} onClick={resetFilters}>Reset filters</button>
+        </div>}
 
         {isAdmin && selected.size > 0 && (
           <div className={styles.bulkBar}>
@@ -646,7 +636,7 @@ export function TenderTableClient({
             role="region"
             aria-label="Tender table; scroll horizontally for milestone columns"
           >
-            <table className={styles.table}>
+            <table className={styles.table} data-matrix={fullTable}>
               <thead>
                 <tr className={styles.theadRow}>
                   {isAdmin && (
@@ -661,11 +651,11 @@ export function TenderTableClient({
                       />
                     </th>
                   )}
+                  <th scope="col" className={styles.th}>Next milestone</th>
                   {sortableHeader("product", "Package")}
                   {sortableHeader("customer", "Customer")}
                   {sortableHeader("result", "Status")}
-                  <th scope="col" className={styles.th}>Next milestone</th>
-                  {sortableHeader("tenderNo", "Tender No.")}
+                  {fullTable && sortableHeader("tenderNo", "Tender No.")}
                   {fullTable && <>
                   {sortableHeader("rowNo", "No")}
                   {visibleCols.track && track === "all" && (
@@ -711,10 +701,19 @@ export function TenderTableClient({
                         />
                       </td>
                     )}
+                    <td className={`${styles.td} ${styles.deadlineCell}`}>
+                      <MilestoneDue
+                        label={upcoming.get(t.id)?.label}
+                        date={upcoming.get(t.id)?.date}
+                        days={upcoming.get(t.id)?.diff}
+                        emptyLabel={t.result ? "Closed schedule" : undefined}
+                      />
+                    </td>
                     <td className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}>
                       <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>
                         {t.product || t.customer || "View tender"}
                       </Link>
+                      {!fullTable && <small className={styles.packageNumber}>{t.tenderNo || `Tender #${t.rowNo}`}</small>}
                     </td>
                     <td
                       className={`${styles.td} ${styles.tdEllipsis}`}
@@ -765,17 +764,9 @@ export function TenderTableClient({
                         <ResultBadge result={t.result} />
                       )}
                     </td>
-                    <td className={`${styles.td} ${styles.deadlineCell}`}>
-                      <MilestoneDue
-                        label={upcoming.get(t.id)?.label}
-                        date={upcoming.get(t.id)?.date}
-                        days={upcoming.get(t.id)?.diff}
-                        emptyLabel={t.result ? "Closed schedule" : undefined}
-                      />
-                    </td>
-                    <td className={`${styles.td} ${styles.tdNoWrap}`}>
+                    {fullTable && <td className={`${styles.td} ${styles.tdNoWrap}`}>
                       {t.tenderNo ? <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>{t.tenderNo}</Link> : "—"}
-                    </td>
+                    </td>}
                     {fullTable && <>
                     <td className={`${styles.td} ${styles.tdMuted}`}>
                       {t.rowNo}

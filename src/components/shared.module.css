@@ -79,3 +79,5 @@
   background: var(--zk-warning-light);
   color: var(--zk-warning-text);
 }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-weight: 550; border-radius: 6px; line-height: 1.45; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }

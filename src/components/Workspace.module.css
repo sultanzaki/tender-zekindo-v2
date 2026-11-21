@@ -40,6 +40,7 @@
 }
 .grid {
   display: grid;
+  align-items: start;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 24px;
   margin-bottom: 24px;
@@ -348,3 +349,8 @@
 .metric { border: 0; border-radius: 0; background: transparent; }
 .metricValue { font-variant-numeric: tabular-nums; }
 .panelHead { background: #f6f8fc; }
+.panelHead { background: white; padding-block: 18px; }
+.panelHead h2 { font-size: 16px; letter-spacing: -.025em; }
+.rowTitle { font-size: 13px; }
+.panel { border-radius: 12px; }
+.filterBar { background: var(--zk-gray-50); }

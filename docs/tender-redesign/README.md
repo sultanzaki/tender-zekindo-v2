@@ -40,7 +40,7 @@ Kedua versi memakai akun admin lokal, seed tender yang sama, dan tiga tanggal Re
 | Tender Detail | [Sebelum](before-detail-1440.png) · [Sesudah](after-detail-1440.png) | [Sebelum](before-detail-390.png) · [Sesudah](after-detail-390.png) |
 
 - **Overview.** Agenda tujuh hari menampilkan jumlah tender per tanggal. Pilih tanggal berisi deadline untuk menuju baris terkait. Follow-up dan ringkasan pipeline membentuk kolom pendamping pada desktop.
-- **Tender List.** Paket, customer, status, dan milestone berada di kolom depan. Di HP, tanggal ada di setiap tender dan filter lanjutan dapat dibuka sesuai kebutuhan. Link paket membawa filter daftar ke halaman detail.
+- **Tender List.** Tanggal dan milestone berada di kolom pertama. Nomor tender mengikuti nama paket. Filters membuka opsi lanjutan dan saved views. Di HP, tanggal ada di setiap tender dan filter lanjutan dapat dibuka sesuai kebutuhan. Link paket membawa filter daftar ke halaman detail.
 - **Tender Detail.** Status dan tanggal muncul bersama identitas, sebelum tab Schedule, Documents, dan Activity. Tombol Edit milestones membuka bagian Milestones langsung. Link kembali mengikuti halaman asal dari Overview atau Tender List.
 - **Analytics.** Cakupan tender dan periode tampil pada judul, dengan grafik win rate dan jumlah outcome sebelum ringkasan. Grafik customer menyebut ukuran sampel minimum.
 
@@ -48,4 +48,4 @@ Kedua versi memakai akun admin lokal, seed tender yang sama, dan tiga tanggal Re
 
 - `OperationsHeading` menyatukan hierarki judul, konteks, dan posisi aksi pada empat halaman.
 - `MilestoneDue` menyajikan label milestone, tanggal dengan angka tabular, dan penanda Today atau Tomorrow di antrean, tabel, dan detail.
-- Baris antrean memakai garis aksen pada deadline terdekat. Tender Detail memakai baris ringkasan status, milestone, dan track sebagai penghubung ke jadwal.
+- Sidebar desktop memisahkan navigasi kerja dari administrasi. Tender Detail memakai baris ringkasan status, milestone, dan track sebagai penghubung ke jadwal.

@@ -6,7 +6,7 @@ Claude Design handoff bundle described below (`project/`, `chats/`).
 
 ## Workspace
 
-The workspace uses the Zekindo logo, blue accents, horizontal desktop navigation and bottom navigation on phones.
+The workspace uses the Zekindo logo, blue accents, a persistent desktop sidebar and bottom navigation on phones.
 
 | Route                   | Workflow                                                                   |
 | ----------------------- | -------------------------------------------------------------------------- |

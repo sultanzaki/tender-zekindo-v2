@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 const paths = {
+  filters: "M3 6h5m4 0h9M3 12h10m4 0h4M3 18h3m4 0h11M8 4v4m5 2v4m-7 2v4",
   overview: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   tenders: "M4 5h16v15H4zM8 3v4M16 3v4M4 10h16M8 14h3M8 17h7",
   analytics: "M4 20V10M10 20V4M16 20v-8M22 20H2",

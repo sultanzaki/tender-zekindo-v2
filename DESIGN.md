@@ -8,24 +8,26 @@ Halaman pertama setelah login adalah **Tender List**. Tim langsung melihat paket
 
 Judul **Tender register** berada di atas satu area kerja yang menyatukan pencarian, filter, dan hasil. Untuk admin, **New tender** berada di sisi kanan judul. Aksi **Export** mengikuti cakupan filter yang sedang aktif.
 
-Urutan informasi pada desktop:
+Navigasi desktop berada dalam sidebar kiri. Grup Workspace memuat tugas harian dan Administration memuat pengelolaan khusus admin. Di HP, logo tetap di atas dan tujuan utama berada di navigasi bawah.
 
 ```text
-Tender register                                       New tender
-[Cari paket, nomor tender, customer]  [Track] [Filter]   [Export]
+Tender register                                         + New tender
+78 of 270 tenders · Next deadline first
+All tenders     Upstream     Downstream
+All results / Active / Won     Search · Filters · Schedule matrix · Columns · Export
 
-Paket / Customer              Milestone berikutnya      Deadline       Status
-Pengadaan demulsifier         Bid submission            21 Nov         Running
-PT Contoh Energi                                        Hari ini
+Next milestone       Package                    Customer           Status     Bid value
+NOV 21 Registration  Pengadaan demulsifier      PT Contoh Energi   Running    Rp …
+       Today         TN-001
 ```
 
-Tampilan awal membuka tender aktif dari semua track. Urutan awal mengikuti deadline terdekat, dihitung dengan tanggal Jakarta (WIB). Tender aktif tanpa jadwal tetap tersedia di bagian akhir dengan label **Belum dijadwalkan**. Tender selesai bisa dilihat melalui filter status. Tanggal lampau tetap terlihat pada riwayat jadwal di Detail.
+Tampilan awal membuka tender aktif dari semua track. Urutan awal mengikuti deadline terdekat, dihitung dengan tanggal Jakarta (WIB). Tender aktif tanpa jadwal tetap tersedia di bagian akhir dengan label **No upcoming milestone**. Tender selesai bisa dilihat melalui filter status. Tanggal lampau tetap terlihat pada riwayat jadwal di Detail.
 
 Pada lebar 390 px, baris paket memakai dua tingkat. Nama paket dan status di atas, lalu milestone dan tanggal di bawah. Nama customer tetap terlihat sebelum informasi sekunder seperti nomor tender. Pencarian tetap di atas daftar. Filter lanjutan dibuka dari satu tombol.
 
 ## Baris tender
 
-Baris tender menjadi pola yang dipakai ulang. Nama paket adalah tautan ke detail. Customer memberi konteks di bawahnya. Milestone dan tanggal membentuk satu unit, sehingga pengguna bisa langsung membaca *apa yang jatuh tempo dan kapan*. **Hari ini**, **Besok**, dan **Belum dijadwalkan** ditulis sebagai teks. Tanggal penuh tetap tersedia ketika format singkat bisa menimbulkan ambiguitas. Gunakan angka tabular dan pertahankan perataan tanggal pada desktop.
+Baris tender menjadi pola yang dipakai ulang. Nama paket adalah tautan ke detail. Nomor tender muncul di bawah nama paket pada desktop. Customer memiliki kolom tersendiri. Milestone dan tanggal membentuk satu unit, sehingga pengguna bisa langsung membaca *apa yang jatuh tempo dan kapan*. **Hari ini**, **Besok**, dan **No upcoming milestone** ditulis sebagai teks. Tanggal penuh tetap tersedia ketika format singkat bisa menimbulkan ambiguitas. Gunakan angka tabular dan pertahankan perataan tanggal pada desktop.
 
 Di Detail, tampilkan identitas paket dan status, lalu jadwal. Letakkan **Edit milestones** di dekat judul jadwal untuk admin. Saat pengguna kembali ke daftar, pertahankan pencarian, filter, dan urutannya.
 

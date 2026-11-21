@@ -225,6 +225,7 @@ test("new tender validates identity, reviews all stages and surfaces save errors
 });
 test("table filters reset pagination and selection; URL and export match", async () => {
   const page = await open("table");
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
@@ -302,6 +303,7 @@ test("mobile tender cards fit narrow screens and keep detail access", async () =
 });
 test("saved views restore filter state and column preferences persist", async () => {
   const page = await open("table");
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Result", exact: true })
     .selectOption("WIN");

@@ -332,3 +332,7 @@
   margin-top: 0;
 }
 .sectionTabs { background: #e9eef5; padding: 2px 12px 0; border-radius: 8px 8px 0 0; }
+.identity { border: 0; padding: 0; margin: 20px 0; box-shadow: none; }
+.handoff { margin-top: 20px; background: var(--zk-gray-50); border: 1px solid var(--color-border); border-radius: 10px; padding: 14px 18px; }
+.sectionTabs { background: transparent; padding-inline: 0; }
+@media(max-width:640px) { .handoff { display: flex; align-items: start; flex-wrap: wrap; gap: 16px; } }

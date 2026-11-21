@@ -94,14 +94,15 @@ export function TopNav({
             height={32}
             priority
           />
-          <strong>Tender workspace</strong>
+          <strong>Procurement workspace</strong>
         </Link>
+        <div className={styles.groupTitle}>Workspace</div>
         <nav aria-label="Main navigation" className={styles.navigation}>
           {pages.map((p) => (
             <Link
               key={p.href}
               href={p.href === "/tenders" ? "/tenders?track=all&result=__EMPTY__" : p.href}
-              className={`${styles.navLink} ${active(p.href) ? styles.active : ""}`}
+              className={styles.navLink}
               aria-current={active(p.href) ? "page" : undefined}
             >
               <Icon name={p.icon} />
@@ -114,6 +115,10 @@ export function TopNav({
             </Link>
           ))}
         </nav>
+        {isAdmin && <nav aria-label="Administration" className={styles.navigation}>
+          <div className={styles.groupTitle}>Administration</div>
+          {adminPages.map(p => <Link key={p.href} href={p.href} className={styles.navLink} aria-current={active(p.href) ? "page" : undefined}><Icon name={p.icon} />{p.label}</Link>)}
+        </nav>}
         <div className={styles.sidebarFooter}>
           <button
             className={styles.accountButton}
@@ -133,13 +138,14 @@ export function TopNav({
         </div>
       </aside>
       <div className={styles.workspace}>
-        {path !== "/tenders" && <header className={styles.header}>
+        <header className={styles.header}>
           <div className={styles.breadcrumb}>
-            <span>Zekindo</span>
+            <Link className={styles.mobileBrand} href="/"><Image src="/logo.png" width={72} height={25} alt="Zekindo" /></Link>
+            <span>Workspace</span>
             <span aria-hidden="true">/</span>
             <strong>{current?.label || "Tender workspace"}</strong>
           </div>
-          <form action="/tenders" className={styles.search} role="search">
+          {path !== "/tenders" && <form action="/tenders" className={styles.search} role="search">
             <Icon name="search" />
             <input type="hidden" name="track" value="all" />
             <input
@@ -149,7 +155,7 @@ export function TopNav({
               placeholder="Search tenders, customers…"
             />
             <kbd>/</kbd>
-          </form>
+          </form>}
           {isAdmin && path === "/tenders" ? null : isAdmin ? (
             <Suspense
               fallback={
@@ -168,13 +174,10 @@ export function TopNav({
               Account
             </button>
           )}
-        </header>}
+        </header>
         <main id="main-content" className={styles.content} tabIndex={-1}>
           {children}
         </main>
-        <footer className={styles.footer}>
-          PT Zeus Kimiatama Indonesia<span>Tender Management</span>
-        </footer>
       </div>
       <nav className={styles.mobileNav} aria-label="Mobile navigation">
         {pages.map((p) => (

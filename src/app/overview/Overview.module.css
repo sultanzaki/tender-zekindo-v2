@@ -162,3 +162,9 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.queue { border-radius: 12px; box-shadow: none; }
+.week li { background: var(--zk-gray-50); border: 1px solid var(--color-divider); }
+.week li[data-today="true"] { background: var(--color-primary); border-color: var(--color-primary); }
+.columnLabels { background: var(--zk-gray-50); }
+.first { background: #f5f8ff; box-shadow: none; }
+.summary { background: #f7f8fa; border: 1px solid var(--color-border); }
