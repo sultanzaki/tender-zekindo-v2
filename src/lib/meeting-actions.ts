@@ -4,7 +4,8 @@ import { supabaseServer } from "./supabase-server";
 import { getTenderById } from "./tenders";
 import { getMilestoneTypes } from "./milestones";
 import { resolveTenderMilestones } from "./tender-logic";
-import { revalidatePath } from "next/cache";
+import { MEETING_COUNTS_TAG } from "./cache-tags";
+import { revalidatePath, updateTag } from "next/cache";
 
 export async function saveMeeting(
   tenderId: string,
@@ -119,6 +120,7 @@ export async function saveMeeting(
       : null;
   if (!result?.data || result.error)
     return "Could not save. Refresh and check the meeting and participants.";
+  updateTag(MEETING_COUNTS_TAG);
   revalidatePath("/tenders");
   revalidatePath("/tenders/" + tenderId);
   revalidatePath("/tenders/" + tenderId + "/meetings");

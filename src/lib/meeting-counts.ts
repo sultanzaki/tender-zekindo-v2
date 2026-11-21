@@ -1,7 +1,9 @@
 import { supabaseServer } from "./supabase-server";
 import { requireUser } from "./auth/dal";
-export async function meetingCounts(id?: string) {
-  await requireUser();
+import { unstable_cache } from "next/cache";
+import { MEETING_COUNTS_TAG, TENDERS_TAG } from "./cache-tags";
+
+async function loadMeetingCounts(id?: string) {
   const counts: Record<string, Record<string, number>> = {};
   for (let offset = 0; ; offset += 1000) {
     let query = supabaseServer()
@@ -20,4 +22,14 @@ export async function meetingCounts(id?: string) {
       (counts[row.tender_id] ??= {})[row.milestone] = row.count;
     if (data.length < 1000) return counts;
   }
+}
+
+const cachedCounts = unstable_cache(loadMeetingCounts,
+  ["meeting-counts", process.env.SUPABASE_URL || "unconfigured"],
+  { tags: [MEETING_COUNTS_TAG, TENDERS_TAG], revalidate: 30 },
+);
+
+export async function meetingCounts(id?: string) {
+  await requireUser();
+  return cachedCounts(id);
 }

@@ -64,19 +64,19 @@ export async function destroyAllSessionsForUser(userId: string): Promise<void> {
   if (error) throw new Error("Unable to revoke existing sessions.");
 }
 
-export async function getSessionUserId(): Promise<string | null> {
+export async function getSessionProfile() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
 
   const { data, error } = await supabaseServer()
     .from("sessions")
-    .select("user_id, expires_at")
+    .select("user_id, expires_at, profile:profiles(id,email,name,role,created_at)")
     .eq("id", hashToken(token))
     .maybeSingle();
   if (error || !data) return null;
   const expires = new Date(data.expires_at).getTime();
   if (!data.user_id || !Number.isFinite(expires) || expires <= Date.now())
     return null;
-  return data.user_id;
+  return data.profile?.id === data.user_id ? data.profile : null;
 }

@@ -255,7 +255,13 @@ export interface Database {
           expires_at: string;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Row"]>;
-        Relationships: [];
+        Relationships: [{
+          foreignKeyName: "sessions_user_id_fkey";
+          columns: ["user_id"];
+          isOneToOne: false;
+          referencedRelation: "profiles";
+          referencedColumns: ["id"];
+        }];
       };
       milestone_types: {
         Row: {

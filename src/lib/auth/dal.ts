@@ -3,8 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { safeNextPath } from "../validation";
-import { getSessionUserId } from "./session";
-import { supabaseServer } from "../supabase-server";
+import { getSessionProfile } from "./session";
 import type { Profile } from "../types";
 
 export interface AuthContext {
@@ -21,23 +20,15 @@ export interface AuthContext {
  */
 export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
   try {
-    const userId = await getSessionUserId();
-    if (!userId) return null;
-
-    const { data: profileRow, error } = await supabaseServer()
-      .from("profiles")
-      .select("id, email, name, role, created_at")
-      .eq("id", userId)
-      .maybeSingle();
+    const profileRow = await getSessionProfile();
     if (
-      error ||
       !profileRow ||
       (profileRow.role !== "admin" && profileRow.role !== "viewer")
     )
       return null;
 
     return {
-      userId,
+      userId: profileRow.id,
       email: profileRow.email,
       profile: {
         id: profileRow.id,

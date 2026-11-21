@@ -202,7 +202,18 @@ before(async () => {
       limit = Number(url.searchParams.get("limit") || 1000);
     rows = rows.slice(offset, offset + limit);
     const columns = url.searchParams.get("select");
-    if (columns && columns !== "*")
+    if (table === "sessions" && columns?.includes("profile:profiles(")) {
+      rows = rows.map(({ user_id, expires_at }) => ({
+        user_id, expires_at,
+        profile: tables.profiles.find((profile) => profile.id === user_id),
+      }));
+    } else if (table === "tenders" && columns?.startsWith("*,")) {
+      const name = (id) => tables.profiles.find((p) => p.id === id)?.name;
+      rows = rows.map((row) => ({ ...row,
+        creator: row.created_by ? { name: name(row.created_by) } : null,
+        editor: row.updated_by ? { name: name(row.updated_by) } : null,
+      }));
+    } else if (columns && columns !== "*")
       rows = rows.map((row) =>
         Object.fromEntries(columns.split(",").map((key) => [key, row[key]])),
       );

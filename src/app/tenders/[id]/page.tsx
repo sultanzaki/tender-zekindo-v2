@@ -52,7 +52,19 @@ export default async function Detail({
   const tender = await getTenderById(id);
   const isAdmin = ctx?.profile.role === "admin";
   if (!tender || (tender.archivedAt && !isAdmin)) notFound();
-  const [catalog, counts] = await Promise.all([getMilestoneTypes(tender.track), meetingCounts(id)]);
+  const tab =
+    query.tab === "documents"
+      ? "documents"
+      : query.tab === "activity" && isAdmin
+        ? "activity"
+        : "overview";
+  const [catalog, counts, documents, tree, activity] = await Promise.all([
+    getMilestoneTypes(tender.track),
+    tab === "overview" ? meetingCounts(id) : null,
+    tab === "documents" ? getTenderDocuments(id) : [],
+    tab === "documents" ? getTenderFileTree(id) : null,
+    tab === "activity" ? getTenderActivity(id) : null,
+  ]);
   const milestones = resolveTenderMilestones(tender, {
     [tender.track]: catalog,
   });
@@ -61,12 +73,6 @@ export default async function Detail({
     tender.result || tender.archivedAt
       ? null
       : nextMilestone(tender, today, { [tender.track]: catalog });
-  const tab =
-    query.tab === "documents"
-      ? "documents"
-      : query.tab === "activity" && isAdmin
-        ? "activity"
-        : "overview";
   const requestedReturn = safeNextPath(query.returnTo);
   const fromOverview =
     query.returnTo === requestedReturn &&
@@ -80,10 +86,6 @@ export default async function Detail({
         : "/tenders";
   const tabHref = (value: string) =>
     `/tenders/${id}?${new URLSearchParams({ tab: value, returnTo })}`;
-  const [documents, tree] =
-    tab === "documents"
-      ? await Promise.all([getTenderDocuments(id), getTenderFileTree(id)])
-      : [[], null];
   const historicalKeys = tree
     ? [
         ...new Set(
@@ -130,7 +132,6 @@ export default async function Detail({
         ),
       ])
     : [];
-  const activity = tab === "activity" ? await getTenderActivity(id) : null;
   return (
     <div className={workspace.page}>
       <Link href={returnTo} className={styles.backLink}>
@@ -252,7 +253,7 @@ export default async function Detail({
                       data-next={next?.key === m.key}
                     >
                       <div className={styles.timelineLabel}>{m.label}</div>
-                      <MeetingLink className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts[id]?.[m.key] ?? 0} meetings</MeetingLink>
+                      <MeetingLink className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts?.[id]?.[m.key] ?? 0} meetings</MeetingLink>
                       <div className={styles.timelineDate}>
                         {m.date ? (
                           <time dateTime={m.date}>{formatDateID(m.date)}</time>

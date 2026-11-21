@@ -184,7 +184,6 @@ export function TenderTableClient({
 }) {
   const router = useRouter();
   const matrixRef = useRef<HTMLDivElement>(null);
-  const [intentHref, setIntentHref] = useState("");
   const intentTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -975,7 +974,7 @@ export function TenderTableClient({
                       if (event.pointerType !== "mouse") return;
                       clearTimeout(intentTimer.current);
                       intentTimer.current = setTimeout(
-                        () => setIntentHref(tenderHref(t.id)),
+                        () => router.prefetch(tenderHref(t.id)),
                         100,
                       );
                     }}
@@ -1003,10 +1002,10 @@ export function TenderTableClient({
                       className={`${styles.td} ${styles.stickyIdentity} ${styles.packageCell}`}
                     >
                       <Link
-                        prefetch={intentHref === tenderHref(t.id)}
+                        prefetch={false}
                         href={tenderHref(t.id)}
                         title={t.product || t.customer || "View tender"}
-                        onFocus={() => setIntentHref(tenderHref(t.id))}
+                        onFocus={() => router.prefetch(tenderHref(t.id))}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (

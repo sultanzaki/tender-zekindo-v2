@@ -5,7 +5,6 @@ import { supabaseServer } from "./supabase-server";
 import type { TenderRow } from "./database.types";
 import type { SelectOptionsMap, Tender, Track } from "./types";
 import { distinctSorted } from "./tender-logic";
-import { getProfilesByIds } from "./users";
 import { rowTrack } from "./milestones";
 import { TENDERS_TAG } from "./cache-tags";
 import { requireUser, requireAdmin } from "./auth/dal";
@@ -21,7 +20,13 @@ function toNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function mapRow(row: TenderRow, names: Map<string, string>): Tender {
+const tenderColumns = "*, creator:profiles!tenders_created_by_fkey(name), editor:profiles!tenders_updated_by_fkey(name)";
+type NamedTenderRow = TenderRow & {
+  creator: { name: string } | null;
+  editor: { name: string } | null;
+};
+
+function mapRow(row: NamedTenderRow): Tender {
   return {
     id: row.id,
     rowNo: row.row_no,
@@ -47,40 +52,21 @@ function mapRow(row: TenderRow, names: Map<string, string>): Tender {
     nilaiPenawaran: toNumber(row.nilai_penawaran),
     archivedAt: row.archived_at,
     createdBy: row.created_by,
-    createdByName: row.created_by ? (names.get(row.created_by) ?? null) : null,
+    createdByName: row.creator?.name ?? null,
     updatedBy: row.updated_by,
-    updatedByName: row.updated_by ? (names.get(row.updated_by) ?? null) : null,
+    updatedByName: row.editor?.name ?? null,
     updatedAt: row.updated_at,
   };
 }
 
-async function withNames(rows: TenderRow[]): Promise<Tender[]> {
-  const ids = rows.flatMap((r) =>
-    [r.created_by, r.updated_by].filter((v): v is string => !!v),
-  );
-  const profiles = await getProfilesByIds(ids);
-  const names = new Map<string, string>();
-  profiles.forEach((p, id) => names.set(id, p.name));
-  return rows.map((r) => mapRow(r, names));
-}
-
-// The full tender list is read by the dashboard, /tenders, /analytics and the
-// nav badge path. It was re-fetched from Supabase (two cross-continent round
-// trips: the rows, then the profile names) on every one of those renders.
-//
-// `unstable_cache` keeps the result across requests and is invalidated by
-// `revalidateTag(TENDERS_TAG)` from every mutation in actions.ts /
-// document-actions.ts, so the app is never more than one write behind. The 30s
-// `revalidate` is a backstop for any write that bypasses those Server Actions
-// (e.g. SQL pasted straight into the Supabase editor).
 const getTendersCached = unstable_cache(
   async (includeArchived: boolean, track: Track | "all"): Promise<Tender[]> => {
-    const rows: TenderRow[] = [];
+    const rows: Tender[] = [];
     const batch = 1000;
     for (let offset = 0; ; offset += batch) {
       let query = supabaseServer()
         .from("tenders")
-        .select("*")
+        .select(tenderColumns)
         .order("row_no", { ascending: true })
         .order("id", { ascending: true })
         .range(offset, offset + batch - 1);
@@ -88,10 +74,10 @@ const getTendersCached = unstable_cache(
       if (track !== "all") query = query.eq("track", track);
       const { data, error } = await query;
       if (error) throw new Error(`Failed to load tenders: ${error.message}`);
-      rows.push(...(data ?? []));
+      rows.push(...(data ?? []).map(mapRow));
       if (!data || data.length < batch) break;
     }
-    return withNames(rows);
+    return rows;
   },
   ["tenders:list", process.env.SUPABASE_URL || "unconfigured"],
   { tags: [TENDERS_TAG], revalidate: 30 },
@@ -121,28 +107,25 @@ export async function getArchivedTenders(): Promise<Tender[]> {
   await requireAdmin();
   const { data, error } = await supabaseServer()
     .from("tenders")
-    .select("*")
+    .select(tenderColumns)
     .not("archived_at", "is", null)
     .order("archived_at", { ascending: false });
   if (error)
     throw new Error(`Failed to load archived tenders: ${error.message}`);
-  return withNames(data ?? []);
+  return (data ?? []).map(mapRow);
 }
 
 export async function getTenderById(id: string): Promise<Tender | null> {
   const ctx = await requireUser();
   const { data, error } = await supabaseServer()
     .from("tenders")
-    .select("*, creator:profiles!tenders_created_by_fkey(name), editor:profiles!tenders_updated_by_fkey(name)")
+    .select(tenderColumns)
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(`Failed to load tender: ${error.message}`);
   if (!data) return null;
   if (data.archived_at && ctx.profile.role !== "admin") return null;
-  const names = new Map<string, string>();
-  if (data.created_by && data.creator) names.set(data.created_by, data.creator.name);
-  if (data.updated_by && data.editor) names.set(data.updated_by, data.editor.name);
-  const tender = mapRow(data, names);
+  const tender = mapRow(data);
   return ctx.profile.role === "admin"
     ? tender
     : { ...tender, catatanInternal: null };

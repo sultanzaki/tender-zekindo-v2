@@ -14,7 +14,7 @@ before(async () => {
     "next/navigation":
       "export function redirect(path){throw new Error('REDIRECT:'+path);}",
     "next/headers": `export async function headers(){return new Headers({'x-workspace-path':globalThis.${key}.path});}export async function cookies(){return {get(){return {value:globalThis.${key}.token};},set(name,value,options){globalThis.${key}.cookie={name,value,options};},delete(){globalThis.${key}.deleted=true;}};}`,
-    "../supabase-server": `export function supabaseServer(){return {from(table){const query={table,operation:'select'};const chain={select(){return chain;},insert(payload){query.operation='insert';query.payload=payload;return chain;},delete(){query.operation='delete';return chain;},eq(key,value){query[key]=value;return chain;},maybeSingle(){return chain;},then(resolve,reject){const state=globalThis.${key};state.calls.push(query);return Promise.resolve({data:table==='sessions'?state.session:state.profile,error:state.error??null}).then(resolve,reject);}};return chain;}};}`,
+    "../supabase-server": `export function supabaseServer(){return {from(table){const query={table,operation:'select'};const chain={select(){return chain;},insert(payload){query.operation='insert';query.payload=payload;return chain;},delete(){query.operation='delete';return chain;},eq(key,value){query[key]=value;return chain;},maybeSingle(){return chain;},then(resolve,reject){const state=globalThis.${key};state.calls.push(query);return Promise.resolve({data:table==='sessions' && state.session?{...state.session,profile:state.profile}:null,error:state.error??null}).then(resolve,reject);}};return chain;}};}`,
   };
   await build({
     stdin: {
@@ -66,6 +66,11 @@ after(async () => {
   delete globalThis[key];
   if (directory) await rm(directory, { recursive: true, force: true });
 });
+test("a protected request resolves its role with one session lookup", async () => {
+  const ctx = await api.requireUser();
+  assert.equal(ctx.profile.role, "viewer");
+  assert.deepEqual(globalThis[key].calls.map((call) => call.table), ["sessions"]);
+});
 test("missing and malformed session tokens never query the database", async () => {
   for (const token of [
     undefined,
@@ -75,7 +80,7 @@ test("missing and malformed session tokens never query the database", async () =
     "!".repeat(43),
   ]) {
     globalThis[key].token = token;
-    assert.equal(await api.getSessionUserId(), null);
+    assert.equal(await api.getSessionProfile(), null);
   }
   assert.equal(globalThis[key].calls.length, 0);
 });
@@ -88,10 +93,10 @@ test("expired, revoked, missing-user and invalid-date sessions fail closed", asy
     { user_id: "viewer", expires_at: null },
   ]) {
     globalThis[key].session = session;
-    assert.equal(await api.getSessionUserId(), null);
+    assert.equal(await api.getSessionProfile(), null);
   }
   globalThis[key].error = { message: "Database unavailable" };
-  assert.equal(await api.getSessionUserId(), null);
+  assert.equal(await api.getSessionProfile(), null);
 });
 test("authentication rejects deleted profiles and unknown roles", async () => {
   for (const profile of [null, { id: "viewer", role: "owner" }]) {

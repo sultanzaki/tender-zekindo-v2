@@ -20,3 +20,5 @@ export const DOCUMENT_TYPES_TAG = "document-types";
 
 /** The global milestone catalog in `milestone_types`. */
 export const MILESTONE_TYPES_TAG = "milestone-types";
+
+export const MEETING_COUNTS_TAG = "meeting-counts";
