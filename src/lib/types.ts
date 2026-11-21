@@ -261,6 +261,7 @@ export interface TenderEvent {
 // runtime (see TenderTableClient); only the plain field columns are fixed here.
 
 export interface TenderFilters {
+  deadline?: string;
   period: string;
   area: string;
   entitas: string;
@@ -270,6 +271,7 @@ export interface TenderFilters {
 }
 
 export const DEFAULT_FILTERS: TenderFilters = {
+  deadline: "all",
   period: "all",
   area: "all",
   entitas: "all",

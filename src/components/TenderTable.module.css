@@ -610,3 +610,17 @@
   .mobileCards .tenderCard { border:0; border-radius:0; border-bottom:1px solid var(--border); }
   .commandBar .exportAction { margin:0; }
 }
+.priorities { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:22px 0 18px; }
+.priority { min-width:0; text-align:left; padding:14px 16px; border:1px solid var(--border); border-radius:11px; background:var(--card); cursor:pointer; transition:background-color .14s,border-color .14s; }
+.priority:hover,.priority[aria-pressed="true"] { background:#f4f8ff; border-color:#a9c2f3; }
+.priority span { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:550; color:var(--color-fg2); }
+.priority svg { flex:none; color:var(--primary); }
+.priority[data-kind="urgent"] svg { color:#b15417; }
+.priority strong { display:inline-block; margin:8px 8px 0 0; font-size:27px; line-height:1; font-variant-numeric:tabular-nums; }
+.priority small { display:inline-block; color:var(--muted-foreground); font-size:11px; }
+@media(max-width:1000px) { .priority small {display:block;margin-top:5px;} }
+@media(max-width:680px) { .priorities { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:14px 0; } .priority {padding:9px 11px;} .priority strong {font-size:21px;margin-top:5px;} .priority span{font-size:12px;} .priority small{display:none;} }
+@media (min-width:360px) and (max-width:600px) {
+  .wrap > header {flex-wrap:nowrap;align-items:center;}
+  .wrap > header > div:first-child {min-width:0;}
+}

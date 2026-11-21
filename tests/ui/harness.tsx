@@ -2,6 +2,7 @@ import { LoginForm } from "../../src/components/LoginForm";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { TopNav } from "../../src/components/TopNav";
+import { readTenderFilters } from "../../src/lib/table-state";
 import { TenderTableClient } from "../../src/components/TenderTableClient";
 import { EditTenderForm } from "../../src/components/EditTenderForm";
 import { ArchiveAction } from "../../src/components/ArchiveAction";
@@ -121,6 +122,9 @@ const components = {
   table: (
     <TenderTableClient
       tenders={tenders}
+      initialFilters={readTenderFilters(
+        new URLSearchParams(window.location.search),
+      )}
       options={{
         periods: ["2026"],
         areas: ["Jawa"],

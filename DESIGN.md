@@ -46,3 +46,10 @@ Layar pertama langsung menampilkan hasil kerja. Kalender mini, ringkasan KPI, da
 - Pada 1440 px dan 390 px, buka halaman pertama dan temukan paket, milestone, serta deadline terdekat tanpa berpindah halaman.
 - Buka paket dari daftar, temukan tindakan edit milestone sebagai admin, lalu kembali ke daftar dengan konteks yang sama.
 - Periksa kasus deadline hari ini, tender tanpa jadwal, nama paket panjang, serta tampilan pengguna viewer.
+
+
+## Prioritas deadline dan laporan
+
+Ringkasan operasional berada di atas register. Keempat kartu menyaring tender aktif, deadline hari ini sampai H+3, H+4 sampai H+14, dan paket tanpa jadwal mendatang. Angka mengikuti track, pencarian, periode, area, entitas, dan customer. Memilih kartu juga memperbarui URL, hasil ekspor, dan tautan kembali dari detail. Tabel awal memuat 25 paket per halaman.
+
+Analytics membuka laporan Performance. Batang per periode membandingkan jumlah outcome terhadap skala yang sama. Laporan Segment comparisons memuat rincian track, area, entitas, customer, dan alasan kekalahan.

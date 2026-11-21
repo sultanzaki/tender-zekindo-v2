@@ -2,7 +2,13 @@ import ExcelJS from "exceljs";
 import { requireUser } from "@/lib/auth/dal";
 import { getAllTenders } from "@/lib/tenders";
 import { getMilestoneTypes, getMilestoneCatalog } from "@/lib/milestones";
-import { filterTenders } from "@/lib/tender-logic";
+import { readTenderFilters } from "@/lib/table-state";
+import {
+  filterTenders,
+  deadlineBucket,
+  nextMilestone,
+  todayISO,
+} from "@/lib/tender-logic";
 import { trackFromParam, TRACK_LABELS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +27,7 @@ export async function GET(request: Request) {
     searchParams.get("track") === "all"
       ? "all"
       : trackFromParam(searchParams.get("track"));
-  const filters = {
-    period: searchParams.get("period") ?? "all",
-    area: searchParams.get("area") ?? "all",
-    entitas: searchParams.get("entitas") ?? "all",
-    customer: searchParams.get("customer") ?? "all",
-    result: searchParams.get("result") ?? "all",
-    search: searchParams.get("search") ?? "",
-  };
+  const filters = readTenderFilters(searchParams);
 
   const tenders = await getAllTenders({ track });
   const milestoneTypes =
@@ -38,7 +37,18 @@ export async function GET(request: Request) {
           ...(c.downstream ?? []),
         ])
       : await getMilestoneTypes(track);
-  const rows = filterTenders(tenders, filters);
+  const catalog = {
+    upstream: milestoneTypes.filter((m) => m.track === "upstream"),
+    downstream: milestoneTypes.filter((m) => m.track === "downstream"),
+  };
+  const anchor = todayISO();
+  const rows = filterTenders(tenders, filters).filter(
+    (t) =>
+      filters.deadline === "all" ||
+      (!t.result &&
+        deadlineBucket(nextMilestone(t, anchor, catalog)?.diff) ===
+          filters.deadline),
+  );
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Tenders");

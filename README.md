@@ -11,7 +11,7 @@ The workspace uses the Zekindo logo, blue accents, a collapsible shadcn/ui sideb
 | Route                   | Workflow                                                                   |
 | ----------------------- | -------------------------------------------------------------------------- |
 | `/`                     | Active tenders across tracks, sorted by nearest scheduled deadline |
-| `/overview`             | Weekly agenda, follow-up queue and pipeline context |
+| `/overview`             | Redirects to the deadline-focused tender register |
 | `/analytics`            | Filterable outcomes, known pipeline, customer/area/entity performance      |
 | `/tenders`              | Search, URL filters, saved browser views, columns, mobile cards            |
 | `/tenders/:id`          | Overview, documents, and administrator activity history                    |
@@ -23,7 +23,7 @@ The workspace uses the Zekindo logo, blue accents, a collapsible shadcn/ui sideb
 | `/tenders/archive`      | Restore or confirm permanent deletion of archived tenders                  |
 
 The entire workspace requires a valid login as viewer or administrator, including
-Overview, analytics, tender lists/details, deadlines, Excel exports and documents.
+Analytics, tender lists/details, deadlines, Excel exports and documents.
 Only `/login` and the technical assets needed to render it are public. Session
 checks run before data reads and outside shared caches. Document downloads check
 the session on every request and stream private storage objects through the app;
@@ -158,13 +158,7 @@ is the authorization boundary, not Postgres RLS.
   scheduled — capped to the 20 most recently active in the UI, since old
   never-closed-out tenders from the source data can otherwise flood the
   list). It's a live view recomputed on load, not a stored/dismissable inbox.
-- **Analytics dashboard** (`/analytics`): win-rate trend, outcome volume, and
-  loss-reason mix by period, plus win-rate and pipeline-value (sum of OE for
-  running tenders) breakdowns by area/entity. Built with
-  [Recharts](https://recharts.org/); win-rate-by-group bars drop any group
-  with fewer than 3 decided tenders and always label both the rate and the
-  sample size (`62% (n=13)`) so a thin bar never gets read as a strong
-  signal.
+- **Analytics dashboard** (`/analytics`): Performance compares period outcomes, customer bids, known pipeline and won bid values. Segment comparisons cover track, area, entity, customer and loss reasons. Reports render on the server and respect the same scope as the export.
 
 The responsive workspace uses a desktop sidebar and a mobile navigation sheet.
 Tender rows become readable cards on phones; the desktop table keeps its own

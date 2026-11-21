@@ -132,7 +132,7 @@ export default async function Detail({
   return (
     <div className={workspace.page}>
       <Link href={returnTo} className={styles.backLink}>
-        ← {fromOverview ? "Overview" : "Tenders"}
+        ← Tenders
       </Link>
       <div className={styles.identity}>
         <OperationsHeading

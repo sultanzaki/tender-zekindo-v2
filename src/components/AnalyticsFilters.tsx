@@ -11,6 +11,7 @@ import { useTransition } from "react";
 import { TRACKS, TRACK_LABELS, type Track } from "@/lib/types";
 import styles from "./Workspace.module.css";
 export function AnalyticsFilters({
+  report,
   areas,
   periods,
   customers = [],
@@ -19,6 +20,7 @@ export function AnalyticsFilters({
   customer = "all",
   track,
 }: {
+  report?: string;
   areas: string[];
   periods: string[];
   customers?: string[];
@@ -40,6 +42,7 @@ export function AnalyticsFilters({
   ) {
     const selected = { track, area, period, customer, ...patch };
     const query = new URLSearchParams();
+    if (report) query.set("report", report);
     for (const [key, value] of Object.entries(selected))
       if (value !== "all") query.set(key, value);
     start(() => router.push(query.size ? `${path}?${query}` : path));

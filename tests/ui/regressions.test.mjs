@@ -234,9 +234,9 @@ test("table filters reset pagination and selection; URL and export match", async
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
-    .getByRole("checkbox", { name: "Select tender TN-101", exact: true })
+    .getByRole("checkbox", { name: "Select tender TN-51", exact: true })
     .check();
-  await page.getByRole("searchbox").fill("Package 1");
+  await page.getByRole("searchbox").fill("Package 11");
   await page.getByText("Page 1 of 1", { exact: true }).waitFor();
   assert.equal(await page.getByText("1 selected", { exact: true }).count(), 0);
   await page.waitForURL(/search=Package/);
@@ -245,13 +245,25 @@ test("table filters reset pagination and selection; URL and export match", async
       await page
         .getByRole("link", { name: "Export to Excel", exact: true })
         .getAttribute("href")
-    ).includes("search=Package+1"),
+    ).includes("search=Package+11"),
   );
   await page
     .getByRole("button", { name: "Reset filters", exact: true })
     .first()
     .click();
-  await page.getByText("Page 1 of 3", { exact: true }).waitFor();
+  await page.getByText("Page 1 of 5", { exact: true }).waitFor();
+  await page.close();
+});
+test("deadline cards filter the register and preserve the Excel scope", async () => {
+  const page = await open("table");
+  await page.getByRole("button", { name: /Needs follow-up/ }).click();
+  await page.waitForURL(/deadline=followup/);
+  assert.match(await page.getByRole("link", {name: "Export to Excel"}).getAttribute("href"), /deadline=followup/);
+  await page.reload();
+  assert.equal(await page.getByRole("button", {name: /Needs follow-up/}).getAttribute("aria-pressed"), "true");
+  await page.getByRole("tab", {name:"Won", exact:true}).click();
+  await page.waitForURL(/result=WIN/);
+  assert.equal(new URL(page.url()).searchParams.has("deadline"), false);
   await page.close();
 });
 test("sorting and quick edits work with keyboard; detail links preserve context", async () => {

@@ -1,361 +1,332 @@
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
-
-import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { OperationsHeading } from "@/components/TenderOperations";
+import { AnalyticsFilters } from "@/components/AnalyticsFilters";
+import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/dal";
-import { MoneyValue, MoneyAccessNotice } from "@/components/MoneyValue";
-import styles from "@/components/Workspace.module.css";
 import { getAllTenders, getFilterOptions } from "@/lib/tenders";
 import {
   ascendingPeriods,
-  outcomesByPeriod,
+  formatCompactRupiah,
   lossReasonByPeriod,
-  winRateByGroup,
-  pipelineValueByGroup,
+  outcomesByPeriod,
   overallWinRate,
+  pipelineValueByGroup,
+  statusBreakdown,
   totalPipelineValue,
   totalWinValue,
-  runningCount,
-  statusBreakdown,
   trackComparison,
+  winRateByGroup,
 } from "@/lib/analytics";
-import { KpiCards } from "@/components/charts/KpiCards";
-import { WinRateTrendChart } from "@/components/charts/WinRateTrendChart";
-import { OutcomeVolumeChart } from "@/components/charts/OutcomeVolumeChart";
-import { LossReasonTrendChart } from "@/components/charts/LossReasonTrendChart";
-import { GroupWinRateChart } from "@/components/charts/GroupWinRateChart";
-import { PipelineValueChart } from "@/components/charts/PipelineValueChart";
-import { TenderStatusDonut } from "@/components/charts/TenderStatusDonut";
-import { TrackComparisonChart } from "@/components/charts/TrackComparisonChart";
-import { AnalyticsFilters } from "@/components/AnalyticsFilters";
-import { TRACK_LABELS, type Track } from "@/lib/types";
-import shared from "@/components/shared.module.css";
-import chartStyles from "@/components/charts/charts.module.css";
+import { formatRupiah } from "@/lib/tender-logic";
+import s from "./Analytics.module.css";
 
 export const dynamic = "force-dynamic";
 
-/** All metrics require a validated session. Filters live in the URL. */
-export default async function AnalyticsDashboardPage({
+function Report({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={s.report}>
+      <header>
+        <h2>{title}</h2>
+        <p>{caption}</p>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function RankedBars({
+  rows,
+  money = false,
+}: {
+  rows: { label: string; value: number; detail?: string }[];
+  money?: boolean;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return rows.length ? (
+    <ol className={s.ranks}>
+      {rows.map((r) => (
+        <li key={r.label}>
+          <div>
+            <span>{r.label}</span>
+            <b title={money ? formatRupiah(r.value) : undefined}>
+              {money ? formatCompactRupiah(r.value) : r.value}
+            </b>
+          </div>
+          <div className={s.bar} aria-hidden="true">
+            <i style={{ width: `${(100 * r.value) / max}%` }} />
+          </div>
+          {r.detail && <small>{r.detail}</small>}
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p className={s.empty}>No recorded values for this selection.</p>
+  );
+}
+
+export default async function Analytics({
   searchParams,
 }: {
-  searchParams: Promise<{
-    area?: string;
-    period?: string;
-    track?: string;
-    customer?: string;
-  }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const ctx = await requireUser();
+  await requireUser();
   const params = await searchParams;
-  // The default here differs from the tender list on purpose: this is an
-  // overview, so it starts on BOTH tracks and you narrow it yourself. A stale
-  // bookmark naming a track we do not recognise falls back to both rather than
-  // to an empty dashboard.
-  const track: Track | "all" =
+  const track =
     params.track === "upstream" || params.track === "downstream"
       ? params.track
       : "all";
-
-  // Scoped to the chosen track first: the area/period options offered, and the
-  // "X of Y" denominator, must describe the track you are actually looking at.
-  const allTenders = await getAllTenders({ track });
-  const canViewMoney = !!ctx;
-  const options = getFilterOptions(allTenders);
-
-  // A value that no longer exists is treated as "no filter" rather than as an
-  // empty result: a stale bookmark for a renamed area should show the data, not
-  // look like an empty database.
-  const area =
-    params.area && options.areas.includes(params.area) ? params.area : "all";
-  const period =
-    params.period && options.periods.includes(params.period)
-      ? params.period
-      : "all";
-
-  const customer =
-    params.customer && options.customers.includes(params.customer)
-      ? params.customer
-      : "all";
-  const exportParams = new URLSearchParams({ track, area, period, customer });
-  const tenders = allTenders.filter(
+  const all = await getAllTenders({ track });
+  const options = getFilterOptions(all);
+  const scope = (value: string | undefined, allowed: string[]) =>
+    value && allowed.includes(value) ? value : "all";
+  const area = scope(params.area, options.areas);
+  const period = scope(params.period, options.periods);
+  const customer = scope(params.customer, options.customers);
+  const data = all.filter(
     (t) =>
       (area === "all" || t.area === area) &&
       (period === "all" || t.period === period) &&
       (customer === "all" || t.customer === customer),
   );
-
-  // Every figure below — KPI cards and charts alike — comes from the filtered
-  // set. That includes the trend charts: with one period selected a "trend" is a
-  // single bar, which is the honest answer to "show me only this one".
-  const periods = ascendingPeriods(tenders.map((t) => t.period));
-  const outcomeRows = outcomesByPeriod(tenders, periods);
-  const lossRows = lossReasonByPeriod(tenders, periods);
-  const winRateByArea = winRateByGroup(tenders, (t) => t.area);
-  const winRateByEntitas = winRateByGroup(tenders, (t) => t.entitas);
-  const pipelineByArea = canViewMoney
-    ? pipelineValueByGroup(tenders, (t) => t.area)
-    : [];
-  const statusData = statusBreakdown(tenders);
-  const trackData = trackComparison(tenders);
-
-  const overall = overallWinRate(tenders);
-  const kpiData = {
-    pipelineValue: totalPipelineValue(tenders),
-
-    winValue: totalWinValue(tenders),
-    runningCount: runningCount(tenders),
-    winRatePct: overall.pct,
-    winCount: overall.win,
-    lossCount: overall.loss,
-    decidedCount: overall.decided,
-  };
-
-  const activeFilters = [
-    track === "all" ? null : `Track: ${TRACK_LABELS[track]}`,
-    area === "all" ? null : `Area: ${area}`,
-    period === "all" ? null : `Period: ${period}`,
-    customer === "all" ? null : `Customer: ${customer}`,
-  ].filter((v): v is string => !!v);
-
+  const query = new URLSearchParams({ track, area, period, customer });
+  const segments = params.report === "segments";
+  const periods = ascendingPeriods(data.map((t) => t.period));
   const coverage =
     periods.length > 1
       ? `${periods[0]}–${periods.at(-1)}`
-      : (periods[0] ?? "No periods");
+      : periods[0] || "No periods";
+  const outcome = overallWinRate(data);
+  const active = data.filter((t) => !t.result);
+  const won = data.filter((t) => t.result === "WIN");
+  const knownBids = won.filter(t => t.nilaiPenawaran !== null).length;
+  const estimated = active.filter(t => t.oe !== null);
+  const rows = outcomesByPeriod(data, periods);
+  const maxClosed = Math.max(1, ...rows.map((r) => r.win + r.loss + r.other));
+  const bids = new Map<string, number>();
+  for (const t of data)
+    if (t.customer && t.nilaiPenawaran != null)
+      bids.set(t.customer, (bids.get(t.customer) ?? 0) + t.nilaiPenawaran);
+  const customers = [...bids]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value]) => ({ label, value }));
   return (
-    <div className={styles.page}>
+    <div className={s.page}>
       <OperationsHeading
         title="Tender analytics"
+        context={`${data.length} tenders · ${coverage} · ${track === "all" ? "Both tracks" : track}`}
         actions={
           <Button asChild variant="outline">
-            <a href={`/tenders/export?${exportParams}`}>Export this scope</a>
+            <a href={`/tenders/export?${query}`}>Export this scope</a>
           </Button>
         }
-        context={[`${tenders.length} tenders`, coverage, ...activeFilters].join(
-          " · ",
-        )}
       />
       <AnalyticsFilters
+        {...{ area, period, customer, track }}
         areas={options.areas}
         periods={options.periods}
         customers={options.customers}
-        customer={customer}
-        area={area}
-        period={period}
-        track={track}
+        report={segments ? "segments" : undefined}
       />
-
-      {!canViewMoney && (
-        <MoneyAccessNotice returnTo={`/analytics?${exportParams}`} />
-      )}
-
-      {
-        <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-          <Card
-            className={`${shared.card} gap-0 py-0`}
-            style={{ overflow: "hidden" }}
+      <nav className={s.tabs} aria-label="Analytics reports">
+        {[
+          ["performance", "Performance"],
+          ["segments", "Segment comparisons"],
+        ].map(([key, label]) => (
+          <Link
+            key={key}
+            href={`/analytics?${query}&report=${key}`}
+            aria-current={
+              (segments ? "segments" : "performance") === key
+                ? "page"
+                : undefined
+            }
           >
-            <div className={shared.cardHeader}>
-              <h2 className={shared.cardTitle}>Win Rate Trend</h2>
-              <span className={shared.cardMeta}>
-                By period, decided tenders only
-              </span>
+            {label}
+          </Link>
+        ))}
+      </nav>
+      {!segments ? (
+        <>
+          <div className={s.score}>
+            <div className={s.lead}>
+              <span>Win rate</span>
+              <strong>{outcome.pct === null ? "—" : outcome.pct + "%"}</strong>
+              <small>
+                {outcome.win} wins / {outcome.decided} decided tenders
+              </small>
             </div>
-            <WinRateTrendChart data={outcomeRows} />
-          </Card>
-
-          <Card
-            className={`${shared.card} gap-0 py-0`}
-            style={{ overflow: "hidden" }}
+            <div>
+              <span>Won bid value</span>
+              <strong>{won.length && !knownBids ? "—" : formatCompactRupiah(totalWinValue(data))}</strong>
+              <small>
+                {knownBids} of{" "}
+                {won.length} wins with a bid value
+              </small>
+            </div>
+            <div>
+              <span>Active pipeline · OE</span>
+              <strong>{active.length && !estimated.length ? "—" : formatCompactRupiah(totalPipelineValue(data))}</strong>
+              <small>
+                {estimated.length} of {active.length}{" "}
+                open packages with an estimate
+              </small>
+            </div>
+          </div>
+          <div className={s.grid}>
+            <Report
+              title="Outcomes by period"
+              caption="Closed tenders · bar length shows total outcomes"
+            >
+              <div className={s.legend}>
+                <span>Won</span>
+                <span>Lost</span>
+                <span>Other closed</span>
+              </div>
+              {rows.length ? (
+                <div className={s.periods}>
+                  {rows.map((r) => (
+                    <div key={r.period}>
+                      <div className={s.line}>
+                        <b>{r.period}</b>
+                        <small>
+                          {r.winRatePct === null
+                            ? "No decisions"
+                            : r.winRatePct + "% win rate"}
+                        </small>
+                      </div>
+                      <div className={s.stack} aria-hidden="true">
+                        {[r.win, r.loss, r.other].map((n, i) => (
+                          <i
+                            key={i}
+                            style={{ width: `${(n * 100) / maxClosed}%` }}
+                          />
+                        ))}
+                      </div>
+                      <small>
+                        {r.win} won · {r.loss} lost · {r.other} other
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={s.empty}>No outcomes in this scope.</p>
+              )}
+            </Report>
+            <Report
+              title="Bid value by customer"
+              caption="Top 6 · sum of recorded bids across all outcomes"
+            >
+              <RankedBars money rows={customers} />
+            </Report>
+          </div>
+          <Report
+            title="Tender status"
+            caption="Package count across the selected scope"
           >
-            <div className={shared.cardHeader}>
-              <h2 className={shared.cardTitle}>Outcome Volume</h2>
-              <span className={shared.cardMeta}>
-                Tender count by outcome, per period
-              </span>
+            <div className={s.status}>
+              {statusBreakdown(data).map((row) => (
+                <div key={row.key}>
+                  <span>{row.label}</span>
+                  <strong>{row.count}</strong>
+                </div>
+              ))}
             </div>
-            <OutcomeVolumeChart data={outcomeRows} />
-          </Card>
-        </div>
-      }
-
-      <KpiCards data={kpiData} canViewMoney={canViewMoney} />
-      <div className={styles.note}>
-        Win rate = WIN ÷ (WIN + LOSS). Canceled, withdrawn, retender, and
-        no-info outcomes are excluded. Pipeline = known OE of active tenders
-        only.{" "}
-        {canViewMoney && (
-          <>
-            {tenders.filter((t) => !t.result && t.oe === null).length} active
-            tenders have no OE;{" "}
-            {
-              tenders.filter(
-                (t) => t.result === "WIN" && t.nilaiPenawaran === null,
-              ).length
-            }{" "}
-            won tenders have no recorded bid value.
-          </>
-        )}
-      </div>
-
-      <Card
-        className={shared.card}
-        style={{ marginBottom: 20, overflow: "hidden" }}
-      >
-        <div className={shared.cardHeader}>
-          <h2 className={shared.cardTitle}>Loss Reason Mix</h2>
-          <span className={shared.cardMeta}>
-            Share of losses by reason, per period
-          </span>
-        </div>
-        <LossReasonTrendChart data={lossRows} />
-      </Card>
-
-      <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-        <Card
-          className={`${shared.card} gap-0 py-0`}
-          style={{ overflow: "hidden" }}
-        >
-          <div className={shared.cardHeader}>
-            <h2 className={shared.cardTitle}>Tender Status</h2>
-            <span className={shared.cardMeta}>
-              Breakdown of all tenders by outcome
-            </span>
-          </div>
-          <TenderStatusDonut data={statusData} />
-        </Card>
-
-        <Card
-          className={`${shared.card} gap-0 py-0`}
-          style={{ overflow: "hidden" }}
-        >
-          <div className={shared.cardHeader}>
-            <h2 className={shared.cardTitle}>Track Comparison</h2>
-            <span className={shared.cardMeta}>Upstream vs downstream</span>
-          </div>
-          <TrackComparisonChart data={trackData} canViewMoney={canViewMoney} />
-        </Card>
-      </div>
-
-      <div className={chartStyles.grid2} style={{ marginBottom: 20 }}>
-        <Card
-          className={`${shared.card} gap-0 py-0`}
-          style={{ overflow: "hidden" }}
-        >
-          <div className={shared.cardHeader}>
-            <h2 className={shared.cardTitle}>Win Rate by Area</h2>
-            <span className={shared.cardMeta}>
-              Areas with at least 3 decided tenders
-            </span>
-          </div>
-          <GroupWinRateChart
-            data={winRateByArea}
-            emptyMessage="Not enough decided tenders per area yet."
-          />
-        </Card>
-
-        <Card
-          className={`${shared.card} gap-0 py-0`}
-          style={{ overflow: "hidden" }}
-        >
-          <div className={shared.cardHeader}>
-            <h2 className={shared.cardTitle}>Win Rate by Entity</h2>
-            <span className={shared.cardMeta}>
-              Entities with at least 3 decided tenders
-            </span>
-          </div>
-          <GroupWinRateChart
-            data={winRateByEntitas}
-            emptyMessage="Not enough decided tenders per entity yet."
-          />
-        </Card>
-      </div>
-
-      {
-        <Card
-          className={`${shared.card} gap-0 py-0`}
-          style={{ overflow: "hidden" }}
-        >
-          <div className={shared.cardHeader}>
-            <h2 className={shared.cardTitle}>Pipeline Value by Area</h2>
-            <span className={shared.cardMeta}>
-              OE of currently running tenders, top 8 areas
-            </span>
-          </div>
-          {canViewMoney ? (
-            <PipelineValueChart
-              data={pipelineByArea}
-              emptyMessage="No running tenders with an OE value yet."
+          </Report>
+        </>
+      ) : (
+        <div className={s.grid}>
+          <Report
+            title="Track comparison"
+            caption="Tender count, win rate and known monetary values"
+          >
+            <div className={s.comparisons}>
+              {trackComparison(data).map((r) => (
+                <div key={r.track}>
+                  <b>{r.label}</b>
+                  <span>
+                    {r.count} tenders ·{" "}
+                    {r.winRate === null ? "—" : r.winRate + "%"} win rate
+                  </span>
+                  <small>
+                    Pipeline {formatCompactRupiah(r.pipelineValue)} · Won{" "}
+                    {formatCompactRupiah(r.winValue)}
+                  </small>
+                </div>
+              ))}
+            </div>
+          </Report>
+          <Report
+            title="Active pipeline by area"
+            caption="Top 8 areas · recorded OE on open packages"
+          >
+            <RankedBars
+              money
+              rows={pipelineValueByGroup(
+                estimated,
+                (t) => t.area,
+              )
+                .slice(0, 8)
+                .map((r) => ({ label: r.group, value: r.value }))}
             />
-          ) : (
-            <div style={{ padding: "48px 20px", textAlign: "center" }}>
-              <MoneyValue canView={false} />
+          </Report>
+          {(["customer", "area", "entitas"] as const).map((key) => {
+            const groups = winRateByGroup(data, (t) => t[key]);
+            return (
+              <Report
+                key={key}
+                title={`Win rate by ${key === "entitas" ? "entity" : key}`}
+                caption="Top 8 by decisions · minimum 3 decided tenders"
+              >
+                <div className={s.comparisons}>
+                  {groups.map((r) => (
+                    <div key={r.group}>
+                      <b>{r.group}</b>
+                      <span>
+                        {r.winRatePct}% · {r.win} wins / {r.decided} decisions
+                      </span>
+                    </div>
+                  ))}
+                  {!groups.length && (
+                    <small>Insufficient decided tenders.</small>
+                  )}
+                </div>
+              </Report>
+            );
+          })}
+          <Report
+            title="Loss reasons by period"
+            caption="Share of recorded losses within each period"
+          >
+            <div className={s.comparisons}>
+              {lossReasonByPeriod(data, periods).map((r) => (
+                <div key={r.period}>
+                  <b>
+                    {r.period} · {r.totalLoss} lost
+                  </b>
+                  {r.shares
+                    .filter((x) => x.count)
+                    .map((x) => (
+                      <small key={x.label}>
+                        {x.label} · {x.count} ({x.pct}%)
+                      </small>
+                    ))}
+                </div>
+              ))}
+              {!outcome.loss && <small>No recorded losses.</small>}
             </div>
-          )}
-        </Card>
-      }
-      <Card className={shared.card} style={{ marginBottom: 24 }}>
-        <div className={shared.cardHeader}>
-          <h2 className={shared.cardTitle}>Customer performance</h2>
-          <span className={shared.cardMeta}>
-            Win rate · At least 3 decided tenders per customer
-          </span>
+          </Report>
         </div>
-        <GroupWinRateChart
-          data={winRateByGroup(tenders, (t) => t.customer)}
-          emptyMessage="Not enough decided tenders per customer yet."
-        />
-      </Card>
-      <Collapsible className={shared.card}>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="m-2">
-            View underlying outcome data
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className={styles.tableWrap}>
-            <Table className={styles.table}>
-              <caption>Exact counts for the selected scope</caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Won</TableHead>
-                  <TableHead>Lost</TableHead>
-                  <TableHead>Other outcomes</TableHead>
-                  <TableHead>Decided</TableHead>
-                  <TableHead>Win rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {outcomeRows.map((row) => (
-                  <TableRow key={row.period}>
-                    <TableCell>{row.period}</TableCell>
-                    <TableCell>{row.win}</TableCell>
-                    <TableCell>{row.loss}</TableCell>
-                    <TableCell>{row.other}</TableCell>
-                    <TableCell>{row.decided}</TableCell>
-                    <TableCell>
-                      {row.winRatePct === null ? "—" : `${row.winRatePct}%`}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      )}
     </div>
   );
 }

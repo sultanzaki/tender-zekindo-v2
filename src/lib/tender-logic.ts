@@ -481,6 +481,14 @@ export function findDuplicateTenderNo(
   );
 }
 
+/** Classifies each active package once, using its nearest scheduled milestone. */
+export function deadlineBucket(days: number | undefined) {
+  if (days === undefined) return "followup";
+  if (days <= REMINDER_DAYS) return "urgent";
+  if (days <= DUE_SOON_DAYS) return "planned";
+  return "later";
+}
+
 export function filterTenders(
   tenders: Tender[],
   filters: {

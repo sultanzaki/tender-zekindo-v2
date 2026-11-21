@@ -9,6 +9,8 @@ export function readTenderFilters(
   }
   if (!["all", "__EMPTY__", ...RESULT_ENUM].includes(filters.result))
     filters.result = "all";
+  if (!["urgent", "planned", "followup"].includes(filters.deadline ?? ""))
+    filters.deadline = "all";
   return filters;
 }
 export function tenderQuery(filters: TenderFilters, track: string): string {

@@ -22,13 +22,11 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "./ui/sidebar";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 const pages = [
   { href: "/tenders", label: "Tenders", icon: "tenders" },
-  { href: "/overview", label: "Overview", icon: "overview" },
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/notifications", label: "Deadlines", icon: "notifications" },
 ] as const;
@@ -57,7 +55,6 @@ function CreateLink() {
 type NavigationProps = {
   profile: Profile | null;
   defaultSidebarOpen?: boolean;
-  notificationCount?: number;
   children?: React.ReactNode;
 };
 export function TopNav(props: NavigationProps) {
@@ -72,7 +69,6 @@ export function TopNav(props: NavigationProps) {
 
 function Workspace({
   profile,
-  notificationCount = 0,
   children,
 }: NavigationProps & { profile: Profile }) {
   const path = usePathname();
@@ -134,14 +130,6 @@ function Workspace({
               >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>
-                {item.href === "/notifications" && notificationCount > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="ml-auto bg-white tabular-nums"
-                  >
-                    {notificationCount > 99 ? "99+" : notificationCount}
-                  </Badge>
-                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

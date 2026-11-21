@@ -4,15 +4,8 @@ import { unstable_cache } from "next/cache";
 import { supabaseServer } from "./supabase-server";
 import type { TenderRow } from "./database.types";
 import type { FilterOptions, SelectOptionsMap, Tender, Track } from "./types";
-import {
-  distinctSorted,
-  periodsSorted,
-  computeDeadlines,
-  computeStalled,
-  todayISO,
-} from "./tender-logic";
+import { distinctSorted, periodsSorted } from "./tender-logic";
 import { getProfilesByIds } from "./users";
-import { getMilestoneCatalog } from "./milestones";
 import { rowTrack } from "./milestones";
 import { TENDERS_TAG } from "./cache-tags";
 import { requireUser, requireAdmin } from "./auth/dal";
@@ -123,30 +116,6 @@ export const getAllTenders = cache(
       : tenders.map((t) => ({ ...t, catatanInternal: null }));
   },
 );
-
-export interface NotificationCounts {
-  /** Milestones due within 3 days — the reminder an admin acts on. */
-  dueH3: number;
-  /** Milestones due within 14 days, for planning ahead. */
-  dueSoon: number;
-  /** Active tenders with nothing scheduled ahead at all. */
-  stalled: number;
-}
-
-/** Reuses the cached tender/catalog reads and the same WIB date and schedule
- * rules as Overview and Deadlines, including an explicitly empty schedule. */
-export async function getNotificationCounts(): Promise<NotificationCounts> {
-  const [tenders, catalog] = await Promise.all([
-    getAllTenders(),
-    getMilestoneCatalog(),
-  ]);
-  const deadlines = computeDeadlines(tenders, todayISO(), catalog);
-  return {
-    dueH3: deadlines.filter((d) => d.days <= 3).length,
-    dueSoon: deadlines.length,
-    stalled: computeStalled(tenders, todayISO(), catalog).length,
-  };
-}
 
 export async function getArchivedTenders(): Promise<Tender[]> {
   await requireAdmin();

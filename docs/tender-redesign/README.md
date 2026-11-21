@@ -1,4 +1,14 @@
-# Redesign alur tender
+# Tender workspace
+
+| Halaman saat ini | Desktop 1440 px | HP 390 px |
+| --- | --- | --- |
+| Tender dan prioritas deadline | [Desktop](workspace-1440.png) | [HP](workspace-390.png) |
+| Analytics · Performance | [Desktop](analytics-1440.png) | [HP](analytics-390.png) |
+
+Kartu deadline menyaring tabel pada halaman yang sama. Tautan Overview lama membuka register dengan track yang sesuai.
+
+## Riwayat migrasi ke shadcn/ui
+
 
 Screenshot sebelum memakai commit c14383f. Versi sesudah memakai komponen shadcn/ui New York, sidebar yang dapat ditutup di desktop, dan menu samping di HP.
 
