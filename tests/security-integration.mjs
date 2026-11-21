@@ -61,6 +61,8 @@ const tender = {
   updated_at: "2026-10-23T00:00:00Z",
 };
 const tables = {
+  meeting_counts: [],
+  tender_meetings: [],
   profiles: [
     viewer,
     admin,
@@ -541,6 +543,11 @@ test("every exposed admin action rejects forged sessions and viewers before muta
         body: "[]",
         redirect: "manual",
       });
+      // Internal viewers may organize meetings, but a missing tender cannot be mutated.
+      if (action.exportedName === "saveMeeting" && role === "viewer") {
+        assert.match(await response.text(), /Tender unavailable/);
+        continue;
+      }
       assert.ok(
         response.headers.get("x-action-redirect"),
         `${role} ${action.exportedName}: ${response.status} ${(await response.text()).slice(0, 150)}`,

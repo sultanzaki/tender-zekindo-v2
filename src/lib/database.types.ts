@@ -1,13 +1,79 @@
-import type { Milestones, TenderEventAction, TenderEventChange, UserRole } from "./types";
+import type {
+  Milestones,
+  TenderEventAction,
+  TenderEventChange,
+  UserRole,
+} from "./types";
 
 /** Hand-written to match supabase/migrations/*.sql — regenerate with
  * `supabase gen types typescript` once this can run against the live project. */
+export type Meeting = {
+  id: string;
+  tender_id: string;
+  milestone: string;
+  organizer: string | null;
+  topic: string;
+  starts_at: string;
+  link: string | null;
+  participants: string[];
+  day_notice: boolean;
+  hour_notice: boolean;
+  cancelled: boolean;
+  revision: number;
+};
+type MeetingMail = {
+  id: string;
+  meeting_id: string;
+  recipient: string;
+  kind: string;
+  subject: string;
+  body: string;
+  due_at: string;
+  expires_at: string;
+  sent_at: string | null;
+  retry_at: string;
+};
 export interface Database {
   public: {
     Tables: {
+      tender_meetings: {
+        Row: Meeting;
+        Insert: Omit<Meeting, "id" | "cancelled" | "revision"> &
+          Partial<Meeting>;
+        Update: Partial<Meeting>;
+        Relationships: [];
+      };
+      meeting_mail: {
+        Row: MeetingMail;
+        Insert: MeetingMail;
+        Update: Partial<MeetingMail>;
+        Relationships: [];
+      };
       reminder_digest: {
-        Row: { day: string; payload: { from: string; to: string[]; subject: string; text: string; html?: string }; sent_at: string | null; provider_id: string | null };
-        Insert: { day: string; payload: { from: string; to: string[]; subject: string; text: string; html?: string }; sent_at?: string | null; provider_id?: string | null };
+        Row: {
+          day: string;
+          payload: {
+            from: string;
+            to: string[];
+            subject: string;
+            text: string;
+            html?: string;
+          };
+          sent_at: string | null;
+          provider_id: string | null;
+        };
+        Insert: {
+          day: string;
+          payload: {
+            from: string;
+            to: string[];
+            subject: string;
+            text: string;
+            html?: string;
+          };
+          sent_at?: string | null;
+          provider_id?: string | null;
+        };
         Update: { sent_at?: string | null; provider_id?: string | null };
         Relationships: [];
       };
@@ -53,8 +119,20 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["tenders"]["Row"]>;
         Relationships: [
-          { foreignKeyName: "tenders_created_by_fkey"; columns: ["created_by"]; referencedRelation: "profiles"; referencedColumns: ["id"]; isOneToOne: false },
-          { foreignKeyName: "tenders_updated_by_fkey"; columns: ["updated_by"]; referencedRelation: "profiles"; referencedColumns: ["id"]; isOneToOne: false },
+          {
+            foreignKeyName: "tenders_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+            isOneToOne: false;
+          },
+          {
+            foreignKeyName: "tenders_updated_by_fkey";
+            columns: ["updated_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+            isOneToOne: false;
+          },
         ];
       };
       profiles: {
@@ -68,7 +146,10 @@ export interface Database {
         };
         // id defaults to gen_random_uuid() (see 0004_custom_auth.sql) — no
         // longer supplied by a Supabase Auth trigger.
-        Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & { email: string; name: string };
+        Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {
+          email: string;
+          name: string;
+        };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
         Relationships: [];
       };
@@ -83,7 +164,9 @@ export interface Database {
           changes: Record<string, TenderEventChange> | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["tender_events"]["Row"]> & {
+        Insert: Partial<
+          Database["public"]["Tables"]["tender_events"]["Row"]
+        > & {
           tender_label: string;
           actor_name: string;
           action: TenderEventAction;
@@ -99,7 +182,9 @@ export interface Database {
           created_by: string | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["select_options"]["Row"]> & { field: string; value: string };
+        Insert: Partial<
+          Database["public"]["Tables"]["select_options"]["Row"]
+        > & { field: string; value: string };
         Update: Partial<Database["public"]["Tables"]["select_options"]["Row"]>;
         Relationships: [];
       };
@@ -112,7 +197,9 @@ export interface Database {
           actor_id: string | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["error_log"]["Row"]> & { message: string };
+        Insert: Partial<Database["public"]["Tables"]["error_log"]["Row"]> & {
+          message: string;
+        };
         Update: Partial<Database["public"]["Tables"]["error_log"]["Row"]>;
         Relationships: [];
       };
@@ -125,7 +212,9 @@ export interface Database {
           created_by: string | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["document_types"]["Row"]> & { label: string };
+        Insert: Partial<
+          Database["public"]["Tables"]["document_types"]["Row"]
+        > & { label: string };
         Update: Partial<Database["public"]["Tables"]["document_types"]["Row"]>;
         Relationships: [];
       };
@@ -140,11 +229,15 @@ export interface Database {
           updated_at: string;
           updated_by: string | null;
         };
-        Insert: Partial<Database["public"]["Tables"]["tender_documents"]["Row"]> & {
+        Insert: Partial<
+          Database["public"]["Tables"]["tender_documents"]["Row"]
+        > & {
           tender_id: string;
           document_type_id: string;
         };
-        Update: Partial<Database["public"]["Tables"]["tender_documents"]["Row"]>;
+        Update: Partial<
+          Database["public"]["Tables"]["tender_documents"]["Row"]
+        >;
         Relationships: [];
       };
       sessions: {
@@ -174,7 +267,9 @@ export interface Database {
           created_by: string | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["milestone_types"]["Row"]> & {
+        Insert: Partial<
+          Database["public"]["Tables"]["milestone_types"]["Row"]
+        > & {
           key: string;
           label: string;
         };
@@ -195,7 +290,9 @@ export interface Database {
           created_by: string | null;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["tender_folders"]["Row"]> & {
+        Insert: Partial<
+          Database["public"]["Tables"]["tender_folders"]["Row"]
+        > & {
           tender_id: string;
           name: string;
         };
@@ -227,8 +324,17 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      meeting_counts: {
+        Row: { tender_id: string; milestone: string; count: number };
+        Relationships: [];
+      };
+    };
     Functions: {
+      claim_meeting_mail: {
+        Args: Record<string, never>;
+        Returns: MeetingMail[];
+      };
       /** Nav badge counts, computed in Postgres — see
        * supabase/migrations/0005_notification_counts.sql and
        * 0008_milestone_reminders.sql (which added due_h3). */
@@ -242,10 +348,15 @@ export interface Database {
 
 export type TenderRow = Database["public"]["Tables"]["tenders"]["Row"];
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-export type TenderEventRow = Database["public"]["Tables"]["tender_events"]["Row"];
-export type SelectOptionRow = Database["public"]["Tables"]["select_options"]["Row"];
+export type TenderEventRow =
+  Database["public"]["Tables"]["tender_events"]["Row"];
+export type SelectOptionRow =
+  Database["public"]["Tables"]["select_options"]["Row"];
 export type ErrorLogRow = Database["public"]["Tables"]["error_log"]["Row"];
-export type DocumentTypeRow = Database["public"]["Tables"]["document_types"]["Row"];
-export type TenderDocumentRow = Database["public"]["Tables"]["tender_documents"]["Row"];
+export type DocumentTypeRow =
+  Database["public"]["Tables"]["document_types"]["Row"];
+export type TenderDocumentRow =
+  Database["public"]["Tables"]["tender_documents"]["Row"];
 export type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
-export type MilestoneTypeRow = Database["public"]["Tables"]["milestone_types"]["Row"];
+export type MilestoneTypeRow =
+  Database["public"]["Tables"]["milestone_types"]["Row"];

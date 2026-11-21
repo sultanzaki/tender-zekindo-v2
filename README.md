@@ -192,3 +192,16 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 - `README.md` — this file
 - `chats/` — conversation transcripts (read these!)
 - `project/` — the `Zekindo Tender Management App` project files (HTML prototypes, assets, components)
+
+### Reminder meeting internal (Resend)
+
+Setiap milestone dapat memiliki beberapa meeting. Buka **Tender detail → Schedule → meetings**. Pengguna yang membuat meeting otomatis menjadi peserta. Pilih anggota internal lain, waktu dalam WIB, dan reminder 24 jam atau 1 jam. Link bersifat opsional. Penyelenggara dan admin dapat mengubah atau membatalkan meeting. Pengiriman individual menggunakan plain text.
+
+Untuk mengaktifkan pengiriman di production:
+
+1. Terapkan migrasi Supabase sampai `0011_tender_meetings.sql`.
+2. Pada server aplikasi, isi `RESEND_API_KEY`, `REMINDER_FROM_EMAIL` (domain terverifikasi di Resend), dan `CRON_SECRET` acak minimal 32 karakter. Penerima meeting berasal dari profil internal yang dipilih. `REMINDER_RECIPIENTS` hanya untuk digest deadline.
+3. Di Supabase Vault buat secret `tender_app_url` berisi origin HTTPS deployment dan `tender_cron_secret` berisi nilai yang sama dengan `CRON_SECRET`. Jalankan [SQL scheduler](supabase/operations/schedule-meeting-reminders.sql) di project tersebut. Cron per menit ini terpisah dari digest harian Vercel.
+4. Uji dengan akun internal sendiri. Endpoint mengembalikan jumlah sent/failed. Periksa cron.job_run_details, respons pg_net, dan log Resend. sent_at menunjukkan Resend menerima permintaan, bukan konfirmasi masuk inbox.
+
+Job yang gagal bisa dicoba ulang setelah dua menit dengan idempotency key yang sama. Reminder kedaluwarsa dilewati. Perubahan jadwal mengganti reminder tertunda dan menjadwalkan koreksi bagi peserta yang telah mendapat reminder. Pembatalan tidak mengirim reminder berikutnya.

@@ -1,18 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
+import { authorized } from "@/lib/cron-auth";
 import { supabaseServer } from "@/lib/supabase-server";
 import { renderReminderHtml, type ReminderRow } from "@/lib/reminder-email";
 import { todayISO, daysBetween } from "@/lib/tender-logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 32) return false;
-  const expected = Buffer.from("Bearer " + secret);
-  const actual = Buffer.from(request.headers.get("authorization") ?? "");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
 
 export async function GET(request: Request) {
   if (!authorized(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });

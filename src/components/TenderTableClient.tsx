@@ -1156,6 +1156,7 @@ export function TenderTableClient({
                           ) : (
                             dateLabel
                           )}
+                          {!!t.meetingCounts?.[m.key] && <Link prefetch={false} className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`} onClick={e=>e.stopPropagation()}><CalendarRange size={13} aria-hidden />{t.meetingCounts[m.key]} meetings</Link>}
                           {nearest && (
                             <small className={styles.nextDate}>
                               {nearest.diff === 0

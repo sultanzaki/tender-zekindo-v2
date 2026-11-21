@@ -1,3 +1,4 @@
+import { meetingCounts } from "@/lib/meeting-counts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +51,7 @@ export default async function Detail({
   const tender = await getTenderById(id);
   const isAdmin = ctx?.profile.role === "admin";
   if (!tender || (tender.archivedAt && !isAdmin)) notFound();
-  const catalog = await getMilestoneTypes(tender.track);
+  const [catalog, counts] = await Promise.all([getMilestoneTypes(tender.track), meetingCounts(id)]);
   const milestones = resolveTenderMilestones(tender, {
     [tender.track]: catalog,
   });
@@ -250,6 +251,7 @@ export default async function Detail({
                       data-next={next?.key === m.key}
                     >
                       <div className={styles.timelineLabel}>{m.label}</div>
+                      <Link className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts[id]?.[m.key] ?? 0} meetings</Link>
                       <div className={styles.timelineDate}>
                         {m.date ? (
                           <time dateTime={m.date}>{formatDateID(m.date)}</time>

@@ -1,0 +1,107 @@
+"use server";
+import { requireUser } from "./auth/dal";
+import { supabaseServer } from "./supabase-server";
+import { getTenderById } from "./tenders";
+import { getMilestoneTypes } from "./milestones";
+import { resolveTenderMilestones } from "./tender-logic";
+import { revalidatePath } from "next/cache";
+
+export async function saveMeeting(
+  tenderId: string,
+  milestone: string,
+  _: string,
+  form: FormData,
+): Promise<string> {
+  const ctx = await requireUser(),
+    db = supabaseServer(),
+    t = await getTenderById(tenderId);
+  if (!t || t.archivedAt) return "Tender unavailable.";
+  const id = String(form.get("id") || ""),
+    revision = Number(form.get("revision"));
+  const cancel = form.get("intent") === "cancel";
+  let organizer = ctx.userId;
+  if (id) {
+    const { data } = await db
+      .from("tender_meetings")
+      .select("*")
+      .eq("id", id)
+      .eq("tender_id", tenderId)
+      .eq("milestone", milestone)
+      .maybeSingle();
+    if (
+      !data ||
+      data.cancelled ||
+      (data.organizer !== ctx.userId && ctx.profile.role !== "admin")
+    )
+      return "Meeting unavailable.";
+    organizer = data.organizer ?? ctx.userId;
+  }
+  const topic = String(form.get("topic") || "").trim(),
+    local = String(form.get("time") || ""),
+    link = String(form.get("link") || "").trim();
+  const time = new Date(local + ":00+07:00");
+  const participants = [
+    ...new Set([organizer, ...form.getAll("member").map(String)]),
+  ];
+  if (!cancel) {
+    const stages = await getMilestoneTypes(t.track);
+    if (
+      !resolveTenderMilestones(t, { [t.track]: stages }).some(
+        (m) => m.key === milestone,
+      )
+    )
+      return "Milestone unavailable.";
+    if (
+      !topic ||
+      topic.length > 180 ||
+      !/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(local) ||
+      !(time.getTime() > Date.now())
+    )
+      return "Enter a topic and a future meeting time in WIB.";
+    if (link) {
+      try {
+        if (!["https:", "http:"].includes(new URL(link).protocol))
+          throw Error();
+      } catch {
+        return "Enter a valid meeting URL.";
+      }
+    }
+  }
+  const fields = cancel
+    ? null
+    : {
+        topic,
+        starts_at: time.toISOString(),
+        link: link || null,
+        participants,
+        day_notice: form.has("day"),
+        hour_notice: form.has("hour"),
+      };
+  const result = id
+    ? await db
+        .from("tender_meetings")
+        .update({ ...fields, cancelled: cancel, revision: revision + 1 })
+        .eq("id", id)
+        .eq("revision", revision)
+        .select("id")
+        .maybeSingle()
+    : fields
+      ? await db
+          .from("tender_meetings")
+          .insert({
+            ...fields,
+            id: String(form.get("createId")),
+            organizer,
+            tender_id: tenderId,
+            milestone,
+          })
+          .select("id")
+          .single()
+      : null;
+  if (!result?.data || result.error)
+    return "Could not save. Refresh and check the meeting and participants.";
+  revalidatePath("/tenders");
+  revalidatePath("/tenders/" + tenderId);
+  revalidatePath("/tenders/" + tenderId + "/meetings");
+  return "Saved";
+}

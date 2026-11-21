@@ -159,7 +159,7 @@ export interface Tender {
 export type RegisterTender = Pick<Tender,
   "id" | "rowNo" | "track" | "period" | "area" | "tenderNo" | "customer" | "product" |
   "entitas" | "qty" | "oe" | "milestones" | "milestoneOrder" | "result" | "pnl" | "nilaiPenawaran"
->;
+> & {meetingCounts?:Record<string,number>};
 
 /** A row of the global milestone catalog (`milestone_types`) — milestones are
  * admin-manageable now. See src/lib/milestones.ts and migration

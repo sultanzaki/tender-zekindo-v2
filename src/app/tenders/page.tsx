@@ -1,3 +1,4 @@
+import { meetingCounts } from "@/lib/meeting-counts";
 import { requireUser } from "@/lib/auth/dal";
 import { getAllTenders } from "@/lib/tenders";
 import { getMilestoneCatalog } from "@/lib/milestones";
@@ -8,9 +9,10 @@ export const dynamic = "force-dynamic";
 
 export default async function TenderTablePage() {
   const ctx = await requireUser();
-  const [rows, catalog] = await Promise.all([
+  const [rows, catalog, counts] = await Promise.all([
     getAllTenders(),
     getMilestoneCatalog(),
+    meetingCounts(),
   ]);
   return (
     <RegisterWorkspace
@@ -48,6 +50,7 @@ export default async function TenderTablePage() {
           result,
           pnl,
           nilaiPenawaran,
+          meetingCounts:counts[id],
           milestones: Object.fromEntries(
             Object.entries(milestones).filter(([, date]) => date != null),
           ),
