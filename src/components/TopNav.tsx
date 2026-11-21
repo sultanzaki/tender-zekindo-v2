@@ -125,7 +125,7 @@ function Workspace({
               <Link
                 href={
                   item.href === "/tenders"
-                    ? "/tenders?track=all&result=__EMPTY__"
+                    ? "/tenders?track=all"
                     : item.href
                 }
                 aria-current={current?.href === item.href ? "page" : undefined}

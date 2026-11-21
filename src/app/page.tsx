@@ -7,5 +7,5 @@ export default async function Home({ searchParams }: {
   await requireUser();
   const { track } = await searchParams;
   const scope = track === "upstream" || track === "downstream" ? track : "all";
-  redirect(`/tenders?track=${scope}&result=__EMPTY__`);
+  redirect(`/tenders?track=${scope}`);
 }

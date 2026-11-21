@@ -276,7 +276,7 @@ export async function updateTender(
   revalidatePath("/tenders");
   updateTag(TENDERS_TAG);
   revalidatePath(`/tenders/${id}`);
-  const keepScope = typeof returnTo === "string" && /^\/(tenders|overview)(\?|$)/.test(returnTo);
+  const keepScope = typeof returnTo === "string" && /^\/(tenders|overview)([?#]|$)/.test(returnTo);
   redirect(`/tenders/${id}${keepScope ? "?" + new URLSearchParams({returnTo}) : ""}`);
 }
 

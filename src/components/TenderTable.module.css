@@ -685,3 +685,6 @@
   .commandBar [data-slot="native-select-wrapper"] { width: 100%; }
   .commandBar .colMenuWrap { grid-column: 2; }
 }
+.filterChips {display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);}
+.filterChips button {max-width:100%;overflow-wrap:anywhere;padding:4px 8px;border-radius:5px;background:#eff5ff;color:#244f85;font-size:12px;cursor:pointer;}
+.bodyRow[data-returned] td {background-color:#eaf2ff;}

@@ -27,6 +27,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
+import { flushSync } from "react-dom";
 import { OperationsHeading } from "./TenderOperations";
 import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
 import { Icon } from "./Icon";
@@ -183,7 +184,9 @@ export function TenderTableClient({
   const router = useRouter();
   const matrixRef = useRef<HTMLDivElement>(null);
   const [intentHref, setIntentHref] = useState("");
-  const intentTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intentTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   useEffect(() => () => clearTimeout(intentTimer.current), []);
   const [filters, setFilters] = useState<TenderFilters>(initialFilters);
   // Keyed by column key rather than a fixed union: milestone keys are data now,
@@ -331,9 +334,91 @@ export function TenderTableClient({
     setSelected(new Set());
   }
 
-  function tenderHref(id: string) {
-    return `/tenders/${id}?${new URLSearchParams({ returnTo: `/tenders?${tenderQuery(filters, track)}` })}`;
+  const [returnedRow, setReturnedRow] = useState("");
+  const scope = tenderQuery(filters, track);
+  function returnHash(id: string) {
+    return "#resume-" + encodeURIComponent(id);
   }
+  function rememberRow(id: string) {
+    try {
+      sessionStorage.setItem(
+        "tender-register-position",
+        JSON.stringify({
+          id,
+          scope,
+          page: safePage,
+          pageSize,
+          sort,
+          x: matrixRef.current?.scrollLeft ?? 0,
+          y: matrixRef.current?.scrollTop ?? 0,
+          windowY: window.scrollY,
+        }),
+      );
+      window.history.replaceState(
+        window.history.state,
+        "",
+        location.pathname + location.search + returnHash(id),
+      );
+    } catch {
+      /* Navigation also works without browser storage. */
+    }
+  }
+  useEffect(() => {
+    if (!location.hash.startsWith("#resume-")) return;
+    let frame = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const saved = JSON.parse(
+        sessionStorage.getItem("tender-register-position") ?? "null",
+      );
+      if (
+        !saved ||
+        saved.scope !== scope ||
+        returnHash(saved.id) !== location.hash ||
+        !PAGE_SIZES.includes(saved.pageSize)
+      )
+        return;
+      frame = requestAnimationFrame(() => {
+        flushSync(() => {
+          setPageSize(saved.pageSize);
+          setPage(saved.page);
+          setSort(saved.sort);
+          setReturnedRow(saved.id);
+        });
+        matrixRef.current?.scrollTo(saved.x, saved.y);
+        window.scrollTo(0, saved.windowY);
+        history.replaceState(
+          history.state,
+          "",
+          location.pathname + location.search,
+        );
+      });
+      timer = setTimeout(() => setReturnedRow(""), 2200);
+    } catch {
+      /* Ignore expired or unreadable preferences. */
+    }
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [scope]);
+
+  function tenderHref(id: string) {
+    const path = "/tenders" + (scope ? "?" + scope : "") + returnHash(id);
+    return `/tenders/${id}?${new URLSearchParams({ returnTo: path })}`;
+  }
+  const filterLabels = {
+    area: "Area",
+    period: "Period",
+    entitas: "Entity",
+    customer: "Customer",
+    result: "Status",
+    deadline: "Deadline",
+    search: "Search",
+  };
+  const chips = (
+    Object.keys(filterLabels) as (keyof typeof filterLabels)[]
+  ).filter((key) => filters[key] && filters[key] !== "all");
 
   function resetFilters() {
     changeFilters(() => DEFAULT_FILTERS);
@@ -661,6 +746,36 @@ export function TenderTableClient({
             </a>
           </Button>
         </div>
+        {(chips.length > 0 || track !== "all") && (
+          <div className={styles.filterChips} aria-label="Active filters">
+            {track !== "all" && (
+              <button
+                aria-label="Remove track filter"
+                onClick={() =>
+                  history.pushState(
+                    null,
+                    "",
+                    "/tenders?" + tenderQuery(filters, "all"),
+                  )
+                }
+              >
+                {TRACK_LABELS[track]} ×
+              </button>
+            )}
+            {chips.map((key) => (
+              <button
+                key={key}
+                aria-label={`Remove ${filterLabels[key]} filter`}
+                onClick={() =>
+                  changeFilters((f) => ({ ...f, [key]: DEFAULT_FILTERS[key] }))
+                }
+              >
+                {filterLabels[key]}:{" "}
+                {filters[key] === "__EMPTY__" ? "Active" : filters[key]} ×
+              </button>
+            ))}
+          </div>
+        )}
         {showFilters && (
           <div className={styles.advanced}>
             <NativeSelect
@@ -855,13 +970,20 @@ export function TenderTableClient({
                   <TableRow
                     key={t.id}
                     className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
-                    onPointerEnter={event => {
+                    onPointerEnter={(event) => {
                       if (event.pointerType !== "mouse") return;
                       clearTimeout(intentTimer.current);
-                      intentTimer.current = setTimeout(() => setIntentHref(tenderHref(t.id)), 100);
+                      intentTimer.current = setTimeout(
+                        () => setIntentHref(tenderHref(t.id)),
+                        100,
+                      );
                     }}
                     onPointerLeave={() => clearTimeout(intentTimer.current)}
-                    onClick={() => router.push(tenderHref(t.id))}
+                    data-returned={returnedRow === t.id || undefined}
+                    onClick={() => {
+                      rememberRow(t.id);
+                      router.push(tenderHref(t.id));
+                    }}
                   >
                     {isAdmin && (
                       <TableCell
@@ -884,10 +1006,22 @@ export function TenderTableClient({
                         href={tenderHref(t.id)}
                         title={t.product || t.customer || "View tender"}
                         onFocus={() => setIntentHref(tenderHref(t.id))}
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (
+                            !event.ctrlKey &&
+                            !event.metaKey &&
+                            !event.shiftKey &&
+                            !event.altKey
+                          )
+                            rememberRow(t.id);
+                        }}
                       >
                         {t.product || t.customer || "View tender"}
                       </Link>
+                      <small className={styles.packageNumber}>
+                        {t.tenderNo || `Tender #${t.rowNo}`}
+                      </small>
                     </TableCell>
                     <TableCell
                       className={`${styles.td} ${styles.tdEllipsis}`}
@@ -1039,7 +1173,16 @@ export function TenderTableClient({
                         <Link
                           prefetch={false}
                           href={tenderHref(t.id)}
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (
+                              !event.ctrlKey &&
+                              !event.metaKey &&
+                              !event.shiftKey &&
+                              !event.altKey
+                            )
+                              rememberRow(t.id);
+                          }}
                         >
                           {t.tenderNo}
                         </Link>
