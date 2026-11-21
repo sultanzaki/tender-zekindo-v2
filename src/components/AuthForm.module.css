@@ -93,3 +93,13 @@
     padding-left: 14px;
   }
 }
+.page { background: #eef3f8; }
+.card { border-radius: 8px; border-top: 3px solid #245ca6; box-shadow: 0 12px 32px #1a36580b; }
+@media (min-width: 800px) {
+  .page { display: grid; grid-template-columns: minmax(260px, 380px) minmax(350px, 440px); justify-content: center; align-content: center; gap: 0; }
+  .brand { box-sizing: border-box; align-self: stretch; flex-direction: column; align-items: start; justify-content: space-between; background: #183957; border-radius: 10px 0 0 10px; padding: 38px; margin: 0; }
+  .brand a { background: white; border-radius: 4px; padding: 9px 12px; }
+  .brand > span { font: 600 34px/1.1 system-ui,sans-serif; letter-spacing: -.04em; color: white; border: 0; padding: 0; }
+  .card { max-width: none; border-radius: 0 10px 10px 0; }
+  .footer { grid-column: 1 / -1; text-align: center; }
+}

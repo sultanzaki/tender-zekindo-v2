@@ -159,3 +159,7 @@
     flex-basis: 70%;
   }
 }
+.section { border-radius: 5px; margin-bottom: 6px; }
+.section[open] { border-left: 3px solid var(--color-primary); }
+.section[open] > summary { background: #eaf2fb; }
+.toolbar button, .actions button { font-size: 12px; min-height: 36px; }

@@ -24,10 +24,9 @@ export function LoginForm({ next }: { next: string }) {
         <span>Tender workspace</span>
       </div>
       <section className={styles.card}>
-        <p className="eyebrow">ACCOUNT ACCESS</p>
-        <h1 className={styles.title}>Welcome back.</h1>
+        <h1 className={styles.title}>Sign in to Zekindo</h1>
         <p className={styles.subtitle}>
-          Sign in to access tenders, analytics, schedules, and documents.
+          Use your workspace email and password.
         </p>
         <form action={action} className={styles.fieldColumn}>
           <input type="hidden" name="next" value={next} />

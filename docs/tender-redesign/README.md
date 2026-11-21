@@ -1,5 +1,7 @@
 # Redesign alur tender
 
+Halaman masuk membuka Tender register dengan semua track dan filter Active. Pengguna dapat membuka Schedule matrix untuk melihat seluruh kolom dan mengedit tanggal per tahap. Overview tersedia sebagai halaman pendukung.
+
 ## Opsi A · Antrean kerja
 
 ```text

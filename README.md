@@ -6,12 +6,12 @@ Claude Design handoff bundle described below (`project/`, `chats/`).
 
 ## Workspace
 
-The application retains Zekindo's blue/white design and Poppins typography, with
-sidebar navigation on desktop and bottom navigation on phones.
+The workspace uses the Zekindo logo, blue accents, horizontal desktop navigation and bottom navigation on phones.
 
 | Route                   | Workflow                                                                   |
 | ----------------------- | -------------------------------------------------------------------------- |
-| `/`                     | Operational overview, upcoming milestones, follow-up queue, recent tenders |
+| `/`                     | Active tenders across tracks, sorted by nearest scheduled deadline |
+| `/overview`             | Weekly agenda, follow-up queue and pipeline context |
 | `/analytics`            | Filterable outcomes, known pipeline, customer/area/entity performance      |
 | `/tenders`              | Search, URL filters, saved browser views, columns, mobile cards            |
 | `/tenders/:id`          | Overview, documents, and administrator activity history                    |

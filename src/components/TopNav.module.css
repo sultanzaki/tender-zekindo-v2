@@ -297,3 +297,34 @@
   --color-primary-hover: #305f9e;
   background: #f4f6fa;
 }
+
+/* Desktop workspace navigation shares a single horizontal masthead. */
+@media (min-width: 901px) {
+  .sidebar {
+    position: sticky;
+    inset: 0 0 auto;
+    width: 100%;
+    min-height: 64px;
+    padding: 0 clamp(20px, 3vw, 50px);
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    overflow: visible;
+    background: white;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .brand { margin: 0; padding: 0 24px 0 0; border: 0; border-right: 1px solid var(--color-border); }
+  .brand strong { display: none; }
+  .brand img { padding: 0; }
+  .sidebar .navigation { flex-direction: row; align-self: stretch; gap: 2px; }
+  .sidebar .navLink { color: #455771; border-radius: 0; padding-inline: 12px; }
+  .sidebar .navLink:hover { color: #174e91; background: #f3f7fd; }
+  .sidebar .navLink.active { color: #154985; background: #edf4fc; box-shadow: inset 0 -3px #2563ae; }
+  .sidebar .count { background: #e5edf6; color: #244971; }
+  .sidebarFooter { margin: 0 0 0 auto; padding: 0; }
+  .sidebar .accountButton { background: white; color: #172b46; border-color: transparent; }
+  .sidebar .accountButton small { color: #52637a; }
+  .workspace { margin-left: 0; }
+  .header { position: static; height: 50px; padding-inline: clamp(20px, 3vw, 50px); background: #f8fafd; }
+}

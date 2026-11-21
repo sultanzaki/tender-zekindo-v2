@@ -63,7 +63,7 @@ export default async function Detail({
         : "overview";
   const requestedReturn = safeNextPath(query.returnTo);
   const fromOverview = query.returnTo === requestedReturn &&
-    (requestedReturn === "/" || requestedReturn.startsWith("/?track="));
+    (requestedReturn === "/overview" || requestedReturn.startsWith("/overview?track="));
   const returnTo = fromOverview || requestedReturn.startsWith("/tenders")
     ? requestedReturn
     : tender.track === "downstream" ? "/tenders?track=downstream" : "/tenders";

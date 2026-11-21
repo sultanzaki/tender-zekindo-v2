@@ -8,8 +8,8 @@ import type { Profile } from "@/lib/types";
 import { Icon } from "./Icon";
 import styles from "./TopNav.module.css";
 const pages = [
-  { href: "/", label: "Overview", icon: "overview" },
   { href: "/tenders", label: "Tenders", icon: "tenders" },
+  { href: "/overview", label: "Overview", icon: "overview" },
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/notifications", label: "Deadlines", icon: "notifications" },
 ] as const;
@@ -63,7 +63,8 @@ export function TopNav({
       )
         return;
       event.preventDefault();
-      search.current?.focus();
+      const localSearch = document.querySelector<HTMLInputElement>('#main-content input[type="search"]');
+      (localSearch ?? search.current)?.focus();
     }
     document.addEventListener("keydown", shortcut);
     return () => document.removeEventListener("keydown", shortcut);
@@ -99,7 +100,7 @@ export function TopNav({
           {pages.map((p) => (
             <Link
               key={p.href}
-              href={p.href}
+              href={p.href === "/tenders" ? "/tenders?track=all&result=__EMPTY__" : p.href}
               className={`${styles.navLink} ${active(p.href) ? styles.active : ""}`}
               aria-current={active(p.href) ? "page" : undefined}
             >
@@ -113,24 +114,6 @@ export function TopNav({
             </Link>
           ))}
         </nav>
-        {isAdmin && (
-          <>
-            <div className={styles.navLabel}>ADMINISTRATION</div>
-            <nav aria-label="Administration" className={styles.navigation}>
-              {adminPages.map((p) => (
-                <Link
-                  key={p.href}
-                  href={p.href}
-                  className={`${styles.navLink} ${active(p.href) ? styles.active : ""}`}
-                  aria-current={active(p.href) ? "page" : undefined}
-                >
-                  <Icon name={p.icon} />
-                  {p.label}
-                </Link>
-              ))}
-            </nav>
-          </>
-        )}
         <div className={styles.sidebarFooter}>
           <button
             className={styles.accountButton}
@@ -150,7 +133,7 @@ export function TopNav({
         </div>
       </aside>
       <div className={styles.workspace}>
-        <header className={styles.header}>
+        {path !== "/tenders" && <header className={styles.header}>
           <div className={styles.breadcrumb}>
             <span>Zekindo</span>
             <span aria-hidden="true">/</span>
@@ -185,7 +168,7 @@ export function TopNav({
               Account
             </button>
           )}
-        </header>
+        </header>}
         <main id="main-content" className={styles.content} tabIndex={-1}>
           {children}
         </main>
@@ -197,7 +180,7 @@ export function TopNav({
         {pages.map((p) => (
           <Link
             key={p.href}
-            href={p.href}
+            href={p.href === "/tenders" ? "/tenders?track=all&result=__EMPTY__" : p.href}
             className={active(p.href) ? styles.mobileActive : ""}
             aria-current={active(p.href) ? "page" : undefined}
           >

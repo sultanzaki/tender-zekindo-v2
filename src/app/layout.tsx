@@ -1,16 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import { TopNav } from "@/components/TopNav";
 import { getAuthContext } from "@/lib/auth/dal";
 import { getNotificationCounts } from "@/lib/tenders";
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Tender Management — Zekindo",
@@ -44,7 +36,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en">
       <body>
         <TopNav
           profile={ctx?.profile ?? null}

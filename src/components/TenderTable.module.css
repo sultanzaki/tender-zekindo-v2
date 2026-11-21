@@ -636,3 +636,23 @@
 .tableWorkspace .viewBar { background: #f4f7fb; }
 .theadRow, .theadRow .stickyIdentity { background: #eaf0f7; }
 .packageCell { padding-block: 15px; }
+.wrap { max-width: 1640px; margin-inline: auto; }
+.wrap > header { margin-bottom: 16px; }
+.tableWorkspace { box-shadow: none; overflow: visible; border-top: 3px solid var(--color-primary); }
+.tableWorkspace .viewBar { background: white; }
+.tableWorkspace .theadRow, .tableWorkspace .theadRow .stickyIdentity { background: #eaf0f7; }
+.tableWorkspace .th { color: #344a64; text-transform: none; font-size: 12px; letter-spacing: 0; }
+@media (min-width: 901px) { .wrap { padding: 30px clamp(20px, 3vw, 50px); } }
+.matrixToggle {
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: white;
+  color: var(--color-fg2);
+  cursor: pointer;
+}
+.matrixToggle[aria-pressed="true"] { color: var(--color-primary-dark); background: var(--zk-blue-50); }
+@media (max-width: 600px) { .matrixToggle { display: none; } }
+.colMenu[data-align-left="true"] { left: 0; right: auto; }

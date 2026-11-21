@@ -281,3 +281,11 @@
     font-size: 14px;
   }
 }
+@media (min-width: 901px) {
+  .page { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; max-width: 1260px; }
+  .page > :global(.page-heading) { grid-column: 1 / -1; }
+  .steps { flex-direction: column; align-self: start; position: sticky; top: 84px; background: transparent; padding: 0; gap: 6px; }
+  .step { min-height: 44px; font-size: 13px; }
+  .stepActive { background: #e2edf9; box-shadow: inset 3px 0 #245ca6; }
+  .card { min-width: 0; }
+}

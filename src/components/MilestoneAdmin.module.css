@@ -187,3 +187,6 @@
   font-size: 12.5px;
   color: var(--zk-error, #b91c1c);
 }
+.row:focus-within { background: #f0f5fc; }
+.index { font-variant-numeric: tabular-nums; font-weight: 600; color: #255b9c; }
+.addRow { padding: 12px; background: #f1f5fa; border-radius: 7px; }

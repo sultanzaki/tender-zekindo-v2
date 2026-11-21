@@ -148,6 +148,8 @@ export function TenderTableClient({
   ) {
     saveCols(update(visibleCols));
   }
+  const [fullTable, setFullTable] = useStoredJSON(`zekindo-full-table:${track}`, false);
+  const [alignMenuLeft, setAlignMenuLeft] = useState(false);
   const [showColMenu, setShowColMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sort, setSort] = useState<{
@@ -211,9 +213,19 @@ export function TenderTableClient({
     () => filterTenders(tenders, deferredFilters),
     [tenders, deferredFilters],
   );
+  const catalog = useMemo(() => ({
+    upstream: milestoneTypes.filter((milestone) => milestone.track === "upstream"),
+    downstream: milestoneTypes.filter((milestone) => milestone.track === "downstream"),
+  }), [milestoneTypes]);
+  const upcoming = useMemo(() => new Map(tenders.map((tender) => [
+    tender.id,
+    tender.result ? null : nextMilestone(tender, anchor, catalog),
+  ])), [tenders, anchor, catalog]);
+
   const sorted = useMemo(
-    () => (sort ? sortTenders(filtered, sort.key, sort.direction) : filtered),
-    [filtered, sort],
+    () => sort ? sortTenders(filtered, sort.key, sort.direction)
+      : [...filtered].sort((a, b) => (upcoming.get(a.id)?.date ?? "9999").localeCompare(upcoming.get(b.id)?.date ?? "9999")),
+    [filtered, sort, upcoming],
   );
 
   // Clamped rather than reset-via-effect: whenever filtering/sorting shrinks
@@ -225,15 +237,6 @@ export function TenderTableClient({
     () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
     [sorted, safePage, pageSize],
   );
-
-  const catalog = useMemo(() => ({
-    upstream: milestoneTypes.filter((milestone) => milestone.track === "upstream"),
-    downstream: milestoneTypes.filter((milestone) => milestone.track === "downstream"),
-  }), [milestoneTypes]);
-  const upcoming = new Map(pageItems.map((tender) => [
-    tender.id,
-    tender.result ? null : nextMilestone(tender, anchor, catalog),
-  ]));
 
   const visibleMilestones = milestoneTypes.filter((m) => visibleCols[m.key]);
 
@@ -377,7 +380,8 @@ export function TenderTableClient({
   return (
     <div className={styles.wrap}>
       <OperationsHeading
-        title="Tenders"
+        title="Tender register"
+        context={sort ? undefined : "Ordered by next deadline"}
         actions={isAdmin ? (
           <Link href={track === "downstream" ? "/tenders/new?track=downstream" : "/tenders/new"} className="button button-primary">
             <span aria-hidden="true">+</span> New tender
@@ -514,18 +518,30 @@ export function TenderTableClient({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            aria-pressed={fullTable}
+            className={styles.matrixToggle}
+            onClick={() => setFullTable(!fullTable)}
+          >
+            Schedule matrix
+          </button>
           <div className={styles.colMenuWrap} ref={menuRef}>
             <button
               ref={columnToggleRef}
               aria-expanded={showColMenu}
               aria-controls="table-columns"
               className={styles.colMenuButton}
-              onClick={() => setShowColMenu((v) => !v)}
+              onClick={(event) => {
+                setAlignMenuLeft(event.currentTarget.getBoundingClientRect().right < 276);
+                setFullTable(true);
+                setShowColMenu((value) => !value);
+              }}
             >
               Columns
             </button>
             {showColMenu && (
-              <div id="table-columns" className={styles.colMenu}>
+              <div id="table-columns" className={styles.colMenu} data-align-left={alignMenuLeft}>
                 {FIELD_TOGGLES.map((c) => (
                   <label key={c.key} className={styles.colMenuItem}>
                     <input
@@ -650,6 +666,7 @@ export function TenderTableClient({
                   {sortableHeader("result", "Status")}
                   <th scope="col" className={styles.th}>Next milestone</th>
                   {sortableHeader("tenderNo", "Tender No.")}
+                  {fullTable && <>
                   {sortableHeader("rowNo", "No")}
                   {visibleCols.track && track === "all" && (
                     <th scope="col" className={styles.th}>Track</th>
@@ -660,9 +677,10 @@ export function TenderTableClient({
                   {visibleCols.period && sortableHeader("period", "Period")}
                   {visibleCols.oe && sortableHeader("oe", "OE (Rp)", "right")}
                   {visibleCols.qty && sortableHeader("qty", "Qty", "right")}
+                  </>}
                   {sortableHeader("nilaiPenawaran", "Bid Value", "right")}
-                  {visibleCols.pnl && sortableHeader("pnl", "P&L")}
-                  {visibleMilestones.map((m) =>
+                  {fullTable && visibleCols.pnl && sortableHeader("pnl", "P&L")}
+                  {fullTable && visibleMilestones.map((m) =>
                     sortableHeader(
                       m.key,
                       shortHeader(m.label),
@@ -758,6 +776,7 @@ export function TenderTableClient({
                     <td className={`${styles.td} ${styles.tdNoWrap}`}>
                       {t.tenderNo ? <Link href={tenderHref(t.id)} onClick={(event) => event.stopPropagation()}>{t.tenderNo}</Link> : "—"}
                     </td>
+                    {fullTable && <>
                     <td className={`${styles.td} ${styles.tdMuted}`}>
                       {t.rowNo}
                     </td>
@@ -791,16 +810,17 @@ export function TenderTableClient({
                         {t.qty ?? "—"}
                       </td>
                     )}
+                    </>}
                     <td className={`${styles.td} ${styles.tdRight}`}>
                       <MoneyValue
                         value={t.nilaiPenawaran}
                         canView={canViewMoney}
                       />
                     </td>
-                    {visibleCols.pnl && (
+                    {fullTable && visibleCols.pnl && (
                       <td className={styles.td}>{t.pnl ? "Yes" : "—"}</td>
                     )}
-                    {visibleMilestones.map((m) => {
+                    {fullTable && visibleMilestones.map((m) => {
                       const iso = t.milestones[m.key] ?? null;
                       const tone = dateTone(iso, t.result, anchor);
                       const isEditing =

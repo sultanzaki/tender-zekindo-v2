@@ -267,6 +267,7 @@ after(async () => {
 
 const routes = [
   "/",
+  "/overview",
   "/analytics?track=all",
   "/notifications",
   "/tenders?track=all",
@@ -395,8 +396,10 @@ test("RSC, HEAD, middleware bypass and spoofed workspace headers cannot reveal d
 });
 
 test("viewers can read the workspace but cannot access admin pages, archives or notes", async () => {
+  const landing = await fetch(base + "/", { headers: headers("viewer"), redirect: "manual" });
+  await assertRedirect(landing, "/tenders");
   for (const route of [
-    "/",
+    "/overview",
     "/analytics",
     "/notifications",
     "/tenders?track=all",

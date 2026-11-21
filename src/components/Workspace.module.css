@@ -342,3 +342,9 @@
     grid-column: 1/-1;
   }
 }
+
+.page { max-width: 1260px; }
+.metrics { gap: 0; border-block: 1px solid var(--color-border); }
+.metric { border: 0; border-radius: 0; background: transparent; }
+.metricValue { font-variant-numeric: tabular-nums; }
+.panelHead { background: #f6f8fc; }
