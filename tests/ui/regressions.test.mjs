@@ -182,29 +182,14 @@ test("mobile account shows sign out without duplicating navigation", async () =>
   );
   await page.close();
 });
-test("collapsed desktop navigation shows icons with tooltips and hides the logo", async () => {
+test("collapsed desktop navigation leaves no rail and can be reopened", async () => {
   const page = await open("nav", 1440);
-  const toggle = page.getByRole("button", {name:"Toggle navigation"});
-  const settings = page.getByRole("link", {name:"Settings", exact:true});
+  const toggle = page.getByRole("button", {name: "Toggle navigation"});
+  const settings = page.getByRole("link", {name: "Settings", exact: true});
   await settings.waitFor();
-  const timing = page.evaluate(() => new Promise(resolve => {
-    const times = [];
-    function frame(now) {
-      times.push(now);
-      if (times.length === 2) document.querySelector('[data-slot="sidebar-trigger"]').click();
-      if (times.length < 32) requestAnimationFrame(frame);
-      else resolve(Math.round(31000 / (times.at(-1) - times[0])));
-    }
-    requestAnimationFrame(frame);
-  }));
-  console.log("Desktop sidebar sample (fps)", await timing);
-  assert.equal(await settings.isVisible(), true);
-  await settings.hover();
-  await page.getByRole("tooltip", {name:"Settings"}).waitFor();
-  await page.mouse.move(500,500);
-  await page.getByRole("link",{name:"Analytics",exact:true}).focus();
-  await page.getByRole("tooltip",{name:"Analytics"}).waitFor();
-  assert.equal(await page.getByRole("link",{name:"Zekindo workspace"}).isVisible(), false);
+  await toggle.click();
+  await settings.waitFor({state: "hidden"});
+  assert.equal(await page.locator('[data-slot="sidebar-gap"]').evaluate(el => el.offsetWidth), 0);
   await toggle.click();
   await settings.waitFor();
   await page.close();
