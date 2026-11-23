@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { supabaseServer } from "./supabase-server";
+import type { AnalyticsTender } from "./analytics";
 import type { TenderRow } from "./database.types";
 import type { SelectOptionsMap, Tender, Track } from "./types";
 import {
@@ -108,6 +109,30 @@ export const getAllTenders = cache(
       : tenders.map((t) => ({ ...t, catatanInternal: null }));
   },
 );
+
+// Reports never need schedule snapshots, notes, or creator/editor joins.
+const analyticsRowsCached = unstable_cache(async () => {
+  const rows: AnalyticsTender[] = [];
+  const batch = 1000;
+  for (let offset = 0; ; offset += batch) {
+    const { data, error } = await supabaseServer().from("tenders")
+      .select("id,tender_no,product,customer,area,entitas,period,track,result,oe,nilai_penawaran")
+      .is("archived_at", null).order("id").range(offset, offset + batch - 1);
+    if (error) throw new Error(`Failed to load analytics: ${error.message}`);
+    for (const row of data) {
+      rows.push({ id: row.id, tenderNo: row.tender_no, product: row.product, customer: row.customer,
+        area: row.area, entitas: row.entitas, period: row.period, track: rowTrack(row.track),
+        result: row.result, oe: toNumber(row.oe), nilaiPenawaran: toNumber(row.nilai_penawaran) });
+    }
+    if (data.length < batch) return rows;
+  }
+}, ["analytics:packages", process.env.SUPABASE_URL || "unconfigured"], {tags: [TENDERS_TAG], revalidate: 30});
+
+export async function getAnalyticsRows(track: Track | "all") {
+  await requireUser();
+  const rows = await analyticsRowsCached();
+  return track === "all" ? rows : rows.filter(row => row.track === track);
+}
 
 // Only operational fields leave this cache; authentication is checked before access.
 const deadlineQueueCached = unstable_cache(

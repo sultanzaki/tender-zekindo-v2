@@ -193,15 +193,14 @@ export function nextMilestone(
   anchor: string,
   catalog?: MilestoneCatalog,
 ): NextMilestone | null {
-  let best: NextMilestone | null = null;
-  for (const m of resolveTenderMilestones(tender, catalog)) {
-    if (!m.date) continue;
-    const diff = daysBetween(m.date, anchor);
-    if (diff >= 0 && (!best || diff < best.diff)) {
-      best = { key: m.key, label: m.label, date: m.date, diff };
+  let best: { key: string; label: string; date: string } | null = null;
+  for (const stage of resolveTenderMilestones(tender, catalog)) {
+    // Stored dates are ISO calendar dates. Compare strings before computing a day distance.
+    if (stage.date && stage.date >= anchor && (!best || stage.date < best.date)) {
+      best = { key: stage.key, label: stage.label, date: stage.date };
     }
   }
-  return best;
+  return best ? { ...best, diff: daysBetween(best.date, anchor) } : null;
 }
 
 export type ResultTone = "success" | "running" | "error" | "neutral";
@@ -535,7 +534,7 @@ export function filterTenders<T extends RegisterTender>(
   });
 }
 
-export function getFilterOptions(tenders: RegisterTender[]): FilterOptions {
+export function getFilterOptions(tenders: Pick<RegisterTender, "period" | "area" | "customer" | "entitas">[]): FilterOptions {
   return {
     periods: periodsSorted(tenders.map((t) => t.period)),
     areas: distinctSorted(tenders.map((t) => t.area)),

@@ -5,7 +5,7 @@ import { OperationsHeading } from "@/components/TenderOperations";
 import { AnalyticsFilters } from "@/components/AnalyticsFilters";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/dal";
-import { getAllTenders, getFilterOptions } from "@/lib/tenders";
+import { getAnalyticsRows, getFilterOptions } from "@/lib/tenders";
 import {
   ascendingPeriods,
   formatCompactRupiah,
@@ -83,7 +83,7 @@ export default async function Analytics({
     params.track === "upstream" || params.track === "downstream"
       ? params.track
       : "all";
-  const all = await getAllTenders({ track });
+  const all = await getAnalyticsRows(track);
   const options = getFilterOptions(all);
   const scope = (value: string | undefined, allowed: string[]) =>
     value && allowed.includes(value) ? value : "all";

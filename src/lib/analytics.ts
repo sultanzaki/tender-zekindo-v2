@@ -1,6 +1,10 @@
 import { LOSS_CATEGORIES, periodsSorted } from "./tender-logic";
 import type { Tender } from "./types";
 
+export type AnalyticsTender = Pick<Tender,
+  "id" | "tenderNo" | "product" | "customer" | "area" | "entitas" | "period" | "track" | "result" | "oe" | "nilaiPenawaran"
+>;
+
 export type Outcome = "win" | "loss" | "other";
 
 function outcomeOf(result: string | null | undefined): Outcome | null {
@@ -28,7 +32,7 @@ export interface PeriodOutcomeRow {
 }
 
 export function outcomesByPeriod(
-  tenders: Tender[],
+  tenders: AnalyticsTender[],
   periods: string[],
 ): PeriodOutcomeRow[] {
   return periods.map((period) => {
@@ -64,7 +68,7 @@ export interface LossReasonPeriodRow {
  * periods with at least one loss are included (an empty period would just
  * be a meaningless 0-height bar). */
 export function lossReasonByPeriod(
-  tenders: Tender[],
+  tenders: AnalyticsTender[],
   periods: string[],
 ): LossReasonPeriodRow[] {
   const rows: LossReasonPeriodRow[] = [];
@@ -101,8 +105,8 @@ export interface GroupWinRateRow {
  * Groups below minDecided are dropped — a 100% "win rate" on one decided
  * tender is noise, not a signal, and would mislead a bar chart reader. */
 export function winRateByGroup(
-  tenders: Tender[],
-  groupFn: (t: Tender) => string | null | undefined,
+  tenders: AnalyticsTender[],
+  groupFn: (t: AnalyticsTender) => string | null | undefined,
   minDecided = 3,
   topN = 8,
 ): GroupWinRateRow[] {
@@ -141,8 +145,8 @@ export interface GroupValueRow {
 
 /** Pipeline (OE) value of currently-running tenders, grouped by area/entitas. */
 export function pipelineValueByGroup(
-  tenders: Tender[],
-  groupFn: (t: Tender) => string | null | undefined,
+  tenders: AnalyticsTender[],
+  groupFn: (t: AnalyticsTender) => string | null | undefined,
 ): GroupValueRow[] {
   const map = new Map<string, { value: number; count: number }>();
   for (const t of tenders) {
@@ -166,7 +170,7 @@ export interface OverallWinRate {
   pct: number | null;
 }
 
-export function overallWinRate(tenders: Tender[]): OverallWinRate {
+export function overallWinRate(tenders: AnalyticsTender[]): OverallWinRate {
   let win = 0;
   let loss = 0;
   for (const t of tenders) {
@@ -183,14 +187,14 @@ export function overallWinRate(tenders: Tender[]): OverallWinRate {
   };
 }
 
-export function totalPipelineValue(tenders: Tender[]): number {
+export function totalPipelineValue(tenders: AnalyticsTender[]): number {
   return tenders
     .filter((t) => !t.result)
     .reduce((sum, t) => sum + (t.oe ?? 0), 0);
 }
 
 /** Total nilai_penawaran (bid value) for WIN tenders. */
-export function totalWinValue(tenders: Tender[]): number {
+export function totalWinValue(tenders: AnalyticsTender[]): number {
   return tenders
     .filter((t) => t.result === "WIN")
     .reduce((sum, t) => sum + (t.nilaiPenawaran ?? 0), 0);
@@ -205,7 +209,7 @@ export interface StatusBreakdown {
 }
 
 /** Breakdown of all tenders by their outcome status. */
-export function statusBreakdown(tenders: Tender[]): StatusBreakdown[] {
+export function statusBreakdown(tenders: AnalyticsTender[]): StatusBreakdown[] {
   let running = 0,
     win = 0,
     loss = 0,
@@ -263,7 +267,7 @@ export interface TrackComparisonRow {
 }
 
 /** Metrics side-by-side for upstream vs downstream. */
-export function trackComparison(tenders: Tender[]): TrackComparisonRow[] {
+export function trackComparison(tenders: AnalyticsTender[]): TrackComparisonRow[] {
   const map = new Map<
     string,
     { count: number; pv: number; wv: number; win: number; loss: number }
@@ -300,7 +304,7 @@ export function trackComparison(tenders: Tender[]): TrackComparisonRow[] {
     });
 }
 
-export function runningCount(tenders: Tender[]): number {
+export function runningCount(tenders: AnalyticsTender[]): number {
   return tenders.filter((t) => !t.result).length;
 }
 
