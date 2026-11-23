@@ -37,24 +37,16 @@ export async function GET(request: Request) {
     if (existing.error) throw existing.error;
     let digest = existing.data;
     if (!digest) {
-      stage = "milestone_query";
-      const catalog: { key: string; track: string; label: string }[] = [];
-      for (let offset = 0; ; offset += 500) {
-        const r = await db.from("milestone_types").select("key,track,label").is("archived_at", null).order("id").range(offset, offset + 499);
-        if (r.error) throw r.error;
-        catalog.push(...r.data);
-        if (r.data.length < 500) break;
-      }
-      log("catalog_loaded", { count: catalog.length });
       stage = "tender_query";
       const lines: (ReminderRow & { line: string })[] = [];
       for (let offset = 0; ; offset += 500) {
-        const r = await db.from("tenders").select("id,track,customer,product,tender_no,milestones,milestone_order,result").is("archived_at", null).order("id").range(offset, offset + 499);
+        const r = await db.from("tenders").select("id,track,customer,product,tender_no,milestones,milestone_order,milestone_labels,result").is("archived_at", null).order("id").range(offset, offset + 499);
         if (r.error) throw r.error;
         for (const t of r.data) {
           if (t.result) continue;
-          for (const m of catalog) {
-            if (m.track !== t.track || (t.milestone_order != null && !t.milestone_order.includes(m.key))) continue;
+          for (const key of t.milestone_order ?? []) {
+            const m = { key, label: t.milestone_labels[key] };
+            if (!m.label) continue;
             const date = t.milestones[m.key];
             if (!date) continue;
             const days = daysBetween(date, day);

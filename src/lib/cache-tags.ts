@@ -22,3 +22,5 @@ export const DOCUMENT_TYPES_TAG = "document-types";
 export const MILESTONE_TYPES_TAG = "milestone-types";
 
 export const MEETING_COUNTS_TAG = "meeting-counts";
+
+export const SELECT_OPTIONS_TAG = "select-options";

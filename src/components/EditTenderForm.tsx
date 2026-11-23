@@ -87,6 +87,8 @@ export function EditTenderForm({
         tender.id,
         {
           ...values,
+          expectedUpdatedAt: tender.updatedAt,
+          privateStages: Object.fromEntries(extra.map(m => [m.key, m.label])),
           milestoneOrder: order,
         },
         returnTo,

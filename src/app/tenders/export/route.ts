@@ -7,6 +7,7 @@ import {
   filterTenders,
   deadlineBucket,
   nextMilestone,
+  resolveTenderMilestones,
   todayISO,
 } from "@/lib/tender-logic";
 import { trackFromParam, TRACK_LABELS } from "@/lib/types";
@@ -125,6 +126,17 @@ export async function GET(request: Request) {
     });
   });
 
+  const schedule = workbook.addWorksheet("Package schedules");
+  schedule.columns = [
+    { header: "Tender", key: "tender", width: 20 },
+    { header: "Package", key: "product", width: 48 },
+    { header: "Stage", key: "label", width: 30 },
+    { header: "Date", key: "date", width: 16 },
+  ];
+  for (const tender of rows) {
+    for (const stage of resolveTenderMilestones(tender, catalog))
+      schedule.addRow({ tender: tender.tenderNo || tender.id, product: tender.product, label: stage.label, date: stage.date });
+  }
   const buffer = await workbook.xlsx.writeBuffer();
   const filename = `tenders-${new Date().toISOString().slice(0, 10)}.xlsx`;
 

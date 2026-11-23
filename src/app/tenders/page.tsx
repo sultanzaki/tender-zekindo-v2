@@ -14,6 +14,25 @@ export default async function TenderTablePage() {
     getMilestoneCatalog(),
     meetingCounts(),
   ]);
+  // Share identical snapshots in the Flight payload (usually one per track).
+  const snapshots = new Map<string, Record<string, string>>();
+  function shareSnapshot(labels?: Record<string, string>) {
+    if (!labels) return undefined;
+    const key = JSON.stringify(labels);
+    const cached = snapshots.get(key);
+    if (cached) return cached;
+    snapshots.set(key, labels);
+    return labels;
+  }
+  const orders = new Map<string, string[]>();
+  function shareOrder(keys: string[] | null) {
+    if (!keys) return null;
+    const key = JSON.stringify(keys);
+    const cached = orders.get(key);
+    if (cached) return cached;
+    orders.set(key, keys);
+    return keys;
+  }
   return (
     <RegisterWorkspace
       rows={rows.map(
@@ -30,6 +49,7 @@ export default async function TenderTablePage() {
           qty,
           oe,
           milestoneOrder,
+          milestoneLabels,
           result,
           pnl,
           nilaiPenawaran,
@@ -46,11 +66,12 @@ export default async function TenderTablePage() {
           entitas,
           qty,
           oe,
-          milestoneOrder,
+          milestoneOrder: shareOrder(milestoneOrder),
+          milestoneLabels: shareSnapshot(milestoneLabels),
           result,
           pnl,
           nilaiPenawaran,
-          meetingCounts:counts[id],
+          meetingCounts: counts[id],
           milestones: Object.fromEntries(
             Object.entries(milestones).filter(([, date]) => date != null),
           ),

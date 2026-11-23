@@ -1,3 +1,4 @@
+import { PeriodPerformance } from "@/components/PeriodPerformance";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { OperationsHeading } from "@/components/TenderOperations";
@@ -9,11 +10,9 @@ import {
   ascendingPeriods,
   formatCompactRupiah,
   lossReasonByPeriod,
-  outcomesByPeriod,
   overallWinRate,
   pipelineValueByGroup,
   statusBreakdown,
-  totalPipelineValue,
   totalWinValue,
   trackComparison,
   winRateByGroup,
@@ -105,16 +104,18 @@ export default async function Analytics({
       ? `${periods[0]}–${periods.at(-1)}`
       : periods[0] || "No periods";
   const outcome = overallWinRate(data);
-  const active = data.filter((t) => !t.result);
+  const active = all.filter(
+    (t) =>
+      !t.result &&
+      (area === "all" || t.area === area) &&
+      (customer === "all" || t.customer === customer),
+  );
+  const activeBids = active.filter((t) => t.nilaiPenawaran !== null);
   const won = data.filter((t) => t.result === "WIN");
   const knownBids = won.filter((t) => t.nilaiPenawaran !== null).length;
   const estimated = active.filter((t) => t.oe !== null);
-  const rows = outcomesByPeriod(data, periods);
-  const totals = new Map<string, number>();
-  for (const t of data) totals.set(t.period, (totals.get(t.period) ?? 0) + 1);
-  const maxVolume = Math.max(1, ...totals.values());
   const bids = new Map<string, number>();
-  for (const t of data)
+  for (const t of activeBids)
     if (t.customer && t.nilaiPenawaran != null)
       bids.set(t.customer, (bids.get(t.customer) ?? 0) + t.nilaiPenawaran);
   const customers = [...bids]
@@ -179,70 +180,43 @@ export default async function Analytics({
               </small>
             </div>
             <div>
-              <span>Active pipeline · OE</span>
+              <span>Current active bids</span>
               <strong>
-                {active.length && !estimated.length
+                {active.length && !activeBids.length
                   ? "—"
-                  : formatCompactRupiah(totalPipelineValue(data))}
+                  : formatCompactRupiah(
+                      activeBids.reduce(
+                        (sum, t) => sum + (t.nilaiPenawaran ?? 0),
+                        0,
+                      ),
+                    )}
               </strong>
               <small>
-                {estimated.length} of {active.length} open packages with an
-                estimate
+                {activeBids.length} of {active.length} active packages with a
+                bid · all periods
               </small>
             </div>
           </div>
           <div className={s.grid}>
+            <PeriodPerformance
+              key={query.toString()}
+              periods={periods}
+              packages={data
+                .filter(
+                  (t) => t.result === "WIN" || t.result?.startsWith("LOSS"),
+                )
+                .map((t) => ({
+                  id: t.id,
+                  name: t.product || t.tenderNo || t.id,
+                  customer: t.customer,
+                  period: t.period,
+                  won: t.result === "WIN",
+                  bid: t.nilaiPenawaran,
+                }))}
+            />
             <Report
-              title="Tender volume by period"
-              caption="Number of packages per period, grouped by outcome"
-            >
-              <div className={s.legend}>
-                {["Won", "Lost", "Other closed", "Active"].map((label) => (
-                  <span key={label}>{label}</span>
-                ))}
-              </div>
-              {rows.length ? (
-                <div
-                  className={s.plotScroll}
-                  role="region"
-                  aria-label="Tender volume chart"
-                  tabIndex={0}
-                >
-                  <div className={s.plot}>
-                    {rows.map((r) => {
-                      const total = totals.get(r.period) ?? 0;
-                      const active = total - r.win - r.loss - r.other;
-                      const description = `${r.period}: ${total} packages, ${r.win} won, ${r.loss} lost, ${r.other} other closed, ${active} active`;
-                      return (
-                        <figure
-                          key={r.period}
-                          aria-label={description}
-                          title={description}
-                        >
-                          <div className={s.columnTrack}>
-                            <strong>{total}</strong>
-                            <div
-                              className={s.column}
-                              style={{ height: `${(total / maxVolume) * 80}%` }}
-                            >
-                              {[r.win, r.loss, r.other, active].map((n, i) => (
-                                <i key={i} style={{ flexGrow: n }} />
-                              ))}
-                            </div>
-                          </div>
-                          <figcaption>{r.period}</figcaption>
-                        </figure>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <p className={s.empty}>No tenders match these filters.</p>
-              )}
-            </Report>
-            <Report
-              title="Bid value by customer"
-              caption="Top 6 · sum of recorded bids across all outcomes"
+              title="Active bids by customer"
+              caption="Current exposure · top 6 by recorded bid value across all periods"
             >
               <RankedBars money rows={customers} />
             </Report>
@@ -277,7 +251,7 @@ export default async function Analytics({
           </Report>
           <Report
             title="Active pipeline by area"
-            caption="Top 8 areas · recorded OE on open packages"
+            caption="Current exposure · top 8 by recorded OE across all periods"
           >
             <RankedBars
               money

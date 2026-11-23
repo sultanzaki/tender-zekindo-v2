@@ -125,6 +125,7 @@ export function NewTenderForm({
     start(async () => {
       const result = await createTender({
         ...currentValues,
+        privateStages: Object.fromEntries(extra.filter(m => m.track === values.track).map(m => [m.key, m.label])),
         milestoneOrder: orders[values.track],
       });
       if (result?.error) setError(result.error);

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/native-select";
 
 import {
+  Fragment,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -69,6 +70,7 @@ import {
   filterTenders,
   formatDateID,
   nextMilestone,
+  resolveTenderMilestones,
   sortTenders,
   type SortDirection,
   type SortKey,
@@ -334,6 +336,7 @@ export function TenderTableClient({
     setSelected(new Set());
   }
 
+  const [expanded, setExpanded] = useState("");
   const [returnedRow, setReturnedRow] = useState("");
   const scope = tenderQuery(filters, track);
   function returnHash(id: string) {
@@ -918,6 +921,16 @@ export function TenderTableClient({
             role="region"
             aria-label="Schedule matrix"
           >
+            {(["upstream","downstream"] as const).map(group => {
+              const groupRows = pageItems.filter(t => t.track === group);
+              if (!groupRows.length) return null;
+              const columns = visibleMilestones.filter(m => m.track === group);
+              const columnKeys = new Set(columns.map(m => m.key));
+              const templateKeys = new Set(milestoneTypes.map(m => m.key));
+              const columnCount = columns.length + 7 + [isAdmin, visibleCols.track && track === "all",
+                track !== "downstream", visibleCols.period, visibleCols.oe, visibleCols.qty, visibleCols.pnl].filter(Boolean).length;
+              return <Fragment key={group}>
+              {track === "all" && <h2 className="sticky left-0 px-3 py-2 font-semibold">{TRACK_LABELS[group]}</h2>}
             <Table className={styles.table} data-compact={compact === true}>
               <TableHeader>
                 <TableRow className={styles.theadRow}>
@@ -940,7 +953,7 @@ export function TenderTableClient({
                   {sortableHeader("product", "Package")}
                   {sortableHeader("customer", "Customer")}
                   {sortableHeader("result", "Status")}
-                  {visibleMilestones.map((m) =>
+                  {columns.map((m) =>
                     sortableHeader(
                       m.key,
                       shortHeader(m.label),
@@ -966,7 +979,22 @@ export function TenderTableClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pageItems.map((t) => (
+                {groupRows.map(t => {
+                  const stages = resolveTenderMilestones(t, catalog);
+                  const extras = new Map<string, number>();
+                  let previous = "";
+                  for (const stage of stages) {
+                    if (columnKeys.has(stage.key)) previous = stage.key;
+                    else if (!templateKeys.has(stage.key)) extras.set(previous, (extras.get(previous) ?? 0) + 1);
+                  }
+                  const toggle = (key: string) => {
+                    const count = extras.get(key);
+                    if (!count) return null;
+                    return <button type="button" className="ml-1 text-primary underline" aria-expanded={expanded === t.id}
+                      aria-label={`Show ${count} additional stages for ${t.tenderNo || t.id}`}
+                      onClick={e => { e.stopPropagation(); setExpanded(expanded === t.id ? "" : t.id); }}>+{count}</button>;
+                  };
+                  return <Fragment key={t.id}>
                   <TableRow
                     key={t.id}
                     className={`${styles.bodyRow} ${selected.has(t.id) ? styles.rowSelected : ""}`}
@@ -1022,6 +1050,10 @@ export function TenderTableClient({
                       <small className={styles.packageNumber}>
                         {t.tenderNo || `Tender #${t.rowNo}`}
                       </small>
+                      {upcoming.get(t.id) && <small className={styles.packageNumber}>Next: {upcoming.get(t.id)?.label} · {formatDateID(upcoming.get(t.id)?.date)}</small>}
+                      {toggle("")}
+                      {!extras.size && <button type="button" className="text-xs text-primary" aria-expanded={expanded === t.id}
+                        onClick={e => { e.stopPropagation(); setExpanded(expanded === t.id ? "" : t.id); }}>Schedule</button>}
                     </TableCell>
                     <TableCell
                       className={`${styles.td} ${styles.tdEllipsis}`}
@@ -1079,7 +1111,7 @@ export function TenderTableClient({
                         <ResultBadge result={t.result} />
                       )}
                     </TableCell>
-                    {visibleMilestones.map((m) => {
+                    {columns.map((m) => {
                       if (
                         t.track !== m.track ||
                         (t.milestoneOrder && !t.milestoneOrder.includes(m.key))
@@ -1156,6 +1188,7 @@ export function TenderTableClient({
                           ) : (
                             dateLabel
                           )}
+                          {toggle(m.key)}
                           {!!t.meetingCounts?.[m.key] && <MeetingLink className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`}><CalendarRange size={13} aria-hidden />{t.meetingCounts[m.key]} meetings</MeetingLink>}
                           {nearest && (
                             <small className={styles.nextDate}>
@@ -1236,9 +1269,15 @@ export function TenderTableClient({
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  {expanded === t.id && <TableRow><TableCell colSpan={columnCount}>
+                    <ol className="grid gap-2 p-3">{stages.map(stage => <li key={stage.key}>{stage.label} · {formatDateID(stage.date) || "Not scheduled"}</li>)}</ol>
+                    <Link className="text-primary underline" href={tenderHref(t.id)}>Open tender</Link>
+                  </TableCell></TableRow>}
+                  </Fragment>;
+                })}
               </TableBody>
-            </Table>
+            </Table></Fragment>;
+            })}
           </div>
         ) : (
           <div className={styles.emptyBox}>

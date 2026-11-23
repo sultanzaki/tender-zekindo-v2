@@ -242,7 +242,7 @@ test("milestone reorder submits both positions in one atomic write", async () =>
   );
 });
 
-test("editing the default schedule keeps following future catalog additions", async () => {
+test("editing the default schedule freezes the selected stages", async () => {
   const state = reset();
   await assert.rejects(
     api.updateTender("t", {
@@ -257,9 +257,9 @@ test("editing the default schedule keeps following future catalog additions", as
     }),
     /REDIRECT/,
   );
-  assert.equal(
+  assert.deepEqual(
     state.calls.find((call) => call.operation === "update").payload.milestone_order,
-    null,
+    ["first"],
   );
 });
 
@@ -283,4 +283,21 @@ test("editing legacy schedules preserves previously stored historical keys", asy
     state.calls.find((call) => call.operation === "update").payload.milestone_order,
     ["historical"],
   );
+});
+
+test("a private stage and its date are saved only on its tender", async () => {
+  const state = reset();
+  const key = "local_" + "b".repeat(32);
+  await assert.rejects(api.createTender({
+    ...base(), privateStages: { [key]: "Site visit" },
+    milestones: { [key]: "2027-02-16" }, milestoneOrder: ["first", key],
+  }), /REDIRECT/);
+  await assert.rejects(api.createTender(base()), /REDIRECT/);
+  const [a, b] = state.calls.filter(c => c.table === "tenders" && c.operation === "insert").map(c => c.payload);
+  assert.equal(a.milestone_labels[key], "Site visit");
+  assert.equal(a.milestones[key], "2027-02-16");
+  assert.deepEqual(a.milestone_order, ["first", key]);
+  assert.deepEqual(b.milestone_order, ["first"]);
+  assert.ok(!Object.hasOwn(b.milestone_labels, key));
+  assert.ok(!state.calls.some(c => c.table === "milestone_types" && c.operation !== "select"));
 });

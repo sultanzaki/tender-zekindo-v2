@@ -14,25 +14,34 @@ import { deadlineCalendar } from "@/lib/calendar";
 import { PageHeading } from "./PageHeading";
 import { TrackBadge } from "./TrackBadge";
 import styles from "./Workspace.module.css";
+function windowLabel(days: number) {
+  return days === 0 ? "Today" : days <= 3 ? "Next 1–3 days" : "Next 4–14 days";
+}
 const VIEWS = [
-  ["all", "Next 14 days"],
-  ["urgent", "Due in 3 days"],
-  ["week", "Due in 7 days"],
+  ["all", "Scheduled"],
+  ["today", "Today"],
+  ["soon", "1–3 days"],
+  ["later", "4–14 days"],
   ["followup", "Needs follow-up"],
 ] as const;
 export function DeadlineWorkspace({
   deadlines,
   followups,
+  isAdmin = false,
   initialView = "all",
   initialTrack = "all",
 }: {
   deadlines: DeadlineRow[];
   followups: StalledRow[];
+  isAdmin?: boolean;
   initialView?: string;
   initialTrack?: string;
 }) {
   const [view, setView] = useState(
-    VIEWS.some(([key]) => key === initialView) ? initialView : "all",
+    ["urgent", "week"].includes(initialView) ||
+      VIEWS.some(([key]) => key === initialView)
+      ? initialView
+      : "all",
   );
   const [track, setTrack] = useState(
     ["upstream", "downstream"].includes(initialTrack) ? initialTrack : "all",
@@ -52,6 +61,9 @@ export function DeadlineWorkspace({
   const needle = search.trim().toLowerCase();
   const upcoming = scopedDeadlines.filter(
     (d) =>
+      (view !== "today" || d.days === 0) &&
+      (view !== "soon" || (d.days >= 1 && d.days <= 3)) &&
+      (view !== "later" || d.days >= 4) &&
       (view !== "urgent" || d.days <= 3) &&
       (view !== "week" || d.days <= 7) &&
       `${d.customer} ${d.product} ${d.milestoneLabel}`
@@ -61,6 +73,19 @@ export function DeadlineWorkspace({
   const stalled = scopedFollowups.filter((d) =>
     `${d.customer} ${d.product} ${d.area}`.toLowerCase().includes(needle),
   );
+  const groups = new Map<string, DeadlineRow[]>();
+  for (const deadline of upcoming) {
+    const group = groups.get(deadline.tenderId);
+    if (group) group.push(deadline);
+    else groups.set(deadline.tenderId, [deadline]);
+  }
+  const counts: Record<string, number> = {
+    all: scopedDeadlines.length,
+    today: scopedDeadlines.filter((d) => !d.days).length,
+    soon: scopedDeadlines.filter((d) => d.days >= 1 && d.days <= 3).length,
+    later: scopedDeadlines.filter((d) => d.days >= 4).length,
+    followup: scopedFollowups.length,
+  };
   function download() {
     const url = URL.createObjectURL(
       new Blob([deadlineCalendar(upcoming)], {
@@ -76,9 +101,7 @@ export function DeadlineWorkspace({
   return (
     <div className={styles.page}>
       <PageHeading
-        eyebrow="DEADLINES & FOLLOW-UP"
-        title="Stay ahead of the next step."
-        description="Milestone dates across both tracks. Calendar entries are all-day events."
+        title="Deadlines"
         actions={
           view !== "followup" && (
             <Button
@@ -91,52 +114,39 @@ export function DeadlineWorkspace({
           )
         }
       />
-      <div className={styles.metrics}>
-        {[
-          ["Due today", scopedDeadlines.filter((d) => d.days === 0).length],
-          ["Due in 3 days", scopedDeadlines.filter((d) => d.days <= 3).length],
-          ["Next 14 days", scopedDeadlines.length],
-          ["Needs follow-up", scopedFollowups.length],
-        ].map(([label, value]) => (
-          <div className={styles.metric} key={label}>
-            <span className={styles.metricLabel}>{label}</span>
-            <strong className={styles.metricValue}>{value}</strong>
-          </div>
-        ))}
-      </div>
       <div className={styles.pills} aria-label="Deadline views">
         {VIEWS.map(([key, label]) => (
           <Button
             variant="ghost"
             key={key}
+            aria-label={label}
             aria-pressed={view === key}
             onClick={() => {
               setView(key);
               updateURL(key, track);
             }}
           >
-            {label}
+            {label} · {counts[key]}
           </Button>
         ))}
       </div>
       <Card className={`${styles.panel} gap-0 py-0`}>
-        <div className={styles.panelHead}>
-          <div>
-            <h2>
+        <div className="flex flex-wrap items-center gap-3 border-b p-3">
+          <div className="min-w-0 flex-1 basis-56">
+            <h2 className="font-semibold">
               {view === "followup"
                 ? "No upcoming milestone"
                 : "Scheduled milestones"}
             </h2>
-            <p>
+            <p className="text-xs text-muted-foreground">
               {view === "followup"
                 ? "These tenders need a result or an updated schedule; this does not mean they are overdue."
-                : "Nearest milestone per active tender, ordered by date."}
+                : "Next 14 days · grouped by package, earliest first."}
             </p>
           </div>
           <NativeSelect
             aria-label="Deadline track"
-            className="control"
-            style={{ maxWidth: 180 }}
+            style={{ minWidth: 145 }}
             value={track}
             onChange={(e) => {
               setTrack(e.target.value);
@@ -162,45 +172,74 @@ export function DeadlineWorkspace({
         {view === "followup"
           ? stalled.map((d) => (
               <Link
-                href={`/tenders/${d.tenderId}`}
+                href={
+                  isAdmin
+                    ? `/tenders/${d.tenderId}/edit?section=milestones`
+                    : `/tenders/${d.tenderId}`
+                }
                 key={d.tenderId}
                 className={styles.row}
               >
                 <span className={styles.rowMain}>
-                  <span className={styles.rowTitle}>{d.customer}</span>
-                  <span className={styles.rowSub}>{d.product}</span>
+                  <span className={styles.rowTitle}>{d.product}</span>
+                  <span className={styles.rowSub}>{d.customer}</span>
                 </span>
                 <span className={styles.rowMeta}>
                   {d.lastMilestoneLabel || "No dates recorded"}
                   <br />
                   {d.lastMilestoneDateFormatted}
+                  <br />
+                  {isAdmin ? "Update schedule" : "View detail"}
                 </span>
               </Link>
             ))
-          : upcoming.map((d) => (
-              <Link
-                href={`/tenders/${d.tenderId}`}
-                key={d.tenderId}
-                className={styles.row}
-              >
-                <span
-                  className={`${styles.day} ${d.urgent ? styles.urgent : ""}`}
+          : [...groups.values()].map(([d, ...rest], index, rows) => (
+              <div key={d.tenderId}>
+                {view === "all" &&
+                  (index === 0 ||
+                    windowLabel(rows[index - 1][0].days) !==
+                      windowLabel(d.days)) && (
+                    <h3 className="border-y bg-muted/40 px-4 py-1.5 text-xs font-semibold">
+                      {windowLabel(d.days)}
+                    </h3>
+                  )}
+                <Link
+                  href={`/tenders/${d.tenderId}`}
+                  key={d.tenderId}
+                  className={styles.row}
                 >
-                  {d.days}
-                  <small>{d.days === 0 ? "TODAY" : "DAYS"}</small>
-                </span>
-                <span className={styles.rowMain}>
-                  <span className={styles.rowTitle}>
-                    {d.customer} <TrackBadge track={d.track} />
+                  <span
+                    className={`${styles.day} ${d.urgent ? styles.urgent : ""}`}
+                  >
+                    {d.days}
+                    <small>{d.days === 0 ? "TODAY" : "DAYS"}</small>
                   </span>
-                  <span className={styles.rowSub}>{d.product}</span>
-                </span>
-                <span className={styles.rowMeta}>
-                  {d.milestoneLabel}
-                  <br />
-                  {d.dateFormatted}
-                </span>
-              </Link>
+                  <span className={styles.rowMain}>
+                    <span className={styles.rowTitle}>
+                      {d.product} <TrackBadge track={d.track} />
+                    </span>
+                    <span className={styles.rowSub}>{d.customer}</span>
+                  </span>
+                  <span className={styles.rowMeta}>
+                    {d.milestoneLabel}
+                    <br />
+                    {d.dateFormatted}
+                  </span>
+                </Link>
+                {rest.length > 0 && (
+                  <details className="px-4 pb-3 text-sm">
+                    <summary className="cursor-pointer text-primary">
+                      {rest.length} more scheduled{" "}
+                      {rest.length === 1 ? "stage" : "stages"}
+                    </summary>
+                    {rest.map((stage) => (
+                      <p key={stage.milestoneKey}>
+                        {stage.milestoneLabel} · {stage.dateFormatted}
+                      </p>
+                    ))}
+                  </details>
+                )}
+              </div>
             ))}
         {(view === "followup" ? !stalled.length : !upcoming.length) && (
           <div className={styles.empty}>

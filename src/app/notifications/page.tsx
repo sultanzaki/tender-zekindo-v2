@@ -1,7 +1,6 @@
-import { getAllTenders } from "@/lib/tenders";
+import { getDeadlineQueue } from "@/lib/tenders";
 import { requireUser } from "@/lib/auth/dal";
-import { getMilestoneCatalog } from "@/lib/milestones";
-import { computeDeadlines, computeStalled, todayISO } from "@/lib/tender-logic";
+import { todayISO } from "@/lib/tender-logic";
 import { DeadlineWorkspace } from "@/components/DeadlineWorkspace";
 export const dynamic = "force-dynamic";
 export default async function Notifications({
@@ -9,16 +8,15 @@ export default async function Notifications({
 }: {
   searchParams: Promise<{ view?: string; track?: string }>;
 }) {
-  await requireUser();
-  const [tenders, catalog, params] = await Promise.all([
-    getAllTenders(),
-    getMilestoneCatalog(),
+  const ctx = await requireUser();
+  const [queue, params] = await Promise.all([
+    getDeadlineQueue(todayISO()),
     searchParams,
   ]);
   return (
     <DeadlineWorkspace
-      deadlines={computeDeadlines(tenders, todayISO(), catalog)}
-      followups={computeStalled(tenders, todayISO(), catalog)}
+      isAdmin={ctx.profile.role === "admin"}
+      {...queue}
       initialView={params.view}
       initialTrack={params.track}
     />

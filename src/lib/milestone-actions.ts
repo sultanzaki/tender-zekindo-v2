@@ -16,10 +16,7 @@ export interface MilestoneActionResult {
  * existing ones without renumbering. */
 const ORDER_STEP = 10;
 
-/** Appends to the end of the default order and clears both caches.
- * A milestone with `tenders.milestone_order` = null (which is every existing
- * tender) picks this up automatically, because null means "show the whole
- * catalog in the default order". */
+/** Append a default stage for future tenders on this track. */
 export async function addMilestoneType(
   label: string,
   track: Track,
@@ -62,91 +59,6 @@ export async function addMilestoneType(
 
   updateTag(MILESTONE_TYPES_TAG);
   revalidatePath("/admin/milestones");
-  return { key };
-}
-
-/** Dipakai form tender: bikin milestone kalau namanya baru, pakai yang sudah ada
- * kalau namanya sudah pernah dibuat.
- *
- * Beda dengan addMilestoneType() milik halaman admin: di sana nama kembar itu
- * kesalahan yang harus dilihat admin, di sini nama kembar adalah hal biasa —
- * banyak tender memang punya milestone bernama sama — jadi yang dikembalikan
- * adalah key yang sudah ada, bukan error. Milestone yang terarsip juga dicocokkan
- * dan diaktifkan lagi, bukan dibikin duplikatnya.
- */
-export async function ensureMilestoneTypeByName(
-  label: string,
-  track: Track,
-): Promise<MilestoneActionResult> {
-  const ctx = await requireAdmin();
-  const trimmed = label.trim();
-  if (!trimmed) return { error: "Nama milestone tidak boleh kosong." };
-
-  const slug = slugifyMilestoneKey(trimmed, track);
-  if (!slug)
-    return { error: "Nama milestone harus mengandung huruf atau angka." };
-
-  // Katalognya kecil, jadi dibaca sekalian: satu query untuk mencari nama yang
-  // sama (tanpa membedakan huruf besar/kecil) DAN untuk tahu key mana yang sudah
-  // terpakai. Pencocokan dilakukan di JS, bukan dengan `ilike`, supaya tanda
-  // `%` atau `_` di nama milestone tidak diperlakukan sebagai wildcard.
-  const { data, error: readError } = await supabaseServer()
-    .from("milestone_types")
-    .select("key, label, archived_at, track");
-  if (readError) return { error: readError.message };
-  const rows = data ?? [];
-
-  // Pencocokan nama HARUS dalam jalur yang sama. Tanpa `track` di sini, menulis
-  // "Prebid" di form downstream akan menemukan milestone "Prebid" milik upstream
-  // dan memakai key upstream itu — sehingga tender downstream menyimpan tanggal
-  // di key milik jalur lain.
-  const match = rows.find(
-    (r) =>
-      r.track === track &&
-      r.label.trim().toLowerCase() === trimmed.toLowerCase(),
-  );
-  if (match) {
-    if (match.archived_at) {
-      const { error } = await supabaseServer()
-        .from("milestone_types")
-        .update({ archived_at: null })
-        .eq("key", match.key);
-      if (error) return { error: error.message };
-      updateTag(MILESTONE_TYPES_TAG);
-    }
-    return { key: match.key };
-  }
-
-  // Nama yang berbeda bisa menghasilkan key yang sama ("Lab Test 2" dan
-  // "Lab-Test2"). Key tidak boleh diubah setelah tertulis karena tanggal di
-  // tenders.milestones memakai key itu, jadi yang baru dibuatkan key uniknya.
-  //
-  // Diperiksa terhadap SELURUH key, bukan hanya jalur ini: constraint di
-  // database adalah `key unique` global, dan key yang sama di dua jalur akan
-  // membuat satu jalur bisa menimpa arti tanggal jalur lain.
-  const takenKeys = new Set(rows.map((r) => r.key));
-  let key = slug;
-  for (let n = 2; takenKeys.has(key); n++) key = `${slug}${n}`;
-
-  const { data: last } = await supabaseServer()
-    .from("milestone_types")
-    .select("sort_order")
-    .eq("track", track)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const sortOrder = (last?.sort_order ?? 0) + ORDER_STEP;
-
-  const { error } = await supabaseServer().from("milestone_types").insert({
-    key,
-    label: trimmed,
-    sort_order: sortOrder,
-    track,
-    created_by: ctx.userId,
-  });
-  if (error) return { error: error.message };
-
-  updateTag(MILESTONE_TYPES_TAG);
   return { key };
 }
 
@@ -295,19 +207,13 @@ export async function setTenderMilestoneOrder(
   // which is exactly what a mismatched payload would do.
   const { data: tender, error: tenderError } = await supabaseServer()
     .from("tenders")
-    .select("track")
+    .select("track,milestone_labels")
     .eq("id", tenderId)
     .maybeSingle();
   if (tenderError) return { error: tenderError.message };
   if (!tender) return { error: "Tender tidak ditemukan." };
 
-  const { data: catalog, error: catalogError } = await supabaseServer()
-    .from("milestone_types")
-    .select("key")
-    .eq("track", tender.track);
-  if (catalogError) return { error: catalogError.message };
-
-  const known = new Set((catalog ?? []).map((m) => m.key));
+  const known = new Set(Object.keys(tender.milestone_labels));
   const unknown = keys.filter((k) => !known.has(k));
   if (unknown.length)
     return { error: `Milestone tidak dikenal: ${unknown.join(", ")}` };

@@ -5,19 +5,19 @@ import { requireAdmin } from "@/lib/auth/dal";
 const destinations = [
   {
     href: "/admin/users",
-    title: "Manage users",
-    description: "Accounts, roles and access",
+    title: "Users & access",
+    description: "Manage workspace accounts and roles.",
     icon: "users",
   },
   {
     href: "/admin/milestones",
-    title: "Manage milestones",
-    description: "Stages and order for each business track",
+    title: "Milestone templates",
+    description: "Set default stages for new Upstream and Downstream tenders.",
     icon: "milestones",
   },
   {
     href: "/tenders/archive",
-    title: "Archive",
+    title: "Archived tenders",
     description: "Review and restore archived tenders",
     icon: "archive",
   },

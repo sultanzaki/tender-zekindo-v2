@@ -30,8 +30,7 @@ the session on every request and stream private storage objects through the app;
 they do not issue shareable signed download URLs. Responses use `private, no-store`.
 Mutations, archives, internal notes and activity history require administrator
 access. Viewer payloads omit internal notes. The browser's saved views contain
-filter preferences only. All reported win rates use WIN / (WIN + LOSS); pipeline
-includes only known OE values on active tenders. Dates use Asia/Jakarta (WIB).
+filter preferences only. All reported win rates use WIN / (WIN + LOSS); Analytics ranks active bids by recorded bid value. OE is labeled separately in the area report. Dates use Asia/Jakarta (WIB).
 
 For the redesign plan and verification evidence, see [REDESIGN_PLAN.md](REDESIGN_PLAN.md)
 and [REDESIGN_REPORT.md](REDESIGN_REPORT.md). The current access policy, security
@@ -72,6 +71,10 @@ npm run dev
 `supabase/seed.sql` is generated from the 270 tenders extracted from the
 source Excel during the design phase (`project/tenders-data.js`). Regenerate
 it with `node scripts/generate-seed-sql.mjs` if that source data changes.
+
+### Tender schedules
+
+Apply migration 0013 before deploying the package schedule update. It freezes the current schedule for existing tenders, including saved order and dates. New tenders start with the template for their track. Adding a stage in a tender form stores it with that tender when the form is saved. Edit the defaults for future packages in Settings → Milestone templates.
 
 ### Authentication
 
@@ -199,7 +202,7 @@ Setiap milestone dapat memiliki beberapa meeting. Buka **Tender detail → Sched
 
 Untuk mengaktifkan pengiriman di production:
 
-1. Terapkan migrasi Supabase sampai `0012_meeting_email_participants.sql`.
+1. Terapkan migrasi Supabase sampai [0013_tender_stage_snapshots.sql](supabase/migrations/0013_tender_stage_snapshots.sql) sebelum deploy aplikasi.
 2. Pada server aplikasi, isi `RESEND_API_KEY`, `REMINDER_FROM_EMAIL` (domain terverifikasi di Resend), dan `CRON_SECRET` acak minimal 32 karakter. Penerima meeting dapat dipilih dari profil internal atau ditambahkan melalui alamat @zekindo.co.id. `REMINDER_RECIPIENTS` hanya untuk digest deadline.
 3. Di Supabase Vault buat secret `tender_app_url` berisi origin HTTPS deployment dan `tender_cron_secret` berisi nilai yang sama dengan `CRON_SECRET`. Jalankan [SQL scheduler](supabase/operations/schedule-meeting-reminders.sql) di project tersebut. Cron per menit ini terpisah dari digest harian Vercel.
 4. Uji dengan akun internal sendiri. Endpoint mengembalikan jumlah sent/failed. Periksa cron.job_run_details, respons pg_net, dan log Resend. sent_at menunjukkan Resend menerima permintaan, bukan konfirmasi masuk inbox.

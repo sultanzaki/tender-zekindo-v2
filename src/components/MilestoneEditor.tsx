@@ -14,8 +14,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 
-import { useState, useTransition } from "react";
-import { ensureMilestoneTypeByName } from "@/lib/milestone-actions";
+import { useState } from "react";
 import { findOutOfOrderMilestones } from "@/lib/tender-logic";
 import type { MilestoneType, Track } from "@/lib/types";
 import styles from "./NewTenderForm.module.css";
@@ -34,20 +33,14 @@ export function MilestoneEditor({
   dates: Record<string, string>;
   onOrder: (order: string[]) => void;
   onDates: (dates: Record<string, string>) => void;
-  onCreated?: (type: MilestoneType) => void;
+  onCreated: (type: MilestoneType) => void;
 }) {
-  const [extra, setExtra] = useState<MilestoneType[]>([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const [pending, start] = useTransition();
-  const all = [
-    ...catalog,
-    ...extra.filter((m) => !catalog.some((c) => c.key === m.key)),
-  ];
   const selected = order
-    .map((key) => all.find((m) => m.key === key))
+    .map((key) => catalog.find((m) => m.key === key))
     .filter((m): m is MilestoneType => !!m);
-  const hidden = all.filter((m) => !order.includes(m.key));
+  const hidden = catalog.filter((m) => !order.includes(m.key));
   const issues = findOutOfOrderMilestones(dates, selected);
   function move(i: number, offset: number) {
     const next = [...order];
@@ -55,34 +48,31 @@ export function MilestoneEditor({
     onOrder(next);
   }
   function add() {
-    if (!name.trim() || pending) return;
+    const label = name.trim();
+    if (!label) return;
+    if (label.length > 100) {
+      setError("Use at most 100 characters.");
+      return;
+    }
+    const existing = catalog.find(
+      (m) => m.label.toLowerCase() === label.toLowerCase(),
+    );
+    const key =
+      existing?.key ?? "local_" + crypto.randomUUID().replaceAll("-", "");
+    if (!existing) {
+      const stage = {
+        id: key,
+        key,
+        label,
+        track,
+        sortOrder: order.length,
+        showInTable: false,
+      };
+      onCreated(stage);
+    }
+    if (!order.includes(key)) onOrder([...order, key]);
     setError("");
-    start(async () => {
-      try {
-        const result = await ensureMilestoneTypeByName(name.trim(), track);
-        if (result.error || !result.key) {
-          setError(result.error || "Milestone could not be created.");
-          return;
-        }
-        const key = result.key;
-        if (!all.some((m) => m.key === key)) {
-          const created = {
-            id: key,
-            key,
-            label: name.trim(),
-            track,
-            sortOrder: 0,
-            showInTable: false,
-          };
-          setExtra((prev) => [...prev, created]);
-          onCreated?.(created);
-        }
-        if (!order.includes(key)) onOrder([...order, key]);
-        setName("");
-      } catch {
-        setError("Could not create milestone. Please try again.");
-      }
-    });
+    setName("");
   }
   return (
     <div className={styles.fieldColumn}>
@@ -120,7 +110,7 @@ export function MilestoneEditor({
                 className="icon-button"
                 type="button"
                 aria-label={`Move ${m.label} up`}
-                disabled={i === 0 || pending}
+                disabled={i === 0}
                 onClick={() => move(i, -1)}
               >
                 ↑
@@ -130,7 +120,7 @@ export function MilestoneEditor({
                 className="icon-button"
                 type="button"
                 aria-label={`Move ${m.label} down`}
-                disabled={i === selected.length - 1 || pending}
+                disabled={i === selected.length - 1}
                 onClick={() => move(i, 1)}
               >
                 ↓
@@ -138,7 +128,6 @@ export function MilestoneEditor({
               <Button
                 variant="outline"
                 type="button"
-                disabled={pending}
                 onClick={() => onOrder(order.filter((k) => k !== m.key))}
               >
                 Remove
@@ -181,10 +170,7 @@ export function MilestoneEditor({
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <p className="muted">
-            This adds a named step to the {track} catalog, and selects it for
-            this tender.
-          </p>
+          <p className="muted">This step belongs to this tender only.</p>
           <div className={styles.fieldRowInline}>
             <Input
               aria-label="Custom milestone name"
@@ -203,9 +189,9 @@ export function MilestoneEditor({
               variant="outline"
               type="button"
               onClick={add}
-              disabled={pending || !name.trim()}
+              disabled={!name.trim()}
             >
-              {pending ? "Creating…" : "Create milestone"}
+              Create milestone
             </Button>
           </div>
           {error && (

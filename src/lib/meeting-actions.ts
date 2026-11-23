@@ -63,7 +63,7 @@ export async function saveMeeting(
   )
     return "Enter up to 50 valid @zekindo.co.id addresses.";
   if (!cancel) {
-    const stages = await getMilestoneTypes(t.track);
+    const stages = t.milestoneLabels ? [] : await getMilestoneTypes(t.track);
     if (
       !resolveTenderMilestones(t, { [t.track]: stages }).some(
         (m) => m.key === milestone,

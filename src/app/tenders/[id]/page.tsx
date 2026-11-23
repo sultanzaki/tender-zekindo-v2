@@ -59,7 +59,7 @@ export default async function Detail({
         ? "activity"
         : "overview";
   const [catalog, counts, documents, tree, activity] = await Promise.all([
-    getMilestoneTypes(tender.track),
+    tender.milestoneLabels ? [] : getMilestoneTypes(tender.track),
     tab === "overview" ? meetingCounts(id) : null,
     tab === "documents" ? getTenderDocuments(id) : [],
     tab === "documents" ? getTenderFileTree(id) : null,
@@ -98,7 +98,7 @@ export default async function Detail({
         ),
       ]
     : [];
-  const historicalLabels = historicalKeys.length ? await getMilestoneLabels(historicalKeys) : new Map<string,string>();
+  const historicalLabels = await getMilestoneLabels(historicalKeys.filter(key => !tender.milestoneLabels?.[key]));
   const sections = tree
     ? buildDocumentSections(tree, [
         ...documents.map(
@@ -114,7 +114,7 @@ export default async function Detail({
           (key, index): SectionDescriptor => ({
             id: `historical:${key}`,
             title:
-              historicalLabels.get(key) ||
+              tender.milestoneLabels?.[key] || historicalLabels.get(key) ||
               `Additional milestone files ${index + 1}`,
             kind: "milestone",
             milestoneKey: key,

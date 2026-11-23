@@ -4,9 +4,13 @@ import { unstable_cache } from "next/cache";
 import { supabaseServer } from "./supabase-server";
 import type { TenderRow } from "./database.types";
 import type { SelectOptionsMap, Tender, Track } from "./types";
-import { distinctSorted } from "./tender-logic";
+import {
+  computeDeadlines,
+  computeStalled,
+  distinctSorted,
+} from "./tender-logic";
 import { rowTrack } from "./milestones";
-import { TENDERS_TAG } from "./cache-tags";
+import { SELECT_OPTIONS_TAG, TENDERS_TAG } from "./cache-tags";
 import { requireUser, requireAdmin } from "./auth/dal";
 
 // PostgREST (Supabase's REST layer) serializes `numeric` columns as JSON
@@ -20,7 +24,8 @@ function toNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const tenderColumns = "*, creator:profiles!tenders_created_by_fkey(name), editor:profiles!tenders_updated_by_fkey(name)";
+const tenderColumns =
+  "*, creator:profiles!tenders_created_by_fkey(name), editor:profiles!tenders_updated_by_fkey(name)";
 type NamedTenderRow = TenderRow & {
   creator: { name: string } | null;
   editor: { name: string } | null;
@@ -42,6 +47,7 @@ function mapRow(row: NamedTenderRow): Tender {
     oeCatatan: row.oe_catatan,
     idrPerL: toNumber(row.idr_per_l),
     milestones: row.milestones,
+    milestoneLabels: row.milestone_labels,
     milestoneOrder: row.milestone_order,
     result: row.result,
     carryOver: row.carry_over,
@@ -103,6 +109,24 @@ export const getAllTenders = cache(
   },
 );
 
+// Only operational fields leave this cache; authentication is checked before access.
+const deadlineQueueCached = unstable_cache(
+  async (day: string) => {
+    const rows = await getTendersCached(false, "all");
+    return {
+      deadlines: computeDeadlines(rows, day, undefined, true),
+      followups: computeStalled(rows, day),
+    };
+  },
+  ["deadline-queue", process.env.SUPABASE_URL || "unconfigured"],
+  { tags: [TENDERS_TAG], revalidate: 30 },
+);
+
+export async function getDeadlineQueue(day: string) {
+  await requireUser();
+  return deadlineQueueCached(day);
+}
+
 export async function getArchivedTenders(): Promise<Tender[]> {
   await requireAdmin();
   const { data, error } = await supabaseServer()
@@ -137,39 +161,43 @@ type FormReference = Pick<
   TenderRow,
   "id" | "tender_no" | "area" | "customer" | "entitas"
 >;
-const getFormReferences = unstable_cache(
+async function getFormReferences(track: Track | "all") {
+  const rows: FormReference[] = [];
+  const limit = 1000;
+  for (let start = 0; ; start += limit) {
+    let query = supabaseServer()
+      .from("tenders")
+      .select("id,tender_no,area,customer,entitas")
+      .order("id")
+      .range(start, start + limit - 1);
+    if (track !== "all") query = query.eq("track", track);
+    const { data, error } = await query;
+    if (error)
+      throw new Error(`Could not load tender choices: ${error.message}`);
+    rows.push(...(data ?? []));
+    if (!data || data.length < limit) return rows;
+  }
+}
+
+const formChoicesCached = unstable_cache(
   async (track: Track | "all") => {
-    const rows: FormReference[] = [];
-    const limit = 1000;
-    for (let start = 0; ; start += limit) {
-      let query = supabaseServer()
-        .from("tenders")
-        .select("id,tender_no,area,customer,entitas")
-        .order("id")
-        .range(start, start + limit - 1);
-      if (track !== "all") query = query.eq("track", track);
-      const { data, error } = await query;
-      if (error)
-        throw new Error(`Could not load tender choices: ${error.message}`);
-      rows.push(...(data ?? []));
-      if (!data || data.length < limit) return rows;
-    }
+    const [rows, options] = await Promise.all([
+      getFormReferences(track),
+      loadSelectOptions(),
+    ]);
+    const selectOptions = mergeSelectOptions(rows, options);
+    const existingTenders = rows
+      .filter((row) => row.tender_no)
+      .map((row) => ({ id: row.id, tenderNo: row.tender_no }));
+    return { selectOptions, existingTenders };
   },
-  ["tenders:form-references", process.env.SUPABASE_URL || "unconfigured"],
-  { tags: [TENDERS_TAG], revalidate: 30 },
+  ["tenders:form-choices", process.env.SUPABASE_URL || "unconfigured"],
+  { tags: [TENDERS_TAG, SELECT_OPTIONS_TAG], revalidate: 30 },
 );
 
 export async function getTenderFormChoices(track: Track | "all") {
   await requireAdmin();
-  const [rows, options] = await Promise.all([
-    getFormReferences(track),
-    loadSelectOptions(),
-  ]);
-  const selectOptions = mergeSelectOptions(rows, options);
-  const existingTenders = rows
-    .filter((row) => row.tender_no)
-    .map((row) => ({ id: row.id, tenderNo: row.tender_no }));
-  return { selectOptions, existingTenders };
+  return formChoicesCached(track);
 }
 
 /** Dropdown options for every extendable field (Area, Customer, Entity):

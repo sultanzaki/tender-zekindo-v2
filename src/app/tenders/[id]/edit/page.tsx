@@ -28,7 +28,7 @@ export default async function EditTenderPage({
   const [{ selectOptions, existingTenders }, milestoneTypes] =
     await Promise.all([
       getTenderFormChoices(tender.track),
-      getMilestoneTypes(tender.track),
+      tender.milestoneLabels ? [] : getMilestoneTypes(tender.track),
     ]);
   return (
     <EditTenderForm
@@ -36,7 +36,20 @@ export default async function EditTenderPage({
       returnTo={returnTo ? safeNextPath(returnTo) : undefined}
       startOnMilestones={section === "milestones"}
       selectOptions={selectOptions}
-      milestoneTypes={milestoneTypes}
+      milestoneTypes={
+        tender.milestoneLabels
+          ? Object.entries(tender.milestoneLabels).map(
+              ([key, label], sortOrder) => ({
+                key,
+                id: key,
+                label,
+                sortOrder,
+                track: tender.track,
+                showInTable: false,
+              }),
+            )
+          : milestoneTypes
+      }
       existingTenders={existingTenders}
     />
   );

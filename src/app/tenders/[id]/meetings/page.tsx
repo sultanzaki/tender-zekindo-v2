@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/dal";
 import { getTenderById } from "@/lib/tenders";
-import { getMilestoneCatalog } from "@/lib/milestones";
+import { getMilestoneTypes } from "@/lib/milestones";
 import { resolveTenderMilestones } from "@/lib/tender-logic";
 import { supabaseServer } from "@/lib/supabase-server";
 import { MeetingForm } from "@/components/MeetingForm";
@@ -19,9 +19,8 @@ export default async function Meetings({
     { milestone } = await searchParams;
   if (!milestone) notFound();
   const db = supabaseServer(),
-    [t, catalog, rows, people] = await Promise.all([
+    [t, rows, people] = await Promise.all([
       getTenderById(id),
-      getMilestoneCatalog(),
       db
         .from("tender_meetings")
         .select("*")
@@ -32,6 +31,7 @@ export default async function Meetings({
     ]);
   if (!t) notFound();
   if (rows.error || people.error) throw Error("Could not load meeting agenda.");
+  const catalog = t.milestoneLabels ? undefined : { [t.track]: await getMilestoneTypes(t.track) };
   const stage = resolveTenderMilestones(t, catalog).find(
     (m) => m.key === milestone,
   );
@@ -47,7 +47,7 @@ export default async function Meetings({
       <Link href={"/tenders/" + id}>← Tender detail</Link>
       <header>
         <h1 className="text-2xl font-semibold">
-          {stage?.label ?? milestone} meetings
+          {stage?.label ?? t.milestoneLabels?.[milestone] ?? milestone} meetings
         </h1>
         <p>{t.product || t.customer}</p>
       </header>

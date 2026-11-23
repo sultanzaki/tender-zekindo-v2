@@ -140,6 +140,7 @@ export interface Tender {
   /** Per-tender milestone order and subset. `null` means "use the catalog's
    * default order and show every milestone in it". See
    * resolveTenderMilestones() in tender-logic.ts. */
+  milestoneLabels?: Record<string, string>;
   milestoneOrder: string[] | null;
   result: string | null;
   carryOver: string | null;
@@ -158,7 +159,7 @@ export interface Tender {
 
 export type RegisterTender = Pick<Tender,
   "id" | "rowNo" | "track" | "period" | "area" | "tenderNo" | "customer" | "product" |
-  "entitas" | "qty" | "oe" | "milestones" | "milestoneOrder" | "result" | "pnl" | "nilaiPenawaran"
+  "entitas" | "qty" | "oe" | "milestoneLabels" | "milestones" | "milestoneOrder" | "result" | "pnl" | "nilaiPenawaran"
 > & {meetingCounts?:Record<string,number>};
 
 /** A row of the global milestone catalog (`milestone_types`) — milestones are
@@ -301,13 +302,13 @@ export interface TenderFormValues {
   oeCatatan: string;
   nilaiPenawaran: string;
   milestones: Record<string, string>;
-  /** The tender's milestone order/subset. Sent by the new-tender form so the
-   * choice is stored at creation time; the edit form omits it because it saves
-   * through setTenderMilestoneOrder() instead. */
+  /** New stage definitions are saved atomically with the package schedule. */
+  privateStages?: Record<string, string>;
   milestoneOrder?: string[];
 }
 
 export interface TenderEditFormValues extends TenderFormValues {
+  expectedUpdatedAt?: string;
   result: string; // "" means still running (null in the DB)
   carryOver: string;
   remarks: string;

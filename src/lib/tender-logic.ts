@@ -98,6 +98,12 @@ export function resolveTenderMilestones(
   tender: RegisterTender,
   catalog?: MilestoneCatalog,
 ): TenderMilestone[] {
+  if (tender.milestoneLabels && tender.milestoneOrder) {
+    const labels = tender.milestoneLabels;
+    return tender.milestoneOrder.filter(key => Object.hasOwn(labels, key)).map(key => ({
+      key, label: labels[key], date: tender.milestones[key] ?? null,
+    }));
+  }
   const forTrack = catalog?.[tender.track];
   const types = forTrack ?? defaultMilestoneTypes(tender.track);
   const order = tender.milestoneOrder;
@@ -236,23 +242,27 @@ export function computeDeadlines(
   tenders: Tender[],
   anchor: string,
   catalog?: MilestoneCatalog,
+  includeAdditional = false,
 ): DeadlineRow[] {
   const rows: DeadlineRow[] = [];
   for (const t of tenders) {
     if (t.result) continue;
-    const nm = nextMilestone(t, anchor, catalog);
-    if (nm && nm.diff <= DUE_SOON_DAYS) {
+    const stages = includeAdditional ? resolveTenderMilestones(t, catalog) : [nextMilestone(t, anchor, catalog)];
+    for (const nm of stages) {
+      if (!nm?.date || nm.date < anchor) continue;
+      const diff = daysBetween(nm.date, anchor);
+      if (diff < 0 || diff > DUE_SOON_DAYS) continue;
       rows.push({
         tenderId: t.id,
         dateIso: nm.date,
         milestoneKey: nm.key,
-        days: nm.diff,
-        daysLabel: nm.diff === 0 ? "D-0" : `D-${nm.diff}`,
+        days: diff,
+        daysLabel: diff === 0 ? "D-0" : `D-${diff}`,
         customer: t.customer || "—",
         product: t.product || "—",
         milestoneLabel: nm.label,
         dateFormatted: formatDateID(nm.date) ?? "—",
-        urgent: nm.diff <= REMINDER_DAYS,
+        urgent: diff <= REMINDER_DAYS,
         track: t.track,
       });
     }
@@ -283,12 +293,12 @@ export function computeStalled(
   const rows: StalledRow[] = [];
   for (const t of tenders) {
     if (t.result) continue;
-    if (nextMilestone(t, anchor, catalog)) continue;
     let last: { label: string; date: string } | null = null;
     for (const m of resolveTenderMilestones(t, catalog)) {
       if (!m.date) continue;
       if (!last || m.date > last.date) last = { label: m.label, date: m.date };
     }
+    if (last && last.date >= anchor) continue;
     rows.push({
       tenderId: t.id,
       track: t.track,

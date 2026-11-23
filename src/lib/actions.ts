@@ -8,7 +8,7 @@ import { getTenderById } from "./tenders";
 import { DOCUMENT_BUCKET } from "./documents";
 import { getMilestoneTypes } from "./milestones";
 import { parseNumericInput, validateTender, isISODate } from "./validation";
-import { TENDERS_TAG } from "./cache-tags";
+import { SELECT_OPTIONS_TAG, TENDERS_TAG } from "./cache-tags";
 import { currentPeriod, periodsSorted } from "./tender-logic";
 import {
   EXTENDABLE_FIELDS,
@@ -115,9 +115,9 @@ function toInsertPayload(
   };
 }
 
-/** True when two milestone order arrays list the same keys in the same order. */
-function sameOrder(a: string[], b: string[]) {
-  return a.length === b.length && a.every((key, i) => key === b[i]);
+function validPrivateStages(stages: Record<string,string> = {}) {
+  return Object.entries(stages).every(([key, label]) => /^local_[a-f0-9]{32}$/.test(key)
+    && typeof label === "string" && label.trim().length > 0 && label.length <= 100);
 }
 
 export async function createTender(
@@ -137,27 +137,11 @@ export async function createTender(
     };
   }
 
-  // Milestone order chosen on the new-tender form. Stored as NULL when it still
-  // matches the catalog, so a tender nobody customised keeps following the
-  // catalog when milestones are later added, renamed or reordered. Unknown keys
-  // are dropped rather than written, so a tampered payload cannot put junk in
-  // the column.
-  const catalogOrder = (await getMilestoneTypes(values.track)).map(
-    (m) => m.key,
-  );
-  const requestedOrder = (values.milestoneOrder ?? catalogOrder).filter((k) =>
-    catalogOrder.includes(k),
-  );
-  const milestoneOrder = sameOrder(requestedOrder, catalogOrder)
-    ? null
-    : requestedOrder;
-
-  // Only THIS track's milestones are stored. The new-tender form offers BOTH
-  // catalogs so you can switch and compare before saving; without this filter,
-  // dates typed for the other track would be written into the row and then
-  // ignored by every reader (the two catalogs use different keys), i.e. data
-  // that looks saved but never appears anywhere.
-  const catalogKeys = new Set(catalogOrder);
+  if (!validPrivateStages(values.privateStages)) return { error: "Invalid tender milestone." };
+  const catalog = await getMilestoneTypes(values.track);
+  const labels = { ...Object.fromEntries(catalog.map(m => [m.key, m.label])), ...values.privateStages };
+  const catalogKeys = new Set(Object.keys(labels));
+  const milestoneOrder = (values.milestoneOrder ?? catalog.map(m => m.key)).filter(k => catalogKeys.has(k));
   const milestones = Object.fromEntries(
     Object.entries(values.milestones).filter(([key]) => catalogKeys.has(key)),
   );
@@ -172,6 +156,7 @@ export async function createTender(
       // catalog. Switching would silently orphan every date it has.
       track: values.track,
       milestone_order: milestoneOrder,
+      milestone_labels: labels,
       period,
       created_by: ctx.userId,
       updated_by: ctx.userId,
@@ -223,15 +208,12 @@ export async function updateTender(
   )
     return { error: "A tender's track cannot change after creation." };
 
-  const catalogOrder = (
-    await getMilestoneTypes(
-      before.track === "downstream" ? "downstream" : "upstream",
-    )
-  ).map((m) => m.key);
-  const allowedOrder = new Set([
-    ...catalogOrder,
-    ...(before.milestone_order ?? []),
-  ]);
+  if (!validPrivateStages(values.privateStages)) return { error: "Invalid tender milestone." };
+  const existingLabels = before.milestone_labels ?? Object.fromEntries(
+    (await getMilestoneTypes(values.track)).map(m => [m.key, m.label])
+  );
+  const labels = { ...values.privateStages, ...existingLabels };
+  const allowedOrder = new Set([...Object.keys(labels), ...(before.milestone_order ?? [])]);
   if (values.milestoneOrder?.some((key) => !allowedOrder.has(key)))
     return {
       error:
@@ -239,15 +221,8 @@ export async function updateTender(
     };
   const patch = {
     ...toInsertPayload(values, before.milestones),
-    ...(values.milestoneOrder !== undefined
-      ? {
-          milestone_order:
-            values.milestoneOrder.length > 0 &&
-            sameOrder(values.milestoneOrder, catalogOrder)
-              ? null
-              : values.milestoneOrder,
-        }
-      : {}),
+    milestone_labels: labels,
+    ...(values.milestoneOrder !== undefined ? { milestone_order: values.milestoneOrder } : {}),
     result: values.result || null,
     carry_over: values.carryOver || null,
     remarks: values.remarks || null,
@@ -257,11 +232,15 @@ export async function updateTender(
     updated_by: ctx.userId,
   };
 
-  const { error } = await supabaseServer()
-    .from("tenders")
-    .update(patch)
-    .eq("id", id);
-  if (error) return { error: `Failed to save changes: ${error.message}` };
+  const write = supabaseServer().from("tenders").update(patch).eq("id", id);
+  if (values.expectedUpdatedAt) {
+    const result = await write.eq("updated_at", values.expectedUpdatedAt).select("id").maybeSingle();
+    if (result.error) return { error: result.error.message };
+    if (!result.data) return { error: "Another change was saved. Reload this tender before editing." };
+  } else {
+    const { error } = await write;
+    if (error) return { error: `Failed to save changes: ${error.message}` };
+  }
 
   await logTenderEvent({
     tenderId: id,
@@ -571,6 +550,8 @@ export async function quickUpdateMilestone(
     .maybeSingle();
   if (beforeError || !before) return { error: "Tender not found." };
 
+  if (before.milestone_labels && (!Object.hasOwn(before.milestone_labels, key) || !before.milestone_order?.includes(key)))
+    return { error: "This stage is outside the tender schedule." };
   const milestones = { ...before.milestones, [key]: value || null };
   const patch = { milestones, updated_by: ctx.userId };
   const { error } = await supabaseServer()
@@ -614,6 +595,7 @@ export async function addSelectOption(
     });
   if (error && error.code !== "23505") return { error: error.message };
 
+  updateTag(SELECT_OPTIONS_TAG);
   revalidatePath("/tenders/new");
   revalidatePath("/tenders");
   return { value: trimmed };

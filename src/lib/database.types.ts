@@ -97,6 +97,7 @@ export interface Database {
           oe_catatan: string | null;
           idr_per_l: number | null;
           milestones: Milestones;
+          milestone_labels: Record<string,string>;
           milestone_order: string[] | null;
           result: string | null;
           carry_over: string | null;

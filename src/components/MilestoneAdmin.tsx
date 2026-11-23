@@ -45,8 +45,8 @@ export function MilestoneAdmin({ sections }: { sections: MilestoneSection[] }) {
     <div className={workspace.page}>
       <PageHeading
         eyebrow="ADMINISTRATION"
-        title="Milestone catalog"
-        description="Manage the default steps and table columns for each business track."
+        title="Milestone templates"
+        description="Set the starting schedule for new tenders and choose default matrix columns by track."
       />
       <div className={workspace.pills} aria-label="Catalog track">
         {sections.map((section) => (
