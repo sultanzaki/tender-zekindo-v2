@@ -301,3 +301,40 @@ test("a private stage and its date are saved only on its tender", async () => {
   assert.ok(!Object.hasOwn(b.milestone_labels, key));
   assert.ok(!state.calls.some(c => c.table === "milestone_types" && c.operation !== "select"));
 });
+
+test("milestone notes save per tender, trim, and clear when empty", async () => {
+  const state = reset();
+  state.before = {
+    id: "t",
+    tender_no: "TEST",
+    archived_at: null,
+    milestone_order: ["first", "second"],
+    milestone_notes: { second: "Keep me" },
+  };
+  assert.equal(await api.updateMilestoneNote("t", "first", "  Docs sent  "), undefined);
+  const write = state.calls.find((c) => c.table === "tenders" && c.operation === "update");
+  assert.deepEqual(write.payload.milestone_notes, { first: "Docs sent", second: "Keep me" });
+  assert.equal(Object.keys(write.payload).sort().join(), "milestone_notes,updated_by");
+  const event = state.calls.find((c) => c.table === "tender_events");
+  assert.deepEqual(event.payload.changes.milestone_notes.to, { first: "Docs sent", second: "Keep me" });
+
+  state.calls = [];
+  await api.updateMilestoneNote("t", "second", "   ");
+  assert.deepEqual(
+    state.calls.find((c) => c.operation === "update").payload.milestone_notes,
+    {},
+  );
+});
+
+test("milestone notes are refused for bad input, foreign stages and non-admins", async () => {
+  const state = reset();
+  state.before = { id: "t", archived_at: null, milestone_order: ["first"], milestone_notes: {} };
+  assert.match((await api.updateMilestoneNote("t", "bad key", "x")).error, /Invalid/);
+  assert.match((await api.updateMilestoneNote("t", "first", "x".repeat(2001))).error, /at most/);
+  assert.match((await api.updateMilestoneNote("t", "other", "x")).error, /outside/);
+  state.before.archived_at = "2026-11-01";
+  assert.match((await api.updateMilestoneNote("t", "first", "x")).error, /Restore/);
+  assert.equal(state.calls.some((c) => c.operation === "update"), false);
+  state.authorized = false;
+  await assert.rejects(api.updateMilestoneNote("t", "first", "x"), /UNAUTHORIZED/);
+});

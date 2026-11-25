@@ -157,6 +157,28 @@ test("signed-in viewers see monetary fields and metrics without administrator co
     await page.close();
   }
 });
+test("administrators add milestone notes in place; others only read them", async () => {
+  const page = await open("milestone-note");
+  const reader = page.getByTestId("reader");
+  assert.equal(await reader.innerText(), "Read me");
+  assert.equal(await reader.getByRole("button").count(), 0);
+  await page.getByRole("button", { name: "Add note for Prebid" }).click();
+  const field = page.getByLabel("Notes for Prebid");
+  await field.fill("fail on purpose");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await page.getByRole("alert").filter({ hasText: "Could not save note" }).waitFor();
+  assert.equal(await field.inputValue(), "fail on purpose", "draft survives a failed save");
+  await field.fill("Dokumen sudah dikirim");
+  await field.press("Control+Enter");
+  await page.getByRole("button", { name: "Edit note for Prebid" }).waitFor();
+  assert.ok((await page.locator("body").innerText()).includes("Dokumen sudah dikirim"));
+  assert.deepEqual(JSON.parse(await page.evaluate(() => document.body.dataset.note)), {
+    key: "prebid",
+    note: "Dokumen sudah dikirim",
+  });
+  await page.close();
+});
+
 test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");

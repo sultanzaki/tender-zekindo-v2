@@ -141,3 +141,7 @@ export async function setMilestoneTableVisibility() {
 export async function login() {
   return { error: "Incorrect email or password." };
 }
+export async function updateMilestoneNote(_id: string, key: string, note: string) {
+  document.body.dataset.note = JSON.stringify({ key, note });
+  return note.includes("fail") ? { error: "Could not save note" } : undefined;
+}

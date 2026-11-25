@@ -52,6 +52,7 @@ function mapRow(row: NamedTenderRow): Tender {
     milestones: row.milestones,
     milestoneLabels: row.milestone_labels,
     milestoneOrder: row.milestone_order,
+    milestoneNotes: row.milestone_notes ?? {},
     result: row.result,
     carryOver: row.carry_over,
     remarks: row.remarks,

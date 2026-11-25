@@ -25,6 +25,7 @@ import {
 import { safeNextPath } from "@/lib/validation";
 import { MilestoneDue, OperationsHeading } from "@/components/TenderOperations";
 import { MoneyValue } from "@/components/MoneyValue";
+import { MilestoneNote } from "@/components/MilestoneNote";
 import { canViewFinancials } from "@/lib/roles";
 import { ResultBadge } from "@/components/ResultBadge";
 import { TrackBadge } from "@/components/TrackBadge";
@@ -266,6 +267,14 @@ export default async function Detail({
                           <strong className={styles.nextTag}>Next</strong>
                         )}
                       </div>
+                      <MilestoneNote
+                        key={tender.milestoneNotes[m.key] ?? ""}
+                        tenderId={id}
+                        milestoneKey={m.key}
+                        label={m.label}
+                        note={tender.milestoneNotes[m.key]}
+                        canEdit={isAdmin && !tender.archivedAt}
+                      />
                     </div>
                   </div>
                 ))}

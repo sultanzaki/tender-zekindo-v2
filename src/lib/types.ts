@@ -110,6 +110,9 @@ export type ResultValue = (typeof RESULT_ENUM)[number];
 
 export type Milestones = Record<string, string | null>;
 
+/** Longest note an administrator can attach to one milestone of a tender. */
+export const MILESTONE_NOTE_MAX_LENGTH = 2000;
+
 export type UserRole = "viewer" | "admin" | "restricted";
 
 export interface Profile {
@@ -142,6 +145,8 @@ export interface Tender {
    * resolveTenderMilestones() in tender-logic.ts. */
   milestoneLabels?: Record<string, string>;
   milestoneOrder: string[] | null;
+  /** One admin-written note per milestone key (migration 0015). */
+  milestoneNotes: Record<string, string>;
   result: string | null;
   carryOver: string | null;
   remarks: string | null;

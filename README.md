@@ -76,6 +76,10 @@ it with `node scripts/generate-seed-sql.mjs` if that source data changes.
 
 Apply migration 0013 before deploying the package schedule update. It freezes the current schedule for existing tenders, including saved order and dates. New tenders start with the template for their track. Adding a stage in a tender form stores it with that tender when the form is saved. Edit the defaults for future packages in Settings → Milestone templates.
 
+### Milestone notes
+
+Each tender milestone can carry one note, written by administrators from **Tender detail → Schedule → Add note**. Every role can read it. Notes belong to that tender only, are recorded in the activity history and are not exported to Excel. Apply `supabase/migrations/0015_milestone_notes.sql` before deploying.
+
 ### Roles
 
 | Role | Access |

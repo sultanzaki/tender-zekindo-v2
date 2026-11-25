@@ -13,6 +13,7 @@ import { ManageUsersClient } from "../../src/components/ManageUsersClient";
 import { NumberInput } from "../../src/components/NumberInput";
 import { DocumentExplorer } from "../../src/components/DocumentExplorer";
 import { MoneyValue } from "../../src/components/MoneyValue";
+import { MilestoneNote } from "../../src/components/MilestoneNote";
 import { KpiCards } from "../../src/components/charts/KpiCards";
 import { TrackComparisonChart } from "../../src/components/charts/TrackComparisonChart";
 import type { Tender, Profile } from "../../src/lib/types";
@@ -110,6 +111,14 @@ function FinancialDemo({ signedIn }: { signedIn: boolean }) {
   );
 }
 const components = {
+  "milestone-note": (
+    <>
+      <MilestoneNote tenderId="t" milestoneKey="prebid" label="Prebid" canEdit />
+      <div data-testid="reader">
+        <MilestoneNote tenderId="t" milestoneKey="pq" label="PQ" note="Read me" canEdit={false} />
+      </div>
+    </>
+  ),
   "guest-money": <FinancialDemo signedIn={false} />,
   "viewer-money": <FinancialDemo signedIn />,
   nav: (

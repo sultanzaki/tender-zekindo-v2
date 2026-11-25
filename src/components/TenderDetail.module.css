@@ -344,3 +344,16 @@
   .handoff {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;}
   .handoff>div:nth-child(2) {grid-column:1/-1;grid-row:1;border-bottom:1px solid var(--border);padding-bottom:10px;}
 }
+.milestoneNote { margin-top: 4px; }
+.milestoneNoteText {
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  border-left: 2px solid var(--color-border);
+  font-size: 13px;
+  color: var(--color-fg2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.milestoneNoteButton { height: auto; padding: 2px 0; font-size: 12px; }
+.milestoneNoteEditor { display: grid; gap: 6px; margin-top: 6px; }
+.milestoneNoteActions { display: flex; gap: 6px; }
