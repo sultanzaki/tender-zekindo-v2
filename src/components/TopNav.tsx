@@ -26,6 +26,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { canViewFinancials, ROLE_LABELS } from "@/lib/roles";
+import { IdleLogout } from "./IdleLogout";
 const pages = [
   { href: "/tenders", label: "Tenders", icon: "tenders" },
   { href: "/analytics", label: "Analytics", icon: "analytics" },
@@ -245,6 +246,7 @@ function Workspace({
           {children}
         </div>
       </SidebarInset>
+      <IdleLogout />
       <Modal
         open={accountOpen}
         onClose={() => setAccountOpen(false)}

@@ -109,8 +109,7 @@ How it works:
   (`resetUserPassword` also revokes that user's existing sessions).
 - **Sessions**: a random 32-byte token in an httpOnly, `SameSite=Lax` cookie;
   only its SHA-256 hash is stored server-side, in the `sessions` table
-  (`src/lib/auth/session.ts`). Sessions last 30 days and aren't refreshed on
-  activity — signing in again after that is expected, not a bug.
+  (`src/lib/auth/session.ts`). Sessions last at most 12 hours; see idle sign-out below.
 - **Route protection**: `src/proxy.ts` (Next.js 16's renamed middleware —
   must live next to `src/app`, not the repo root, or Next silently never
   runs it) does a cheap, cookie-presence-only redirect to `/login`; it's
@@ -122,6 +121,10 @@ How it works:
   `requireUser()`/`requireAdmin()` (`src/lib/auth/dal.ts`), called at the
   top of every protected page and Server Action. That's the actual security
   boundary, not the proxy.
+- **Idle sign-out**: a session ends after 60 minutes without activity in any
+  tab (one-minute warning first) and after 12 hours at most, enforced on the
+  server via `sessions.last_seen_at` (migration 0016) and in the browser.
+  Values live in `src/lib/auth/session-policy.ts`.
 - **Login protection**: invalid credentials use the same message and bcrypt work
   for unknown and known accounts. A bounded, per-process throttle reserves at most
   10 attempts per email per 15 minutes. Multi-instance hosting also needs an edge

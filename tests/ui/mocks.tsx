@@ -149,3 +149,10 @@ export async function reorderMilestoneTypes(track: string, ids: string[]) {
   document.body.dataset.reordered = JSON.stringify({ track, ids });
   return ids[0] === "fail" ? { error: "Could not reorder" } : {};
 }
+export async function logoutIdle() {
+  document.body.dataset.idleLogout = "true";
+}
+export async function keepSessionAlive() {
+  document.body.dataset.heartbeats = String(Number(document.body.dataset.heartbeats || 0) + 1);
+  return true;
+}

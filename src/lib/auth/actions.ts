@@ -9,7 +9,7 @@ import {
   destroyAllSessionsForUser,
   destroySession,
 } from "./session";
-import { requireAdmin } from "./dal";
+import { getAuthContext, requireAdmin } from "./dal";
 import { safeNextPath } from "../validation";
 import type { UserRole } from "../types";
 import { isUserRole } from "../roles";
@@ -68,6 +68,18 @@ export async function login(
 export async function logout() {
   await destroySession();
   redirect("/login");
+}
+
+/** Called by the idle timer: ends the session and explains why on /login. */
+export async function logoutIdle() {
+  await destroySession();
+  redirect("/login?reason=idle");
+}
+
+/** Heartbeat from an active browser. Reading the session refreshes its
+ * last-seen time; `false` means it already ended (idle, expired, revoked). */
+export async function keepSessionAlive(): Promise<boolean> {
+  return (await getAuthContext()) !== null;
 }
 
 export interface CreateUserInput {

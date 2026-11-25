@@ -3,9 +3,13 @@ import { randomBytes, createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { supabaseServer } from "../supabase-server";
 import { SESSION_COOKIE_NAME } from "./sessionCookie";
+import {
+  ACTIVITY_TOUCH_MS,
+  IDLE_TIMEOUT_MS,
+  SESSION_MAX_AGE_MS,
+} from "./session-policy";
 
 export { SESSION_COOKIE_NAME };
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -16,7 +20,7 @@ function hashToken(token: string): string {
  * the browser's cookie, same principle as a password-reset token. */
 export async function createSession(userId: string): Promise<void> {
   const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
 
   const { error } = await supabaseServer()
     .from("sessions")
@@ -69,14 +73,30 @@ export async function getSessionProfile() {
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
 
+  const id = hashToken(token);
   const { data, error } = await supabaseServer()
     .from("sessions")
-    .select("user_id, expires_at, profile:profiles(id,email,name,role,created_at)")
-    .eq("id", hashToken(token))
+    .select("*, profile:profiles(id,email,name,role,created_at)")
+    .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;
+  const now = Date.now();
   const expires = new Date(data.expires_at).getTime();
-  if (!data.user_id || !Number.isFinite(expires) || expires <= Date.now())
+  if (!data.user_id || !Number.isFinite(expires) || expires <= now)
     return null;
+  // Before migration 0016 the column is absent; treat the session as active.
+  const lastSeen =
+    data.last_seen_at === undefined ? now : new Date(data.last_seen_at).getTime();
+  if (!Number.isFinite(lastSeen)) return null;
+  if (now - lastSeen > IDLE_TIMEOUT_MS) {
+    // Idle too long: the session is over even if the browser keeps the cookie.
+    await supabaseServer().from("sessions").delete().eq("id", id);
+    return null;
+  }
+  if (data.last_seen_at !== undefined && now - lastSeen > ACTIVITY_TOUCH_MS)
+    await supabaseServer()
+      .from("sessions")
+      .update({ last_seen_at: new Date(now).toISOString() })
+      .eq("id", id);
   return data.profile?.id === data.user_id ? data.profile : null;
 }

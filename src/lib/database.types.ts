@@ -250,6 +250,8 @@ export interface Database {
           user_id: string;
           created_at: string;
           expires_at: string;
+          /** Migration 0016. */
+          last_seen_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["sessions"]["Row"]> & {
           id: string;

@@ -14,7 +14,7 @@ before(async () => {
     "next/navigation":
       "export function redirect(path){throw new Error('REDIRECT:'+path);}",
     "next/headers": `export async function headers(){return new Headers({'x-workspace-path':globalThis.${key}.path});}export async function cookies(){return {get(){return {value:globalThis.${key}.token};},set(name,value,options){globalThis.${key}.cookie={name,value,options};},delete(){globalThis.${key}.deleted=true;}};}`,
-    "../supabase-server": `export function supabaseServer(){return {from(table){const query={table,operation:'select'};const chain={select(){return chain;},insert(payload){query.operation='insert';query.payload=payload;return chain;},delete(){query.operation='delete';return chain;},eq(key,value){query[key]=value;return chain;},maybeSingle(){return chain;},then(resolve,reject){const state=globalThis.${key};state.calls.push(query);return Promise.resolve({data:table==='sessions' && state.session?{...state.session,profile:state.profile}:null,error:state.error??null}).then(resolve,reject);}};return chain;}};}`,
+    "../supabase-server": `export function supabaseServer(){return {from(table){const query={table,operation:'select'};const chain={select(){return chain;},insert(payload){query.operation='insert';query.payload=payload;return chain;},delete(){query.operation='delete';return chain;},update(payload){query.operation='update';query.payload=payload;return chain;},eq(key,value){query[key]=value;return chain;},maybeSingle(){return chain;},then(resolve,reject){const state=globalThis.${key};state.calls.push(query);return Promise.resolve({data:table==='sessions' && state.session?{...state.session,profile:state.profile}:null,error:state.error??null}).then(resolve,reject);}};return chain;}};}`,
   };
   await build({
     stdin: {
@@ -145,4 +145,36 @@ test("login throttle reserves concurrent attempts, expires and resets after succ
   assert.equal(api.reserveLoginAttempt(email, now + 15 * 60 * 1000), true);
   api.clearLoginAttempts(email);
   assert.equal(api.reserveLoginAttempt(email, now), true);
+});
+
+test("idle sessions end on the server; active ones refresh last-seen sparingly", async () => {
+  const ago = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+  const state = globalThis[key];
+  state.session = { user_id: "viewer", expires_at: "2099-01-01T00:00:00Z", last_seen_at: ago(61) };
+  assert.equal(await api.getSessionProfile(), null, "61 minutes idle is signed out");
+  assert.ok(state.calls.some((c) => c.table === "sessions" && c.operation === "delete"));
+
+  for (const [minutes, touches] of [[10, true], [1, false]]) {
+    state.calls = [];
+    state.session = { user_id: "viewer", expires_at: "2099-01-01T00:00:00Z", last_seen_at: ago(minutes) };
+    assert.equal((await api.getSessionProfile()).id, "viewer");
+    const update = state.calls.find((c) => c.operation === "update");
+    assert.equal(!!update, touches, `${minutes} minutes`);
+    if (update) assert.ok(Date.now() - Date.parse(update.payload.last_seen_at) < 5000);
+  }
+
+  state.calls = [];
+  state.session = { user_id: "viewer", expires_at: "2099-01-01T00:00:00Z" };
+  assert.equal((await api.getSessionProfile()).id, "viewer", "works before migration 0016");
+  assert.equal(state.calls.length, 1);
+  state.session.last_seen_at = "not a date";
+  assert.equal(await api.getSessionProfile(), null);
+});
+
+test("new sessions last at most 12 hours", async () => {
+  await api.createSession("viewer");
+  const insert = globalThis[key].calls.find((c) => c.operation === "insert");
+  const hours = (Date.parse(insert.payload.expires_at) - Date.now()) / 3600000;
+  assert.ok(hours > 11.9 && hours <= 12, String(hours));
+  assert.ok(Math.abs(globalThis[key].cookie.options.expires - Date.parse(insert.payload.expires_at)) < 1000);
 });

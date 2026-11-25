@@ -179,6 +179,29 @@ test("administrators add milestone notes in place; others only read them", async
   await page.close();
 });
 
+test("inactivity warns after 59 minutes and signs out at 60 unless the user stays", async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.clock.install();
+  await page.goto(`${base}/?component=nav`);
+  await page.getByText("Page content").waitFor();
+  await page.clock.runFor("58:00");
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  await page.clock.runFor("01:05");
+  const dialog = page.getByRole("dialog", { name: "Still there?" });
+  await dialog.waitFor();
+  await page.mouse.wheel(0, 200);
+  await page.clock.runFor("00:02");
+  assert.equal(await dialog.isVisible(), true, "stray input does not dismiss the warning");
+  // The frozen test clock stops the dialog animation, so skip the stability wait.
+  await dialog.getByRole("button", { name: "Stay signed in" }).click({ force: true });
+  await dialog.waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => document.body.dataset.heartbeats), "1");
+  assert.equal(await page.evaluate(() => document.body.dataset.idleLogout), undefined);
+  await page.clock.runFor("01:00:05");
+  await page.waitForFunction(() => document.body.dataset.idleLogout === "true");
+  await page.close();
+});
+
 test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");
