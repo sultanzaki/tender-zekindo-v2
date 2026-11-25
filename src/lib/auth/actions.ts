@@ -9,9 +9,11 @@ import {
   destroyAllSessionsForUser,
   destroySession,
 } from "./session";
-import { requireAdmin } from "./dal";
+import { getAuthContext, requireAdmin } from "./dal";
+import { logAccess } from "../access-log";
 import { safeNextPath } from "../validation";
 import type { UserRole } from "../types";
+import { isUserRole } from "../roles";
 import { reserveLoginAttempt, clearLoginAttempts } from "./login-throttle";
 
 export interface FormState {
@@ -35,10 +37,16 @@ export async function login(
   if (!email || !password) return { error: "Enter your email and password." };
   if (email.length > 254 || password.length > 1024)
     return { error: "Incorrect email or password." };
-  if (!reserveLoginAttempt(email))
+  if (!reserveLoginAttempt(email)) {
+    await logAccess({
+      action: "login_failed",
+      actorEmail: email,
+      detail: { reason: "throttled" },
+    });
     return {
       error: "Too many sign-in attempts. Please try again in 15 minutes.",
     };
+  }
 
   try {
     const { data: profile, error } = await supabaseServer()
@@ -52,10 +60,18 @@ export async function login(
       password,
       profile?.password_hash || DUMMY_HASH,
     );
-    if (!profile?.password_hash || !matches)
+    if (!profile?.password_hash || !matches) {
+      await logAccess({
+        action: "login_failed",
+        actorId: profile?.id ?? null,
+        actorEmail: email,
+        detail: { reason: profile ? "wrong_password" : "unknown_account" },
+      });
       return { error: "Incorrect email or password." };
+    }
     await createSession(profile.id);
     clearLoginAttempts(email);
+    await logAccess({ action: "login", actorId: profile.id, actorEmail: email });
   } catch {
     return { error: "Unable to sign in. Check your connection and try again." };
   }
@@ -64,9 +80,28 @@ export async function login(
   redirect(safeNextPath(next));
 }
 
-export async function logout() {
+async function endSession(action: "logout" | "logout_idle") {
+  const ctx = await getAuthContext();
   await destroySession();
+  if (ctx)
+    await logAccess({ action, actorId: ctx.userId, actorEmail: ctx.email });
+}
+
+export async function logout() {
+  await endSession("logout");
   redirect("/login");
+}
+
+/** Called by the idle timer: ends the session and explains why on /login. */
+export async function logoutIdle() {
+  await endSession("logout_idle");
+  redirect("/login?reason=idle");
+}
+
+/** Heartbeat from an active browser. Reading the session refreshes its
+ * last-seen time; `false` means it already ended (idle, expired, revoked). */
+export async function keepSessionAlive(): Promise<boolean> {
+  return (await getAuthContext()) !== null;
 }
 
 export interface CreateUserInput {
@@ -89,7 +124,7 @@ export async function createUser(
   if (!email || !name) return { error: "Name and email are required." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: "Enter a valid email address." };
-  if (input.role !== "admin" && input.role !== "viewer")
+  if (!isUserRole(input.role))
     return { error: "Choose a valid role." };
   if (input.password.length < MIN_PASSWORD_LENGTH) {
     return {
@@ -149,7 +184,7 @@ export async function updateUserRole(
   const ctx = await requireAdmin();
   if (userId === ctx.userId)
     return { error: "You cannot change your own role." };
-  if (role !== "admin" && role !== "viewer")
+  if (!isUserRole(role))
     return { error: "Choose a valid role." };
   const { error } = await supabaseServer()
     .from("profiles")

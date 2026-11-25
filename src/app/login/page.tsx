@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; reason?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, reason } = await searchParams;
   const safeNext = safeNextPath(next);
 
   // A real DB-backed check, not just cookie presence (that's what proxy.ts
@@ -22,5 +22,11 @@ export default async function LoginPage({
   const ctx = await getAuthContext();
   if (ctx) redirect(safeNext);
 
-  return <LoginForm next={safeNext} />;
+  const notice =
+    reason === "idle"
+      ? "You were signed out after 60 minutes of inactivity."
+      : reason === "expired"
+        ? "Your session ended. Please sign in again."
+        : undefined;
+  return <LoginForm next={safeNext} notice={notice} />;
 }

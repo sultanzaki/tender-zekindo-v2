@@ -301,3 +301,64 @@ test("a private stage and its date are saved only on its tender", async () => {
   assert.ok(!Object.hasOwn(b.milestone_labels, key));
   assert.ok(!state.calls.some(c => c.table === "milestone_types" && c.operation !== "select"));
 });
+
+test("milestone notes save per tender, trim, and clear when empty", async () => {
+  const state = reset();
+  state.before = {
+    id: "t",
+    tender_no: "TEST",
+    archived_at: null,
+    milestone_order: ["first", "second"],
+    milestone_notes: { second: "Keep me" },
+  };
+  assert.equal(await api.updateMilestoneNote("t", "first", "  Docs sent  "), undefined);
+  const write = state.calls.find((c) => c.table === "tenders" && c.operation === "update");
+  assert.deepEqual(write.payload.milestone_notes, { first: "Docs sent", second: "Keep me" });
+  assert.equal(Object.keys(write.payload).sort().join(), "milestone_notes,updated_by");
+  const event = state.calls.find((c) => c.table === "tender_events");
+  assert.deepEqual(event.payload.changes.milestone_notes.to, { first: "Docs sent", second: "Keep me" });
+
+  state.calls = [];
+  await api.updateMilestoneNote("t", "second", "   ");
+  assert.deepEqual(
+    state.calls.find((c) => c.operation === "update").payload.milestone_notes,
+    {},
+  );
+});
+
+test("milestone notes are refused for bad input, foreign stages and non-admins", async () => {
+  const state = reset();
+  state.before = { id: "t", archived_at: null, milestone_order: ["first"], milestone_notes: {} };
+  assert.match((await api.updateMilestoneNote("t", "bad key", "x")).error, /Invalid/);
+  assert.match((await api.updateMilestoneNote("t", "first", "x".repeat(2001))).error, /at most/);
+  assert.match((await api.updateMilestoneNote("t", "other", "x")).error, /outside/);
+  state.before.archived_at = "2026-11-01";
+  assert.match((await api.updateMilestoneNote("t", "first", "x")).error, /Restore/);
+  assert.equal(state.calls.some((c) => c.operation === "update"), false);
+  state.authorized = false;
+  await assert.rejects(api.updateMilestoneNote("t", "first", "x"), /UNAUTHORIZED/);
+});
+
+test("template drag reorder writes the whole track order in one upsert", async () => {
+  const state = reset();
+  const stage = (id, sort_order) => ({ id, key: id, label: id, track: "upstream", sort_order, show_in_table: true, archived_at: null });
+  state.milestones = [stage("m1", 10), stage("m2", 20), stage("m3", 30)];
+  assert.deepEqual(await api.reorderMilestoneTypes("upstream", ["m3", "m1", "m2"]), {});
+  const writes = state.calls.filter((c) => c.operation !== "select");
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].operation, "upsert");
+  assert.deepEqual(writes[0].payload.map((r) => [r.id, r.sort_order]), [["m3", 10], ["m1", 20], ["m2", 30]]);
+});
+
+test("template drag reorder refuses stale or partial lists without writing", async () => {
+  const state = reset();
+  const stage = (id, sort_order) => ({ id, key: id, label: id, track: "upstream", sort_order, show_in_table: true, archived_at: null });
+  state.milestones = [stage("m1", 10), stage("m2", 20)];
+  for (const ids of [["m1"], ["m1", "m1"], ["m1", "other"], ["m1", "m2", "m3"]])
+    assert.match((await api.reorderMilestoneTypes("upstream", ids)).error, /changed meanwhile/);
+  assert.match((await api.reorderMilestoneTypes("sideways", ["m1", "m2"])).error, /Invalid track/);
+  assert.deepEqual(await api.reorderMilestoneTypes("upstream", ["m1", "m2"]), {}, "unchanged order is a no-op");
+  assert.equal(state.calls.some((c) => c.operation !== "select"), false);
+  state.authorized = false;
+  await assert.rejects(api.reorderMilestoneTypes("upstream", ["m2", "m1"]), /UNAUTHORIZED/);
+});

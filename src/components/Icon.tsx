@@ -4,6 +4,7 @@ import {
   Bell,
   FolderOpen,
   Settings2,
+  ShieldCheck,
   ChartColumn,
   CircleUserRound,
   Download,
@@ -31,6 +32,7 @@ const icons = {
   search: Search,
   filters: SlidersHorizontal,
   settings: Settings2,
+  shield: ShieldCheck,
   users: Users,
   close: X,
 };

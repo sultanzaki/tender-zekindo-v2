@@ -99,6 +99,7 @@ const tables = {
   milestone_types: [],
   select_options: [],
   tender_events: [],
+  access_log: [],
   error_log: [],
   document_types: [
     {
@@ -472,8 +473,16 @@ test("valid admins retain the administration workspace", async () => {
   }
 });
 
-test("authenticated Excel keeps values and enforces admin-only notes", async () => {
-  for (const role of ["viewer", "admin"]) {
+test("Excel export is administrator-only and recorded in the access log", async () => {
+  const before = tables.access_log.length;
+  const refused = await fetch(base + "/tenders/export?track=all", {
+    headers: headers("viewer"),
+    redirect: "manual",
+  });
+  assert.ok(!/spreadsheetml/.test(refused.headers.get("content-type") ?? ""));
+  assert.ok(refused.status >= 300 && refused.status < 400 || /NEXT_REDIRECT|\/login|"\/"/.test(await refused.text()));
+  assert.equal(tables.access_log.length, before, "a refused export is not logged as an export");
+  for (const role of ["admin"]) {
     const response = await fetch(base + "/tenders/export?track=all", {
       headers: headers(role),
     });
@@ -493,6 +502,10 @@ test("authenticated Excel keeps values and enforces admin-only notes", async () 
       role === "admin",
     );
   }
+  const entry = tables.access_log.at(-1);
+  assert.equal(entry.action, "export");
+  assert.equal(entry.actor_id, admin.id);
+  assert.equal(entry.detail.rows, 1);
 });
 
 test("downloads require a live session, enforce tender ownership and never expose signed URLs", async () => {
@@ -509,6 +522,10 @@ test("downloads require a live session, enforce tender ownership and never expos
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("location"), null);
     assert.equal(await response.text(), "SECURE-FIXTURE-DOCUMENT");
+    const logged = tables.access_log.at(-1);
+    assert.equal(logged.action, "download");
+    assert.equal(logged.actor_id, viewer.id);
+    assert.equal(logged.detail.tenderId, "T0001");
     const cross = await fetch(base + route.replace("T0001", "T0002"), {
       headers: headers("admin"),
     });
@@ -528,10 +545,34 @@ test("downloads require a live session, enforce tender ownership and never expos
   assert.equal(invalid.status, 400);
 });
 
+test("the session heartbeat reports a revoked session without needing admin rights", async () => {
+  const [id] = Object.entries(manifest.node).find(
+    ([, action]) => action.exportedName === "keepSessionAlive",
+  );
+  for (const [role, alive] of [["viewer", true], ["revoked", false], ["expired", false]]) {
+    const response = await fetch(base + "/tenders", {
+      method: "POST",
+      headers: headers(role, { "Next-Action": id, "Content-Type": "text/plain;charset=UTF-8", Origin: base }),
+      body: "[]",
+      redirect: "manual",
+    });
+    assert.match(await response.text(), new RegExp(`1:${alive}`), role);
+  }
+});
+
+// Access-log rows record reads (downloads, exports); they are not mutations.
+const businessWrites = () => writes.filter((w) => w.table !== "access_log");
+
 test("every exposed admin action rejects forged sessions and viewers before mutation", async () => {
   const actions = Object.entries(manifest.node).filter(
     ([, action]) =>
-      !["login", "logout", "reportClientError"].includes(action.exportedName),
+      ![
+        "login",
+        "logout",
+        "logoutIdle",
+        "keepSessionAlive",
+        "reportClientError",
+      ].includes(action.exportedName),
   );
   assert.ok(actions.length >= 20);
   for (const role of ["revoked", "viewer"]) {
@@ -566,7 +607,7 @@ test("every exposed admin action rejects forged sessions and viewers before muta
     }
   }
   assert.equal(
-    writes.length,
+    businessWrites().length,
     0,
     "authorization failures must not mutate fixture data",
   );
@@ -587,7 +628,7 @@ test("cross-origin requests cannot execute an authenticated admin action", async
     redirect: "manual",
   });
   assert.equal(response.status, 500);
-  assert.equal(writes.length, 0);
+  assert.equal(businessWrites().length, 0);
 });
 
 test("security headers and login page expose no public workspace entry", async () => {
@@ -662,6 +703,15 @@ test("real login uses generic credential errors, secure cookies and revokes the 
     .click();
   await page.waitForURL("**/login");
   assert.ok(!tables.sessions.some((row) => row.id === hash(cookie.value)));
+  const events = tables.access_log.map((e) => [e.action, e.actor_email, e.detail?.reason]);
+  for (const expected of [
+    ["login_failed", viewer.email, "wrong_password"],
+    ["login_failed", "unknown@example.test", "unknown_account"],
+    ["login", viewer.email, undefined],
+    ["logout", viewer.email, undefined],
+  ])
+    assert.ok(events.some((e) => JSON.stringify(e) === JSON.stringify(expected)), JSON.stringify(expected));
+  assert.ok(tables.access_log.every((e) => !JSON.stringify(e).includes("Password")), "passwords never logged");
   const reuse = await fetch(base + "/tenders/export", {
     headers: { Cookie: `zk_session=${cookie.value}` },
     redirect: "manual",

@@ -141,3 +141,18 @@ export async function setMilestoneTableVisibility() {
 export async function login() {
   return { error: "Incorrect email or password." };
 }
+export async function updateMilestoneNote(_id: string, key: string, note: string) {
+  document.body.dataset.note = JSON.stringify({ key, note });
+  return note.includes("fail") ? { error: "Could not save note" } : undefined;
+}
+export async function reorderMilestoneTypes(track: string, ids: string[]) {
+  document.body.dataset.reordered = JSON.stringify({ track, ids });
+  return ids[0] === "fail" ? { error: "Could not reorder" } : {};
+}
+export async function logoutIdle() {
+  document.body.dataset.idleLogout = "true";
+}
+export async function keepSessionAlive() {
+  document.body.dataset.heartbeats = String(Number(document.body.dataset.heartbeats || 0) + 1);
+  return true;
+}

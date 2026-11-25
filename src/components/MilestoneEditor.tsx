@@ -9,6 +9,7 @@ import {
   CollapsibleTrigger,
 } from "./ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { DragHandle, SortableList, moveId } from "./SortableList";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -42,10 +43,17 @@ export function MilestoneEditor({
     .filter((m): m is MilestoneType => !!m);
   const hidden = catalog.filter((m) => !order.includes(m.key));
   const issues = findOutOfOrderMilestones(dates, selected);
+  // Works on keys rather than list positions: `order` can hold keys the
+  // catalog no longer offers, so its indexes do not match `selected`.
   function move(i: number, offset: number) {
-    const next = [...order];
-    [next[i], next[i + offset]] = [next[i + offset], next[i]];
-    onOrder(next);
+    const target = selected[i + offset];
+    if (target) onOrder(moveId(order, selected[i].key, target.key));
+  }
+  // Dragging reorders the visible steps; any other keys keep their slots.
+  function reorder(keys: string[]) {
+    const shown = new Set(keys);
+    const queue = [...keys];
+    onOrder(order.map((k) => (shown.has(k) ? queue.shift()! : k)));
   }
   function add() {
     const label = name.trim();
@@ -92,8 +100,16 @@ export function MilestoneEditor({
         </div>
       )}
       <div className={styles.milestoneList}>
-        {selected.map((m, i) => (
-          <div key={m.key} className={styles.milestoneRow}>
+        <SortableList
+          id={`tender-milestones-${track}`}
+          items={selected}
+          getId={(m) => m.key}
+          getLabel={(m) => m.label}
+          onReorder={reorder}
+        >
+          {(m, i, drag) => (
+          <div className={styles.milestoneRow}>
+            <DragHandle handle={drag.handle} />
             <span className={styles.stepNumber}>{i + 1}</span>
             <Label className={styles.label}>
               {m.label}
@@ -134,7 +150,8 @@ export function MilestoneEditor({
               </Button>
             </div>
           </div>
-        ))}
+          )}
+        </SortableList>
       </div>
       {!selected.length && (
         <p className="muted">

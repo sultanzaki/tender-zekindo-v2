@@ -25,6 +25,8 @@ import {
 import { safeNextPath } from "@/lib/validation";
 import { MilestoneDue, OperationsHeading } from "@/components/TenderOperations";
 import { MoneyValue } from "@/components/MoneyValue";
+import { MilestoneNote } from "@/components/MilestoneNote";
+import { canViewFinancials } from "@/lib/roles";
 import { ResultBadge } from "@/components/ResultBadge";
 import { TrackBadge } from "@/components/TrackBadge";
 import { DocumentChecklist } from "@/components/DocumentChecklist";
@@ -51,6 +53,7 @@ export default async function Detail({
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const tender = await getTenderById(id);
   const isAdmin = ctx?.profile.role === "admin";
+  const financials = canViewFinancials(ctx.profile.role);
   if (!tender || (tender.archivedAt && !isAdmin)) notFound();
   const tab =
     query.tab === "documents"
@@ -264,6 +267,14 @@ export default async function Detail({
                           <strong className={styles.nextTag}>Next</strong>
                         )}
                       </div>
+                      <MilestoneNote
+                        key={tender.milestoneNotes[m.key] ?? ""}
+                        tenderId={id}
+                        milestoneKey={m.key}
+                        label={m.label}
+                        note={tender.milestoneNotes[m.key]}
+                        canEdit={isAdmin && !tender.archivedAt}
+                      />
                     </div>
                   </div>
                 ))}
@@ -277,7 +288,7 @@ export default async function Detail({
             <div className={styles.sidePanels}>
               <Card className={`${workspace.panel} gap-0 py-0`}>
                 <div className={workspace.panelHead}>
-                  <h2>Value & entity</h2>
+                  <h2>{financials ? "Value & entity" : "Entity & quantity"}</h2>
                 </div>
                 <dl className={styles.facts}>
                   <div>
@@ -288,20 +299,24 @@ export default async function Detail({
                     <dt>Quantity</dt>
                     <dd>{tender.qty?.toLocaleString("id-ID") ?? "—"}</dd>
                   </div>
-                  <div>
-                    <dt>OE value</dt>
-                    <dd>
-                      <MoneyValue value={tender.oe} canView />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Our bid value</dt>
-                    <dd>
-                      <MoneyValue value={tender.nilaiPenawaran} canView />
-                    </dd>
-                  </div>
+                  {financials && (
+                    <>
+                      <div>
+                        <dt>OE value</dt>
+                        <dd>
+                          <MoneyValue value={tender.oe} canView />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Our bid value</dt>
+                        <dd>
+                          <MoneyValue value={tender.nilaiPenawaran} canView />
+                        </dd>
+                      </div>
+                    </>
+                  )}
                 </dl>
-                {tender.oeCatatan && (
+                {financials && tender.oeCatatan && (
                   <p className={styles.factNote}>{tender.oeCatatan}</p>
                 )}
               </Card>

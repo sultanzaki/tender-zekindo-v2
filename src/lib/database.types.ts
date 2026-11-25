@@ -98,6 +98,7 @@ export interface Database {
           idr_per_l: number | null;
           milestones: Milestones;
           milestone_labels: Record<string,string>;
+          milestone_notes: Record<string, string>;
           milestone_order: string[] | null;
           result: string | null;
           carry_over: string | null;
@@ -249,6 +250,8 @@ export interface Database {
           user_id: string;
           created_at: string;
           expires_at: string;
+          /** Migration 0016. */
+          last_seen_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["sessions"]["Row"]> & {
           id: string;
@@ -263,6 +266,24 @@ export interface Database {
           referencedRelation: "profiles";
           referencedColumns: ["id"];
         }];
+      };
+      /** Migration 0017. Written by src/lib/access-log.ts only. */
+      access_log: {
+        Row: {
+          id: number;
+          created_at: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          action: string;
+          detail: Record<string, unknown>;
+          ip: string | null;
+          user_agent: string | null;
+        };
+        Insert: Partial<
+          Omit<Database["public"]["Tables"]["access_log"]["Row"], "id">
+        > & { action: string };
+        Update: never;
+        Relationships: [];
       };
       milestone_types: {
         Row: {

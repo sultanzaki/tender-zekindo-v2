@@ -68,13 +68,32 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # or: supabase db reset (applies see
 npm run dev
 ```
 
-`supabase/seed.sql` is generated from the 270 tenders extracted from the
-source Excel during the design phase (`project/tenders-data.js`). Regenerate
-it with `node scripts/generate-seed-sql.mjs` if that source data changes.
+`supabase/seed.sql` holds three **fictional** tenders for local development.
+It never truncates and skips rows that already exist. The company's real
+register is confidential and must not be committed to this repository: import
+it into the production database directly, never through a file in Git.
 
 ### Tender schedules
 
 Apply migration 0013 before deploying the package schedule update. It freezes the current schedule for existing tenders, including saved order and dates. New tenders start with the template for their track. Adding a stage in a tender form stores it with that tender when the form is saved. Edit the defaults for future packages in Settings → Milestone templates.
+
+### Access log
+
+Sign-ins (including failed attempts), sign-outs, Excel exports and document downloads are written to `access_log` with user, time, IP address and browser (migration 0017). Administrators review them in **Settings → Access log**. Exports and downloads are refused if their entry cannot be stored, so nothing leaves the application unrecorded. **Excel export is administrator-only.**
+
+### Milestone notes
+
+Each tender milestone can carry one note, written by administrators from **Tender detail → Schedule → Add note**. Every role can read it. Notes belong to that tender only, are recorded in the activity history and are not exported to Excel. Apply `supabase/migrations/0015_milestone_notes.sql` before deploying.
+
+### Roles
+
+| Role | Access |
+| --- | --- |
+| `admin` | Everything: edits, archive, users, Settings, internal notes, activity |
+| `viewer` | Read-only; sees OE, bid values and Analytics, not internal notes; no Excel export |
+| `restricted` | Read-only like viewer, but OE, OE note, bid value and IDR/L are removed server-side and Analytics is unavailable (navigation, page and export) |
+
+Apply `supabase/migrations/0014_restricted_role.sql` before assigning the new role. Permission checks live in `src/lib/roles.ts`; redaction happens in `redactTender()` (`src/lib/tenders.ts`) before data reaches the browser.
 
 ### Authentication
 
@@ -94,8 +113,7 @@ How it works:
   (`resetUserPassword` also revokes that user's existing sessions).
 - **Sessions**: a random 32-byte token in an httpOnly, `SameSite=Lax` cookie;
   only its SHA-256 hash is stored server-side, in the `sessions` table
-  (`src/lib/auth/session.ts`). Sessions last 30 days and aren't refreshed on
-  activity — signing in again after that is expected, not a bug.
+  (`src/lib/auth/session.ts`). Sessions last at most 12 hours; see idle sign-out below.
 - **Route protection**: `src/proxy.ts` (Next.js 16's renamed middleware —
   must live next to `src/app`, not the repo root, or Next silently never
   runs it) does a cheap, cookie-presence-only redirect to `/login`; it's
@@ -107,6 +125,10 @@ How it works:
   `requireUser()`/`requireAdmin()` (`src/lib/auth/dal.ts`), called at the
   top of every protected page and Server Action. That's the actual security
   boundary, not the proxy.
+- **Idle sign-out**: a session ends after 60 minutes without activity in any
+  tab (one-minute warning first) and after 12 hours at most, enforced on the
+  server via `sessions.last_seen_at` (migration 0016) and in the browser.
+  Values live in `src/lib/auth/session-policy.ts`.
 - **Login protection**: invalid credentials use the same message and bcrypt work
   for unknown and known accounts. A bounded, per-process throttle reserves at most
   10 attempts per email per 15 minutes. Multi-instance hosting also needs an edge

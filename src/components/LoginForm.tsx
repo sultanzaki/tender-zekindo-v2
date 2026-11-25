@@ -11,7 +11,13 @@ import Image from "next/image";
 
 import { login } from "@/lib/auth/actions";
 import styles from "./AuthForm.module.css";
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({
+  next,
+  notice,
+}: {
+  next: string;
+  notice?: string;
+}) {
   const [state, action, pending] = useActionState(login, undefined);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +81,11 @@ export function LoginForm({ next }: { next: string }) {
                 </Button>
               </div>
             </div>
+            {notice && !state?.error && (
+              <Alert>
+                <AlertDescription>{notice}</AlertDescription>
+              </Alert>
+            )}
             {state?.error && (
               <Alert variant="destructive">
                 <AlertDescription>{state.error}</AlertDescription>

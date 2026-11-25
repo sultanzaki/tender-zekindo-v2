@@ -1,5 +1,7 @@
 import ExcelJS from "exceljs";
-import { requireUser } from "@/lib/auth/dal";
+import { requireAdmin } from "@/lib/auth/dal";
+import { logAccess } from "@/lib/access-log";
+import { canViewFinancials } from "@/lib/roles";
 import { getAllTenders } from "@/lib/tenders";
 import { getMilestoneTypes, getMilestoneCatalog } from "@/lib/milestones";
 import { readTenderFilters } from "@/lib/table-state";
@@ -20,8 +22,11 @@ export const dynamic = "force-dynamic";
 const msKey = (key: string) => `ms_${key}`;
 
 export async function GET(request: Request) {
-  const ctx = await requireUser();
+  // Exports carry the whole register out of the application: administrators
+  // only, and never without an access-log entry.
+  const ctx = await requireAdmin();
   const isAdmin = ctx?.profile.role === "admin";
+  const financials = canViewFinancials(ctx.profile.role);
 
   const { searchParams } = new URL(request.url);
   const track =
@@ -51,6 +56,18 @@ export async function GET(request: Request) {
           filters.deadline),
   );
 
+  const logged = await logAccess({
+    action: "export",
+    actorId: ctx.userId,
+    actorEmail: ctx.email,
+    detail: { track, rows: rows.length, query: searchParams.toString().slice(0, 500) },
+  });
+  if (!logged)
+    return new Response("Export is unavailable right now. Please try again.", {
+      status: 503,
+      headers: { "Cache-Control": "private, no-store" },
+    });
+
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Tenders");
 
@@ -67,9 +84,13 @@ export async function GET(request: Request) {
     { header: "Entity", key: "entitas", width: 14 },
     { header: "Period", key: "period", width: 12 },
     { header: "Qty", key: "qty", width: 10 },
-    { header: "OE (Rp)", key: "oe", width: 16 },
-    { header: "OE Note", key: "oeCatatan", width: 20 },
-    { header: "Bid Value (Rp)", key: "nilaiPenawaran", width: 16 },
+    ...(financials
+      ? [
+          { header: "OE (Rp)", key: "oe", width: 16 },
+          { header: "OE Note", key: "oeCatatan", width: 20 },
+          { header: "Bid Value (Rp)", key: "nilaiPenawaran", width: 16 },
+        ]
+      : []),
     { header: "P&L", key: "pnl", width: 8 },
     ...milestoneTypes.map((m) => ({
       header: m.label,
@@ -96,8 +117,9 @@ export async function GET(request: Request) {
     pattern: "solid",
     fgColor: { argb: "FF1A5F7A" },
   };
-  for (const key of ["oe", "nilaiPenawaran"])
-    sheet.getColumn(key).numFmt = "#,##0.00";
+  if (financials)
+    for (const key of ["oe", "nilaiPenawaran"])
+      sheet.getColumn(key).numFmt = "#,##0.00";
   sheet.getColumn("qty").numFmt = "#,##0.########";
 
   rows.forEach((t) => {
@@ -111,9 +133,9 @@ export async function GET(request: Request) {
       entitas: t.entitas,
       period: t.period,
       qty: t.qty,
-      oe: ctx ? t.oe : "Sign in to view",
-      oeCatatan: ctx ? t.oeCatatan : "Sign in to view",
-      nilaiPenawaran: ctx ? t.nilaiPenawaran : "Sign in to view",
+      ...(financials
+        ? { oe: t.oe, oeCatatan: t.oeCatatan, nilaiPenawaran: t.nilaiPenawaran }
+        : {}),
       pnl: t.pnl ? "Yes" : "",
       ...Object.fromEntries(
         milestoneTypes.map((m) => [msKey(m.key), t.milestones[m.key]]),

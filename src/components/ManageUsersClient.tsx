@@ -104,6 +104,7 @@ export function ManageUsersClient({
           ["Total accounts", users.length],
           ["Administrators", users.filter((u) => u.role === "admin").length],
           ["Viewers", users.filter((u) => u.role === "viewer").length],
+          ["Restricted", users.filter((u) => u.role === "restricted").length],
         ].map(([label, value]) => (
           <div key={label} className={styles.metric}>
             <span className={styles.metricLabel}>{label}</span>
@@ -169,6 +170,9 @@ export function ManageUsersClient({
                     >
                       <NativeSelectOption value="viewer">
                         Viewer
+                      </NativeSelectOption>
+                      <NativeSelectOption value="restricted">
+                        Restricted
                       </NativeSelectOption>
                       <NativeSelectOption value="admin">
                         Admin
@@ -279,6 +283,9 @@ export function ManageUsersClient({
               >
                 <NativeSelectOption value="viewer">
                   Viewer · read-only
+                </NativeSelectOption>
+                <NativeSelectOption value="restricted">
+                  Restricted · read-only, no OE, bid values or Analytics
                 </NativeSelectOption>
                 <NativeSelectOption value="admin">
                   Admin · manage all tenders and users

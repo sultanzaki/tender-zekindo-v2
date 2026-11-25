@@ -12,6 +12,7 @@ import { SELECT_OPTIONS_TAG, TENDERS_TAG } from "./cache-tags";
 import { currentPeriod, periodsSorted } from "./tender-logic";
 import {
   EXTENDABLE_FIELDS,
+  MILESTONE_NOTE_MAX_LENGTH,
   RESULT_ENUM,
   type ExtendableField,
   type Milestones,
@@ -571,6 +572,55 @@ export async function quickUpdateMilestone(
 
   revalidatePath("/");
   revalidatePath("/tenders");
+  updateTag(TENDERS_TAG);
+  revalidatePath(`/tenders/${id}`);
+}
+
+/** Saves the note for one milestone of one tender. An empty note removes it. */
+export async function updateMilestoneNote(
+  id: string,
+  key: string,
+  note: string,
+): Promise<ActionError | undefined> {
+  const ctx = await requireAdmin();
+  if (!MILESTONE_KEY_PATTERN.test(key))
+    return { error: "Invalid milestone key." };
+  if (typeof note !== "string") return { error: "Enter a valid note." };
+  const text = note.trim();
+  if (text.length > MILESTONE_NOTE_MAX_LENGTH)
+    return {
+      error: `Notes can be at most ${MILESTONE_NOTE_MAX_LENGTH} characters.`,
+    };
+
+  const { data: before, error: beforeError } = await supabaseServer()
+    .from("tenders")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (beforeError || !before) return { error: "Tender not found." };
+  if (before.archived_at) return { error: "Restore the tender before editing it." };
+  if (before.milestone_order && !before.milestone_order.includes(key))
+    return { error: "This stage is outside the tender schedule." };
+
+  const milestone_notes = { ...(before.milestone_notes ?? {}) };
+  if (text) milestone_notes[key] = text;
+  else delete milestone_notes[key];
+  const patch = { milestone_notes, updated_by: ctx.userId };
+  const { error } = await supabaseServer()
+    .from("tenders")
+    .update(patch)
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  await logTenderEvent({
+    tenderId: id,
+    tenderLabel: before.tender_no || before.product || id,
+    actorId: ctx.userId,
+    actorName: ctx.profile.name,
+    action: "update",
+    changes: diffRecords(before, { milestone_notes }),
+  });
+
   updateTag(TENDERS_TAG);
   revalidatePath(`/tenders/${id}`);
 }

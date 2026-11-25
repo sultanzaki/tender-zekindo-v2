@@ -25,6 +25,8 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
+import { canViewFinancials, ROLE_LABELS } from "@/lib/roles";
+import { IdleLogout } from "./IdleLogout";
 const pages = [
   { href: "/tenders", label: "Tenders", icon: "tenders" },
   { href: "/analytics", label: "Analytics", icon: "analytics" },
@@ -165,7 +167,14 @@ function Workspace({
           <SidebarGroup>
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <nav aria-label="Main navigation">
-              {menu(isAdmin ? [...pages, settings] : pages)}
+              {menu([
+                ...pages.filter(
+                  (p) =>
+                    p.href !== "/analytics" ||
+                    canViewFinancials(profile.role),
+                ),
+                ...(isAdmin ? [settings] : []),
+              ])}
             </nav>
           </SidebarGroup>
         </SidebarContent>
@@ -177,7 +186,7 @@ function Workspace({
             </span>
             <span className="grid text-left">
               <strong>{profile.name}</strong>
-              <small>{isAdmin ? "Administrator" : "Viewer"}</small>
+              <small>{ROLE_LABELS[profile.role]}</small>
             </span>
           </SidebarMenuButton>
         </SidebarFooter>
@@ -237,6 +246,7 @@ function Workspace({
           {children}
         </div>
       </SidebarInset>
+      <IdleLogout />
       <Modal
         open={accountOpen}
         onClose={() => setAccountOpen(false)}

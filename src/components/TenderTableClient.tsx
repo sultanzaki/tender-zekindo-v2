@@ -31,7 +31,7 @@ import Link from "next/link";
 import { MeetingLink } from "@/components/MeetingLink";
 import { flushSync } from "react-dom";
 import { OperationsHeading } from "./TenderOperations";
-import { MoneyValue, MoneyAccessNotice } from "./MoneyValue";
+import { MoneyValue } from "./MoneyValue";
 import { Icon } from "./Icon";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -208,6 +208,8 @@ export function TenderTableClient({
     for (const key of Object.keys(defaultCols))
       if (typeof storedCols[key] === "boolean")
         visibleCols[key] = storedCols[key];
+  // Restricted users receive no revenue values; drop the columns entirely.
+  if (!canViewMoney) visibleCols.oe = false;
   function setVisibleCols(
     update: (previous: Record<string, boolean>) => Record<string, boolean>,
   ) {
@@ -216,7 +218,11 @@ export function TenderTableClient({
   const [columnSearch, setColumnSearch] = useState("");
   const [compact, setCompact] = useStoredJSON("zekindo-matrix-compact", false);
   const columnChoices = [
-    ...FIELD_TOGGLES.filter((c) => c.key !== "track" || track === "all"),
+    ...FIELD_TOGGLES.filter(
+      (c) =>
+        (c.key !== "track" || track === "all") &&
+        (c.key !== "oe" || canViewMoney),
+    ),
     ...milestoneTypes,
   ].filter((c) =>
     c.label.toLowerCase().includes(columnSearch.trim().toLowerCase()),
@@ -528,7 +534,6 @@ export function TenderTableClient({
           variant="ghost"
           type="button"
           className={styles.sortButton}
-          disabled={!canViewMoney && (key === "oe" || key === "nilaiPenawaran")}
           onClick={() => toggleSort(key)}
         >
           {label}
@@ -568,11 +573,6 @@ export function TenderTableClient({
           ) : undefined
         }
       />
-      {!canViewMoney && (
-        <MoneyAccessNotice
-          returnTo={`/tenders?${tenderQuery(filters, track)}`}
-        />
-      )}
       <div className={styles.priorities} aria-label="Deadline priorities">
         {priorityCards.map(({ key, title, caption, Icon: Glyph }) => (
           <button
@@ -738,16 +738,18 @@ export function TenderTableClient({
               </PopoverContent>
             </Popover>
           </div>
-          <Button asChild variant="outline" size="icon">
-            <a
-              href={exportHref}
-              aria-label="Export to Excel"
-              title="Export to Excel"
-              className={styles.exportAction}
-            >
-              <Icon name="download" width={16} height={16} />
-            </a>
-          </Button>
+          {isAdmin && (
+            <Button asChild variant="outline" size="icon">
+              <a
+                href={exportHref}
+                aria-label="Export to Excel"
+                title="Export to Excel"
+                className={styles.exportAction}
+              >
+                <Icon name="download" width={16} height={16} />
+              </a>
+            </Button>
+          )}
         </div>
         {(chips.length > 0 || track !== "all") && (
           <div className={styles.filterChips} aria-label="Active filters">
@@ -927,7 +929,7 @@ export function TenderTableClient({
               const columns = visibleMilestones.filter(m => m.track === group);
               const columnKeys = new Set(columns.map(m => m.key));
               const templateKeys = new Set(milestoneTypes.map(m => m.key));
-              const columnCount = columns.length + 7 + [isAdmin, visibleCols.track && track === "all",
+              const columnCount = columns.length + (canViewMoney ? 7 : 6) + [isAdmin, visibleCols.track && track === "all",
                 track !== "downstream", visibleCols.period, visibleCols.oe, visibleCols.qty, visibleCols.pnl].filter(Boolean).length;
               return <Fragment key={group}>
               {track === "all" && <h2 className="sticky left-0 px-3 py-2 font-semibold">{TRACK_LABELS[group]}</h2>}
@@ -974,7 +976,8 @@ export function TenderTableClient({
                   {visibleCols.period && sortableHeader("period", "Period")}
                   {visibleCols.oe && sortableHeader("oe", "OE (Rp)", "right")}
                   {visibleCols.qty && sortableHeader("qty", "Qty", "right")}
-                  {sortableHeader("nilaiPenawaran", "Bid Value", "right")}
+                  {canViewMoney &&
+                    sortableHeader("nilaiPenawaran", "Bid Value", "right")}
                   {visibleCols.pnl && sortableHeader("pnl", "P&L")}
                 </TableRow>
               </TableHeader>
@@ -1249,7 +1252,7 @@ export function TenderTableClient({
                     )}
                     {visibleCols.oe && (
                       <TableCell className={`${styles.td} ${styles.tdRight}`}>
-                        <MoneyValue value={t.oe} canView={canViewMoney} />
+                        <MoneyValue value={t.oe} canView />
                       </TableCell>
                     )}
                     {visibleCols.qty && (
@@ -1257,12 +1260,11 @@ export function TenderTableClient({
                         {t.qty ?? "—"}
                       </TableCell>
                     )}
-                    <TableCell className={`${styles.td} ${styles.tdRight}`}>
-                      <MoneyValue
-                        value={t.nilaiPenawaran}
-                        canView={canViewMoney}
-                      />
-                    </TableCell>
+                    {canViewMoney && (
+                      <TableCell className={`${styles.td} ${styles.tdRight}`}>
+                        <MoneyValue value={t.nilaiPenawaran} canView />
+                      </TableCell>
+                    )}
                     {visibleCols.pnl && (
                       <TableCell className={styles.td}>
                         {t.pnl ? "Yes" : "—"}

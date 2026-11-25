@@ -84,7 +84,7 @@ async function open(component, width = 1280) {
   await page.goto(`${base}/?component=${component}`);
   return page;
 }
-test("guests see blurred placeholders and a scoped sign-in link on desktop and phone", async () => {
+test("without financial access, money is masked and register revenue columns are removed", async () => {
   for (const width of [1440, 375]) {
     const page = await open("guest-money", width);
     const field = page.getByTestId("money-field");
@@ -105,16 +105,19 @@ test("guests see blurred placeholders and a scoped sign-in link on desktop and p
       (await page.locator("body").innerText()).includes("987.654"),
       false,
     );
-    const login = await page
-      .getByRole("link", { name: "Sign in to view amounts" })
-      .getAttribute("href");
+    // The register drops revenue columns for roles without financial access.
     assert.equal(
-      new URL(login, base).searchParams.get("next").startsWith("/tenders?"),
-      true,
+      await page.getByRole("columnheader", { name: /Bid Value|OE \(Rp\)/ }).count(),
+      0,
     );
+    await page.getByRole("button", { name: /Columns/ }).first().click();
+    await page.getByRole("checkbox", { name: "Qty" }).waitFor();
+    assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
+    await page.keyboard.press("Escape");
     assert.equal(
-      await page.getByRole("link", { name: "Export to Excel" }).isVisible(),
-      true,
+      await page.getByRole("link", { name: "Export to Excel" }).count(),
+      0,
+      "export is administrator-only",
     );
     assert.equal(
       await page.evaluate(
@@ -155,6 +158,51 @@ test("signed-in viewers see monetary fields and metrics without administrator co
     await page.close();
   }
 });
+test("administrators add milestone notes in place; others only read them", async () => {
+  const page = await open("milestone-note");
+  const reader = page.getByTestId("reader");
+  assert.equal(await reader.innerText(), "Read me");
+  assert.equal(await reader.getByRole("button").count(), 0);
+  await page.getByRole("button", { name: "Add note for Prebid" }).click();
+  const field = page.getByLabel("Notes for Prebid");
+  await field.fill("fail on purpose");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await page.getByRole("alert").filter({ hasText: "Could not save note" }).waitFor();
+  assert.equal(await field.inputValue(), "fail on purpose", "draft survives a failed save");
+  await field.fill("Dokumen sudah dikirim");
+  await field.press("Control+Enter");
+  await page.getByRole("button", { name: "Edit note for Prebid" }).waitFor();
+  assert.ok((await page.locator("body").innerText()).includes("Dokumen sudah dikirim"));
+  assert.deepEqual(JSON.parse(await page.evaluate(() => document.body.dataset.note)), {
+    key: "prebid",
+    note: "Dokumen sudah dikirim",
+  });
+  await page.close();
+});
+
+test("inactivity warns after 59 minutes and signs out at 60 unless the user stays", async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.clock.install();
+  await page.goto(`${base}/?component=nav`);
+  await page.getByText("Page content").waitFor();
+  await page.clock.runFor("58:00");
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  await page.clock.runFor("01:05");
+  const dialog = page.getByRole("dialog", { name: "Still there?" });
+  await dialog.waitFor();
+  await page.mouse.wheel(0, 200);
+  await page.clock.runFor("00:02");
+  assert.equal(await dialog.isVisible(), true, "stray input does not dismiss the warning");
+  // The frozen test clock stops the dialog animation, so skip the stability wait.
+  await dialog.getByRole("button", { name: "Stay signed in" }).click({ force: true });
+  await dialog.waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => document.body.dataset.heartbeats), "1");
+  assert.equal(await page.evaluate(() => document.body.dataset.idleLogout), undefined);
+  await page.clock.runFor("01:00:05");
+  await page.waitForFunction(() => document.body.dataset.idleLogout === "true");
+  await page.close();
+});
+
 test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");
@@ -531,6 +579,70 @@ test("deadline views export a readable calendar and handle empty followups", asy
     .getByText("Nothing matches this view.", { exact: false })
     .waitFor();
   await page.close();
+});
+async function stageOrder(page) {
+  return page.getByRole("button", { name: /^Drag to reorder / }).evaluateAll((handles) =>
+    handles.map((h) => h.getAttribute("aria-label").replace("Drag to reorder ", "")));
+}
+async function mouseDrag(page, from, to) {
+  // Centre the dragged row so the target is on screen on short phone viewports.
+  await page
+    .getByRole("button", { name: `Drag to reorder ${from}` })
+    .evaluate((el) => el.scrollIntoView({ block: "center" }));
+  const a = await page.getByRole("button", { name: `Drag to reorder ${from}` }).boundingBox();
+  const b = await page.getByRole("button", { name: `Drag to reorder ${to}` }).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++)
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2 + ((b.y - a.y + 6) * i) / 10);
+  await page.mouse.up();
+}
+test("tender stages reorder by mouse and keyboard drag and save in that order", async () => {
+  const page = await open("edit-reorder");
+  await page.getByRole("button", { name: "Milestones", exact: true }).click();
+  assert.deepEqual(await stageOrder(page), ["Stage A", "Stage B", "Stage C"]);
+  await mouseDrag(page, "Stage A", "Stage C");
+  await page.waitForFunction(() => document.querySelectorAll("[data-dragging]").length === 0);
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage C", "Stage A"]);
+  const handle = page.getByRole("button", { name: "Drag to reorder Stage A" });
+  await handle.focus();
+  // Each step waits for the screen-reader announcement, as a user would.
+  const live = page.locator("[role=status][aria-live]");
+  await page.keyboard.press("Space");
+  await page.locator("[data-dragging]").waitFor();
+  // dnd-kit's keyboard sensor attaches its arrow-key listener on the next
+  // task after pick-up; a person never presses that fast.
+  await page.waitForTimeout(100);
+  await page.keyboard.press("ArrowUp");
+  await live.filter({ hasText: "is over position 2 of 3." }).waitFor({ state: "attached" });
+  await page.keyboard.press("Space");
+  await live.filter({ hasText: "Stage A dropped at position 2 of 3." }).waitFor({ state: "attached" });
+  await page.waitForFunction(() => document.querySelectorAll("[data-dragging]").length === 0);
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage A", "Stage C"]);
+  await page.getByRole("button", { name: "Move Stage C up" }).click();
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage C", "Stage A"], "arrow buttons still work");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.getByRole("alert").waitFor();
+  const saved = JSON.parse(await page.locator("body").getAttribute("data-saved"));
+  assert.deepEqual(saved.milestoneOrder, ["b", "c", "a"]);
+  await page.close();
+});
+test("template stages reorder by drag and submit the whole track order", async () => {
+  for (const width of [1280, 375]) {
+    const page = await open("milestones-reorder", width);
+    await mouseDrag(page, "Stage C", "Stage A");
+    await page.waitForFunction(() => document.body.dataset.reordered);
+    assert.deepEqual(JSON.parse(await page.evaluate(() => document.body.dataset.reordered)), {
+      track: "upstream",
+      ids: ["c", "a", "b"],
+    });
+    assert.deepEqual(await stageOrder(page), ["Stage C", "Stage A", "Stage B"]);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await page.close();
+  }
 });
 test("milestone catalogs switch tracks without mixing them", async () => {
   const page = await open("milestones");
