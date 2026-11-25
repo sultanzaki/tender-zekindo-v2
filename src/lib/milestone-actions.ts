@@ -173,6 +173,45 @@ export async function moveMilestoneType(
 
 /** Controls the starting visibility of a milestone in the dense tender table
  * (the Columns menu still toggles it per session). */
+/** Drag-and-drop reorder: `ids` is the full active catalog of one track in its
+ * new order. Every position is written in one upsert, so a failed request
+ * leaves the previous order intact. A stale list (another admin added or
+ * archived a step meanwhile) is refused rather than guessed at. */
+export async function reorderMilestoneTypes(
+  track: Track,
+  ids: string[],
+): Promise<MilestoneActionResult> {
+  await requireAdmin();
+  if (track !== "upstream" && track !== "downstream")
+    return { error: "Invalid track." };
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string"))
+    return { error: "Invalid order." };
+
+  const { data, error } = await supabaseServer()
+    .from("milestone_types")
+    .select("*")
+    .eq("track", track)
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) return { error: error.message };
+
+  const list = data ?? [];
+  const byId = new Map(list.map((m) => [m.id, m]));
+  if (ids.length !== list.length || new Set(ids).size !== ids.length || ids.some((id) => !byId.has(id)))
+    return { error: "The template changed meanwhile. Reload the page and try again." };
+
+  const rows = ids.map((id, i) => ({ ...byId.get(id)!, sort_order: (i + 1) * ORDER_STEP }));
+  const changed = rows.some((row) => row.sort_order !== byId.get(row.id)!.sort_order);
+  if (!changed) return {};
+  const write = await supabaseServer().from("milestone_types").upsert(rows);
+  if (write.error) return { error: write.error.message };
+
+  updateTag(MILESTONE_TYPES_TAG);
+  revalidatePath("/admin/milestones");
+  return {};
+}
+
 export async function setMilestoneTableVisibility(
   id: string,
   showInTable: boolean,

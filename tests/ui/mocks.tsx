@@ -145,3 +145,7 @@ export async function updateMilestoneNote(_id: string, key: string, note: string
   document.body.dataset.note = JSON.stringify({ key, note });
   return note.includes("fail") ? { error: "Could not save note" } : undefined;
 }
+export async function reorderMilestoneTypes(track: string, ids: string[]) {
+  document.body.dataset.reordered = JSON.stringify({ track, ids });
+  return ids[0] === "fail" ? { error: "Could not reorder" } : {};
+}

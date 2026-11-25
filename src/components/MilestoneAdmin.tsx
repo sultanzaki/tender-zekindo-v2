@@ -14,12 +14,14 @@ import {
   archiveMilestoneType,
   moveMilestoneType,
   renameMilestoneType,
+  reorderMilestoneTypes,
   restoreMilestoneType,
   setMilestoneTableVisibility,
 } from "@/lib/milestone-actions";
 import { TRACK_LABELS, type MilestoneTypeAdmin, type Track } from "@/lib/types";
 import { PageHeading } from "./PageHeading";
 import { Modal } from "./Modal";
+import { DragHandle, SortableList, type DragHandleProps } from "./SortableList";
 import workspace from "./Workspace.module.css";
 import shared from "./shared.module.css";
 import styles from "./MilestoneAdmin.module.css";
@@ -82,7 +84,20 @@ function Section({ section }: { section: MilestoneSection }) {
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  const active = milestoneTypes.filter((m) => !m.archivedAt);
+  const saved = milestoneTypes.filter((m) => !m.archivedAt);
+  // A dropped order shows at once, until the refreshed catalog arrives (its
+  // order then differs from `base`) or the save fails.
+  const [pendingOrder, setPendingOrder] = useState<{
+    base: string;
+    ids: string[];
+  } | null>(null);
+  const savedIds = saved.map((m) => m.id).join();
+  const active =
+    pendingOrder?.base === savedIds
+      ? pendingOrder.ids
+          .map((id) => saved.find((m) => m.id === id))
+          .filter((m): m is MilestoneTypeAdmin => !!m)
+      : saved;
   const archived = milestoneTypes.filter((m) => m.archivedAt);
 
   function run(id: string, fn: () => Promise<{ error?: string }>) {
@@ -95,6 +110,26 @@ function Section({ section }: { section: MilestoneSection }) {
         else router.refresh();
       } catch {
         setMessage("The change could not be saved. Try again.");
+      } finally {
+        setBusyId(null);
+      }
+    });
+  }
+
+  function handleReorder(ids: string[]) {
+    setPendingOrder({ base: savedIds, ids });
+    setBusyId("__order__");
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        const result = await reorderMilestoneTypes(track, ids);
+        if (result?.error) {
+          setPendingOrder(null);
+          setMessage(result.error);
+        } else router.refresh();
+      } catch {
+        setPendingOrder(null);
+        setMessage("The new order could not be saved. Try again.");
       } finally {
         setBusyId(null);
       }
@@ -121,6 +156,7 @@ function Section({ section }: { section: MilestoneSection }) {
     m: MilestoneTypeAdmin,
     index: number,
     list: MilestoneTypeAdmin[],
+    drag?: DragHandleProps,
   ) {
     const draft = drafts[m.id] ?? m.label;
     const dirty = draft.trim() !== m.label;
@@ -133,6 +169,7 @@ function Section({ section }: { section: MilestoneSection }) {
         className={styles.row}
         style={{ opacity: isArchived ? 0.55 : 1 }}
       >
+        {drag && <DragHandle handle={drag.handle} disabled={busy} />}
         <span className={styles.index}>{index + 1}.</span>
         <Input
           className={styles.name}
@@ -299,7 +336,16 @@ function Section({ section }: { section: MilestoneSection }) {
         </div>
 
         {active.length ? (
-          active.map((m, i) => row(m, i, active))
+          <SortableList
+            id={`milestone-template-${track}`}
+            items={active}
+            getId={(m) => m.id}
+            getLabel={(m) => m.label}
+            disabled={busyId !== null}
+            onReorder={handleReorder}
+          >
+            {(m, i, drag) => row(m, i, active, drag)}
+          </SortableList>
         ) : (
           <div className={shared.emptyState}>
             No {trackLabel.toLowerCase()} milestones yet. Add one above.

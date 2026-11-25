@@ -1,0 +1,44 @@
+.item {
+  position: relative;
+  background: var(--color-card);
+}
+
+.item[data-dragging] {
+  z-index: 2;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(15 23 42 / 0.16);
+}
+
+.handle {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-fg3);
+  cursor: grab;
+  /* Lets touch screens start a drag from the handle instead of scrolling. */
+  touch-action: none;
+}
+
+.handle:hover:not(:disabled) {
+  background: var(--zk-gray-100);
+  color: var(--color-fg1);
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.item[data-dragging] .handle {
+  cursor: grabbing;
+}

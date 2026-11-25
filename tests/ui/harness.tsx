@@ -204,6 +204,26 @@ const components = {
       existingTenders={[]}
     />
   ),
+  "edit-reorder": (
+    <EditTenderForm
+      tender={{ ...tenders[0], qty: 12.5, oe: 1000, nilaiPenawaran: 900, oeCatatan: null,
+        catatanInternal: null, milestoneOrder: ["a", "b", "c"] } as Tender}
+      selectOptions={{ area: ["Jawa"], customer: ["Customer"], entitas: ["ZKI"] }}
+      milestoneTypes={["a", "b", "c"].map((key, i) => ({ id: key, key,
+        label: `Stage ${key.toUpperCase()}`, track: "upstream" as const, sortOrder: i, showInTable: true }))}
+      existingTenders={[]}
+    />
+  ),
+  "milestones-reorder": (
+    <MilestoneAdmin
+      sections={[
+        { track: "upstream", loadError: null, milestoneTypes: ["a", "b", "c"].map((id, i) => ({
+          id, key: id, label: `Stage ${id.toUpperCase()}`, track: "upstream" as const,
+          sortOrder: (i + 1) * 10, showInTable: true, archivedAt: null })) },
+        { track: "downstream", loadError: null, milestoneTypes: [] },
+      ]}
+    />
+  ),
   archive: <ArchiveAction tenderId="t" action="delete" />,
   deadlines: (
     <DeadlineWorkspace

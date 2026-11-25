@@ -556,6 +556,70 @@ test("deadline views export a readable calendar and handle empty followups", asy
     .waitFor();
   await page.close();
 });
+async function stageOrder(page) {
+  return page.getByRole("button", { name: /^Drag to reorder / }).evaluateAll((handles) =>
+    handles.map((h) => h.getAttribute("aria-label").replace("Drag to reorder ", "")));
+}
+async function mouseDrag(page, from, to) {
+  // Centre the dragged row so the target is on screen on short phone viewports.
+  await page
+    .getByRole("button", { name: `Drag to reorder ${from}` })
+    .evaluate((el) => el.scrollIntoView({ block: "center" }));
+  const a = await page.getByRole("button", { name: `Drag to reorder ${from}` }).boundingBox();
+  const b = await page.getByRole("button", { name: `Drag to reorder ${to}` }).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++)
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2 + ((b.y - a.y + 6) * i) / 10);
+  await page.mouse.up();
+}
+test("tender stages reorder by mouse and keyboard drag and save in that order", async () => {
+  const page = await open("edit-reorder");
+  await page.getByRole("button", { name: "Milestones", exact: true }).click();
+  assert.deepEqual(await stageOrder(page), ["Stage A", "Stage B", "Stage C"]);
+  await mouseDrag(page, "Stage A", "Stage C");
+  await page.waitForFunction(() => document.querySelectorAll("[data-dragging]").length === 0);
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage C", "Stage A"]);
+  const handle = page.getByRole("button", { name: "Drag to reorder Stage A" });
+  await handle.focus();
+  // Each step waits for the screen-reader announcement, as a user would.
+  const live = page.locator("[role=status][aria-live]");
+  await page.keyboard.press("Space");
+  await page.locator("[data-dragging]").waitFor();
+  // dnd-kit's keyboard sensor attaches its arrow-key listener on the next
+  // task after pick-up; a person never presses that fast.
+  await page.waitForTimeout(100);
+  await page.keyboard.press("ArrowUp");
+  await live.filter({ hasText: "is over position 2 of 3." }).waitFor({ state: "attached" });
+  await page.keyboard.press("Space");
+  await live.filter({ hasText: "Stage A dropped at position 2 of 3." }).waitFor({ state: "attached" });
+  await page.waitForFunction(() => document.querySelectorAll("[data-dragging]").length === 0);
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage A", "Stage C"]);
+  await page.getByRole("button", { name: "Move Stage C up" }).click();
+  assert.deepEqual(await stageOrder(page), ["Stage B", "Stage C", "Stage A"], "arrow buttons still work");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await page.getByRole("alert").waitFor();
+  const saved = JSON.parse(await page.locator("body").getAttribute("data-saved"));
+  assert.deepEqual(saved.milestoneOrder, ["b", "c", "a"]);
+  await page.close();
+});
+test("template stages reorder by drag and submit the whole track order", async () => {
+  for (const width of [1280, 375]) {
+    const page = await open("milestones-reorder", width);
+    await mouseDrag(page, "Stage C", "Stage A");
+    await page.waitForFunction(() => document.body.dataset.reordered);
+    assert.deepEqual(JSON.parse(await page.evaluate(() => document.body.dataset.reordered)), {
+      track: "upstream",
+      ids: ["c", "a", "b"],
+    });
+    assert.deepEqual(await stageOrder(page), ["Stage C", "Stage A", "Stage B"]);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await page.close();
+  }
+});
 test("milestone catalogs switch tracks without mixing them", async () => {
   const page = await open("milestones");
   await page.getByRole("button", { name: "Downstream", exact: true }).click();
