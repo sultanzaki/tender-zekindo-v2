@@ -284,6 +284,9 @@ const routes = [
   "/overview",
   "/analytics?track=all",
   "/notifications",
+  "/calendar",
+  "/calendar?month=2026-10",
+  "/admin/access-log",
   "/tenders?track=all",
   "/tenders/T0001",
   "/tenders/T0001?tab=documents",
@@ -416,6 +419,7 @@ test("viewers can read the workspace but cannot access admin pages, archives or 
   for (const route of [
     "/analytics",
     "/notifications",
+    "/calendar?month=2026-10",
     "/tenders?track=all",
     "/tenders/T0001",
     "/tenders/T0001?tab=documents",

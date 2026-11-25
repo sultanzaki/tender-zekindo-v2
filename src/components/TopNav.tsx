@@ -29,6 +29,7 @@ import { canViewFinancials, ROLE_LABELS } from "@/lib/roles";
 import { IdleLogout } from "./IdleLogout";
 const pages = [
   { href: "/tenders", label: "Tenders", icon: "tenders" },
+  { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/notifications", label: "Deadlines", icon: "notifications" },
 ] as const;

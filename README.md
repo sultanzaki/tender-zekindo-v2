@@ -12,6 +12,7 @@ The workspace uses the Zekindo logo, blue accents, a collapsible shadcn/ui sideb
 | ----------------------- | -------------------------------------------------------------------------- |
 | `/`                     | Active tenders across tracks, sorted by nearest scheduled deadline |
 | `/overview`             | Redirects to the deadline-focused tender register |
+| `/calendar`             | Month grid and agenda of every milestone and internal meeting, colour-coded by urgency |
 | `/analytics`            | Filterable outcomes, known pipeline, customer/area/entity performance      |
 | `/tenders`              | Search, URL filters, saved browser views, columns, mobile cards            |
 | `/tenders/:id`          | Overview, documents, and administrator activity history                    |

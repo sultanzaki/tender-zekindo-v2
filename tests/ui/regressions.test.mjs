@@ -203,6 +203,43 @@ test("inactivity warns after 59 minutes and signs out at 60 unless the user stay
   await page.close();
 });
 
+test("calendar shows colour-coded stages, details, filters and a phone agenda", async () => {
+  const page = await open("calendar", 1440);
+  const grid = page.getByRole("region", { name: "November 2026 month view" });
+  await grid.waitFor();
+  assert.match(await page.locator("body").innerText(), /6 due within 3 days/);
+  const chip = grid.getByRole("button", { name: "Prebid: Production Chemical Supply" });
+  assert.equal(await chip.getAttribute("data-tone"), "urgent");
+  await chip.click();
+  const detail = page.getByRole("dialog");
+  await detail.getByText("Tomorrow").waitFor();
+  assert.equal(await detail.getByRole("link", { name: /Production Chemical Supply/ }).getAttribute("href"), "/tenders/C0");
+  await page.keyboard.press("Escape");
+  // 25 Nov holds five entries: two shown, the rest behind "+N more".
+  await grid.getByRole("button", { name: "+3 more" }).click();
+  const day = page.getByRole("dialog").filter({ hasText: "Wednesday 25 November" });
+  await day.waitFor();
+  assert.equal(await day.getByRole("article").count(), 5);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Downstream", exact: true }).click();
+  assert.equal(await grid.getByRole("button", { name: /Production Chemical Supply/ }).count(), 0);
+  await page.getByRole("button", { name: "All tracks" }).click();
+  await page.getByLabel("Meetings").uncheck();
+  assert.equal(await grid.getByRole("button", { name: /^Meeting/ }).count(), 0);
+  await page.getByLabel("Hide closed tenders").check();
+  assert.equal(await grid.locator('[data-tone="closed"]').count(), 0);
+  await page.getByRole("button", { name: "Agenda" }).click();
+  assert.equal(await grid.isVisible(), false);
+  await page.getByRole("region", { name: "November 2026 agenda" }).waitFor();
+  await page.close();
+
+  const phone = await open("calendar", 375);
+  assert.equal(await phone.getByRole("region", { name: "November 2026 month view" }).isVisible(), false);
+  await phone.getByRole("region", { name: "November 2026 agenda" }).getByRole("link", { name: /Field Test|Demulsifier/ }).first().waitFor();
+  assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await phone.close();
+});
+
 test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");
