@@ -344,16 +344,84 @@
   .handoff {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;}
   .handoff>div:nth-child(2) {grid-column:1/-1;grid-row:1;border-bottom:1px solid var(--border);padding-bottom:10px;}
 }
-.milestoneNote { margin-top: 4px; }
-.milestoneNoteText {
-  margin: 4px 0 0;
-  padding: 6px 10px;
-  border-left: 2px solid var(--color-border);
+/* ── Timeline rows: name left, date + status right, actions underneath. */
+.timelineBody { padding-bottom: 18px; }
+.timelineHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+.timelineLabel { font-size: 14px; font-weight: 550; color: var(--color-fg1); }
+.timelineBody[data-next="true"] .timelineLabel { color: var(--color-primary-dark); }
+.nextTag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--zk-blue-50);
+  color: var(--color-primary-dark);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.timelineDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   font-size: 13px;
+  color: var(--color-fg2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.unscheduled { color: var(--color-fg3); }
+.dayPill {
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--zk-blue-50);
+  color: var(--zk-blue-700);
+}
+.dayPill[data-tone="urgent"] { background: var(--zk-error-light); color: var(--zk-error); }
+.dayPill[data-tone="soon"] { background: var(--zk-warning-light); color: var(--zk-warning-text); }
+.dayPill[data-tone="past"] { background: var(--zk-gray-100); color: var(--color-fg3); }
+
+/* Meetings link and note action share one quiet row; a note's text sits
+ * above them at full width (MilestoneNote's box is display: contents). */
+.timelineActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: 4px;
+}
+.timelineLink,
+.milestoneNoteButton {
+  height: auto;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-fg3);
+  text-decoration: none;
+}
+.timelineLink:hover,
+.milestoneNoteButton:hover { color: var(--color-primary); text-decoration: underline; }
+.milestoneNote { display: contents; }
+.milestoneNoteText {
+  order: -1;
+  flex-basis: 100%;
+  margin: 2px 0 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--zk-gray-50);
+  border-left: 3px solid var(--zk-blue-200);
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--color-fg2);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.milestoneNoteButton { height: auto; padding: 2px 0; font-size: 12px; }
-.milestoneNoteEditor { display: grid; gap: 6px; margin-top: 6px; }
+.milestoneNoteEditor { flex-basis: 100%; display: grid; gap: 6px; margin-top: 4px; }
 .milestoneNoteActions { display: flex; gap: 6px; }

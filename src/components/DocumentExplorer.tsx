@@ -1,4 +1,5 @@
 "use client";
+import { plural } from "@/lib/utils";
 import { Progress } from "./ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -266,7 +267,7 @@ export function DocumentExplorer({
         <CollapsibleTrigger type="button">
           {node.folder.name}{" "}
           <span className="muted">
-            · {node.files.length + node.children.length} items
+            · {plural(node.files.length + node.children.length, "item")}
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -416,7 +417,7 @@ export function DocumentExplorer({
             <strong>{section.title}</strong>
             <small>
               {section.kind} ·{" "}
-              {section.rootFiles.length + section.folders.length} items
+              {plural(section.rootFiles.length + section.folders.length, "item")}
             </small>
           </CollapsibleTrigger>
           <CollapsibleContent>

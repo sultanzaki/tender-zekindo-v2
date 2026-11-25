@@ -451,7 +451,7 @@ test("viewers can read the workspace but cannot access admin pages, archives or 
   });
   assert.ok([200, 404].includes(archived.status));
   const archivedBody = await archived.text();
-  assert.ok(archivedBody.includes("Tender not found."));
+  assert.ok(archivedBody.includes("Tender not found"));
   assert.ok(!archivedBody.includes(tender.catatan_internal));
   const activity = await fetch(base + "/tenders/T0001?tab=activity", {
     headers: headers("viewer"),

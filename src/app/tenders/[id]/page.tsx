@@ -15,12 +15,14 @@ import {
   type SectionDescriptor,
 } from "@/lib/folders";
 import { getTenderActivity } from "@/lib/activity";
+import { describeTenderEvent } from "@/lib/activity-format";
 import {
   resolveTenderMilestones,
   formatDateID,
   dateTone,
   todayISO,
   nextMilestone,
+  daysBetween,
 } from "@/lib/tender-logic";
 import { safeNextPath } from "@/lib/validation";
 import { MilestoneDue, OperationsHeading } from "@/components/TenderOperations";
@@ -255,26 +257,49 @@ export default async function Detail({
                       className={styles.timelineBody}
                       data-next={next?.key === m.key}
                     >
-                      <div className={styles.timelineLabel}>{m.label}</div>
-                      <MeetingLink className="text-sm text-primary underline" href={`/tenders/${id}/meetings?${new URLSearchParams({milestone:m.key})}`}>{counts?.[id]?.[m.key] ?? 0} meetings</MeetingLink>
-                      <div className={styles.timelineDate}>
-                        {m.date ? (
-                          <time dateTime={m.date}>{formatDateID(m.date)}</time>
-                        ) : (
-                          "Not scheduled"
-                        )}
-                        {next?.key === m.key && (
-                          <strong className={styles.nextTag}>Next</strong>
-                        )}
+                      <div className={styles.timelineHead}>
+                        <span className={styles.timelineLabel}>
+                          {m.label}
+                          {next?.key === m.key && (
+                            <strong className={styles.nextTag}>Next</strong>
+                          )}
+                        </span>
+                        <span className={styles.timelineDate}>
+                          {m.date ? (
+                            <time dateTime={m.date}>{formatDateID(m.date)}</time>
+                          ) : (
+                            <span className={styles.unscheduled}>Not scheduled</span>
+                          )}
+                          {m.date && !tender.result && (() => {
+                            const diff = daysBetween(m.date, today);
+                            const tone = dateTone(m.date, tender.result, today);
+                            return (
+                              <span className={styles.dayPill} data-tone={tone}>
+                                {diff < 0 ? "Passed" : diff === 0 ? "Today" : `D-${diff}`}
+                              </span>
+                            );
+                          })()}
+                        </span>
                       </div>
-                      <MilestoneNote
-                        key={tender.milestoneNotes[m.key] ?? ""}
-                        tenderId={id}
-                        milestoneKey={m.key}
-                        label={m.label}
-                        note={tender.milestoneNotes[m.key]}
-                        canEdit={isAdmin && !tender.archivedAt}
-                      />
+                      <div className={styles.timelineActions}>
+                        <MeetingLink
+                          className={styles.timelineLink}
+                          href={`/tenders/${id}/meetings?${new URLSearchParams({ milestone: m.key })}`}
+                        >
+                          {(() => {
+                            const n = counts?.[id]?.[m.key] ?? 0;
+                            return n ? `${n} meeting${n === 1 ? "" : "s"}` : "Meetings";
+                          })()}
+                        </MeetingLink>
+                        <MilestoneNote
+                          key={tender.milestoneNotes[m.key] ?? ""}
+                          tenderId={id}
+                          milestoneKey={m.key}
+                          label={m.label}
+                          note={tender.milestoneNotes[m.key]}
+                          canEdit={isAdmin && !tender.archivedAt}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -428,20 +453,15 @@ export default async function Detail({
               <AlertDescription>{activity.error}</AlertDescription>
             </Alert>
           )}
-          {activity.events.map((event) => (
+          {activity.events.map((event) => {
+            const { verb, detail } = describeTenderEvent(event);
+            return (
             <div key={event.id} className={workspace.row}>
               <div className={workspace.rowMain}>
                 <span className={workspace.rowTitle}>
-                  {event.actor_name} · {event.action}
+                  {event.actor_name} {verb}
                 </span>
-                <span className={workspace.rowSub}>
-                  {event.changes
-                    ? Object.keys(event.changes)
-                        .filter((key) => key !== "updated_by")
-                        .map((key) => key.replace(/_/g, " "))
-                        .join(", ")
-                    : "Tender status changed"}
-                </span>
+                {detail && <span className={workspace.rowSub}>{detail}</span>}
               </div>
               <span className={workspace.rowMeta}>
                 {new Intl.DateTimeFormat("en-GB", {
@@ -452,7 +472,8 @@ export default async function Detail({
                 WIB
               </span>
             </div>
-          ))}
+            );
+          })}
           {!activity.events.length && !activity.error && (
             <div className={workspace.empty}>No activity recorded yet.</div>
           )}

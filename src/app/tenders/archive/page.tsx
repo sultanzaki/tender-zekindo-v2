@@ -31,17 +31,12 @@ export default async function ArchivedTendersPage() {
         title="Archived tenders"
         description="Restore archived work or permanently remove records you no longer need."
       />
-      <Link
-        href="/tenders"
-        className={shared.cardMeta}
-        style={{ display: "inline-block", marginBottom: 16 }}
-      >
-        &larr; Back to table
-      </Link>
       <Card className={shared.card}>
         <div className={shared.cardHeader}>
-          <h2 className={shared.cardTitle}>Archived tenders</h2>
-          <span className={shared.cardMeta}>{tenders.length} archived</span>
+          <h2 className={shared.cardTitle}>
+            {tenders.length} archived tender{tenders.length === 1 ? "" : "s"}
+          </h2>
+          <span className={shared.cardMeta}>Newest first</span>
         </div>
         {tenders.length > 0 ? (
           <div className={tableStyles.scroll}>

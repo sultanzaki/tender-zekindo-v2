@@ -17,6 +17,8 @@ before(async () => {
         "table-state",
         "calendar",
         "calendar-events",
+        "activity-format",
+        "utils",
         "upload-policy",
       ]
         .map((name) => `export * from './src/lib/${name}';`)
@@ -320,4 +322,28 @@ test("calendar events carry tone, WIB meeting days and no monetary fields", () =
   assert.ok(!events.some((e) => e.title === "Hidden"), "meetings of invisible tenders are dropped");
   assert.doesNotMatch(JSON.stringify(events), /999999|888888|oe|nilai/i);
   assert.equal(api.toneFor(20, null), "upcoming");
+});
+
+test("activity history reads as sentences with friendly field names", () => {
+  assert.deepEqual(api.describeTenderEvent({ action: "create", changes: null }), {
+    verb: "created the tender", detail: null,
+  });
+  assert.deepEqual(
+    api.describeTenderEvent({
+      action: "update",
+      changes: {
+        result: { from: null, to: "WIN" },
+        milestone_notes: { from: {}, to: { pq: "x" } },
+        nilai_penawaran: { from: 1, to: 2 },
+        updated_by: { from: "a", to: "b" },
+      },
+    }),
+    { verb: "updated", detail: "Status (Running → WIN), milestone notes, bid value" },
+  );
+  assert.equal(
+    api.describeTenderEvent({ action: "update", changes: { updated_by: { from: 1, to: 2 } } }).detail,
+    null,
+  );
+  assert.equal(api.plural(1, "meeting"), "1 meeting");
+  assert.equal(api.plural(0, "item"), "0 items");
 });

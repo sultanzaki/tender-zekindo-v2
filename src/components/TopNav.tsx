@@ -56,6 +56,58 @@ function CreateLink() {
     </Button>
   );
 }
+const SUBPAGES: [RegExp, string][] = [
+  [/^\/admin\/users/, "Users & access"],
+  [/^\/admin\/milestones/, "Milestone templates"],
+  [/^\/admin\/access-log/, "Access log"],
+  [/^\/tenders\/archive/, "Archived tenders"],
+  [/^\/tenders\/new/, "New tender"],
+  [/^\/tenders\/[^/]+\/edit/, "Edit tender"],
+  [/^\/tenders\/[^/]+\/meetings/, "Meetings"],
+  [/^\/tenders\/(?!export)[^/]+$/, "Tender detail"],
+];
+
+/** Workspace / Section / Page. Crumbs carry data-slot so the global blue
+ * link colour does not apply; only the last crumb is the current page. */
+function Breadcrumbs({
+  path,
+  section,
+}: {
+  path: string;
+  section: { href: string; label: string } | null;
+}) {
+  const sub = SUBPAGES.find(([re]) => re.test(path))?.[1];
+  const sectionHref = section?.href === "/tenders" ? "/tenders?track=all" : section?.href;
+  const crumb = "text-muted-foreground transition-colors hover:text-foreground";
+  return (
+    <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
+      <ol className="flex min-w-0 items-center gap-2 text-sm">
+        <li className="text-muted-foreground">Workspace</li>
+        {section && (
+          <>
+            <li aria-hidden="true" className="text-muted-foreground/60">/</li>
+            <li>
+              {sub ? (
+                <Link data-slot="breadcrumb-link" href={sectionHref!} className={crumb}>
+                  {section.label}
+                </Link>
+              ) : (
+                <span aria-current="page" className="font-medium">{section.label}</span>
+              )}
+            </li>
+          </>
+        )}
+        {sub && (
+          <>
+            <li aria-hidden="true" className="text-muted-foreground/60">/</li>
+            <li aria-current="page" className="truncate font-medium">{sub}</li>
+          </>
+        )}
+      </ol>
+    </nav>
+  );
+}
+
 type NavigationProps = {
   profile: Profile | null;
   defaultSidebarOpen?: boolean;
@@ -199,17 +251,10 @@ function Workspace({
           <Link href="/" className="md:hidden">
             <Image src="/logo.png" width={69} height={24} alt="Zekindo" />
           </Link>
-          <span className="hidden text-sm text-muted-foreground md:inline">
-            Workspace
-          </span>
-          <span className="hidden text-muted-foreground md:inline">/</span>
-          <span className="hidden text-sm font-medium md:inline">
-            {isSettings && path !== "/settings" ? (
-              <Link href="/settings">Settings</Link>
-            ) : (
-              current?.label
-            )}
-          </span>
+          <Breadcrumbs
+            path={path}
+            section={current ?? null}
+          />
           {path !== "/tenders" && (
             <form
               action="/tenders"

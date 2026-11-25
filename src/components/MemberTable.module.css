@@ -1,0 +1,27 @@
+/* Users & access member list. */
+
+/* Remove is destructive but repeated on every row: outlined, red on intent. */
+.removeButton { color: var(--zk-error); border-color: #f1c2c8; }
+.removeButton:hover:not(:disabled) {
+  background: var(--zk-error-light);
+  color: var(--zk-error);
+  border-color: var(--zk-error);
+}
+.roleSelect { min-width: 140px; }
+
+/* Phones: each member becomes a stacked card instead of a 3-column row. */
+@media (max-width: 640px) {
+  .head > input { max-width: none !important; width: 100%; }
+  .members thead { display: none; }
+  .members tr {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .members td { display: block; padding: 0 !important; border: 0 !important; }
+  .members td [data-slot="native-select-wrapper"] { width: 100%; }
+  .roleSelect { width: 100%; height: auto; min-height: 42px; padding-block: 8px; line-height: 1.4; }
+  .actions { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions button { width: 100%; }
+}

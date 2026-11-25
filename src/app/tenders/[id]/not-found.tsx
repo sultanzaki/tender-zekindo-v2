@@ -1,14 +1,14 @@
-import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function TenderNotFound() {
   return (
-    <div style={{ padding: 80, textAlign: "center" }}>
-      <div style={{ fontSize: 14, color: "var(--color-fg2)", marginBottom: 12 }}>
-        Tender not found.
-      </div>
-      <Link href="/tenders" style={{ fontSize: 13 }}>
-        &larr; Back to table
-      </Link>
-    </div>
+    <EmptyState
+      title="Tender not found"
+      description="It may have been archived or deleted, or the link may be incomplete. Archived tenders are listed in Settings for administrators."
+      actions={[
+        { href: "/tenders?track=all", label: "Back to tenders", primary: true },
+        { href: "/calendar", label: "Open calendar" },
+      ]}
+    />
   );
 }

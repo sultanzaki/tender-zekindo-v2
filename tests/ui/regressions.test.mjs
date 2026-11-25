@@ -110,10 +110,13 @@ test("without financial access, money is masked and register revenue columns are
       await page.getByRole("columnheader", { name: /Bid Value|OE \(Rp\)/ }).count(),
       0,
     );
-    await page.getByRole("button", { name: /Columns/ }).first().click();
-    await page.getByRole("checkbox", { name: "Qty" }).waitFor();
-    assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
-    await page.keyboard.press("Escape");
+    if (width > 600) {
+      // The Columns menu exists only beside the desktop matrix.
+      await page.getByRole("button", { name: /Columns/ }).first().click();
+      await page.getByRole("checkbox", { name: "Qty" }).waitFor();
+      assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
+      await page.keyboard.press("Escape");
+    }
     assert.equal(
       await page.getByRole("link", { name: "Export to Excel" }).count(),
       0,
@@ -154,7 +157,9 @@ test("signed-in viewers see monetary fields and metrics without administrator co
       (await page.locator("body").innerText()).includes("Rp 1,2 Jt") ||
         (await page.locator("body").innerText()).includes("Rp 1.2 Jt"),
     );
-    assert.ok((await page.locator("body").innerText()).includes("987.654"));
+    // Bid values appear in the desktop matrix; phone cards keep to the schedule.
+    if (width > 600)
+      assert.ok((await page.locator("body").innerText()).includes("987.654"));
     await page.close();
   }
 });
@@ -425,8 +430,21 @@ test("sorting and quick edits work with keyboard; detail links preserve context"
     .waitFor();
   await page.close();
 });
-test("schedule matrix opens on desktop and phone and contains long package names", async () => {
-  for (const width of [390, 1440]) {
+test("phones list tenders as cards linking to detail instead of the matrix", async () => {
+  const page = await open("table", 390);
+  assert.equal(await page.getByRole("region", { name: "Schedule matrix" }).isVisible(), false);
+  const cards = page.getByRole("list", { name: "Tenders" });
+  const first = cards.getByRole("link").first();
+  await first.waitFor();
+  assert.match(await first.getAttribute("href"), /^\/tenders\//);
+  assert.equal(await page.getByRole("button", { name: /Columns/ }).isVisible(), false);
+  assert.equal(await page.getByRole("combobox", { name: "Jump to milestone" }).count() === 0 ||
+    !(await page.getByRole("combobox", { name: "Jump to milestone" }).isVisible()), true);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.close();
+});
+test("schedule matrix opens on desktop and contains long package names", async () => {
+  for (const width of [1440]) {
     const page = await open("table", width);
     const matrix = page.getByRole("region", {name:"Schedule matrix"});
     await matrix.getByRole("columnheader", {name:"Site visit"}).waitFor();
@@ -441,13 +459,12 @@ test("schedule matrix opens on desktop and phone and contains long package names
         style.textOverflow === "ellipsis" && style.overflowX === "hidden";
     });
     assert.ok(truncated, `expected a single truncated line at ${width}px`);
-    if (width === 390) assert.ok(await matrix.evaluate(el => el.scrollWidth > el.clientWidth));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.close();
   }
 });
 test("long statuses and editors stay inside the cell, and matrix preferences work", async () => {
-  for (const width of [390, 1440]) {
+  for (const width of [1024, 1440]) {
     const page = await open("table&audit=1", width);
     const status = page.getByRole("button", {name:"Edit result for TN-1", exact:true});
     const inside = el => {
