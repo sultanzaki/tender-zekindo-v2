@@ -16,6 +16,9 @@ before(async () => {
         "validation",
         "table-state",
         "calendar",
+        "calendar-events",
+        "activity-format",
+        "utils",
         "upload-policy",
       ]
         .map((name) => `export * from './src/lib/${name}';`)
@@ -276,4 +279,71 @@ test("file sections reject path fragments and ambiguous ownership", () => {
     api.validFileSection(null, "00000000-0000-0000-0000-000000000001"),
     true,
   );
+});
+
+test("calendar month grid is six Monday-first weeks covering the month", () => {
+  const days = api.monthGrid("2026-11");
+  assert.equal(days.length, 42);
+  assert.equal(days[0], "2026-10-26"); // Monday before 1 Nov 2026 (a Sunday)
+  assert.ok(days.includes("2026-11-30"));
+  assert.equal(new Date(days[0] + "T00:00:00Z").getUTCDay(), 1);
+  assert.equal(api.monthGrid("2027-02")[0], "2027-02-01");
+  assert.equal(api.shiftMonth("2026-12", 1), "2027-01");
+  assert.equal(api.shiftMonth("2026-01", -1), "2025-12");
+  for (const bad of ["2026-13", "26-11", "2026-1", "x", "", null, "1999-01"])
+    assert.equal(api.parseMonth(bad), null, String(bad));
+  assert.equal(api.parseMonth("2026-11"), "2026-11");
+});
+
+test("calendar events carry tone, WIB meeting days and no monetary fields", () => {
+  const tender = {
+    id: "T1", track: "upstream", tenderNo: "N1", customer: "Customer", product: "Package",
+    milestones: { a: "2026-11-20", b: "2026-11-26", c: "2026-12-05", d: "2026-12-20", out: "2027-03-01" },
+    milestoneLabels: { a: "A", b: "B", c: "C", d: "D", out: "Out" },
+    milestoneOrder: ["a", "b", "c", "d", "out"], result: null,
+    oe: 999999, nilaiPenawaran: 888888,
+  };
+  const closed = { ...tender, id: "T2", result: "WIN", milestones: { a: "2026-11-27" }, milestoneOrder: ["a"] };
+  const meetings = [
+    // 23:30 UTC on the 24th is 06:30 WIB on the 25th.
+    { id: "m1", tenderId: "T1", milestone: "b", topic: "Prep", startsAt: "2026-11-24T23:30:00Z" },
+    { id: "m2", tenderId: "ARCHIVED", milestone: "b", topic: "Hidden", startsAt: "2026-11-24T03:00:00Z" },
+  ];
+  const events = api.buildCalendarEvents([tender, closed], meetings,
+    { from: "2026-10-26", to: "2026-12-06", today: "2026-11-25" });
+  const tones = Object.fromEntries(events.map((e) => [e.id, e.tone]));
+  assert.deepEqual(tones, {
+    "m:T1:a": "past", "g:m1": "meeting", "m:T1:b": "urgent", "m:T2:a": "closed", "m:T1:c": "soon",
+  });
+  const meeting = events.find((e) => e.kind === "meeting");
+  assert.equal(meeting.date, "2026-11-25");
+  assert.equal(meeting.time, "06:30");
+  assert.equal(meeting.milestoneLabel, "B");
+  assert.ok(!events.some((e) => e.title === "Hidden"), "meetings of invisible tenders are dropped");
+  assert.doesNotMatch(JSON.stringify(events), /999999|888888|oe|nilai/i);
+  assert.equal(api.toneFor(20, null), "upcoming");
+});
+
+test("activity history reads as sentences with friendly field names", () => {
+  assert.deepEqual(api.describeTenderEvent({ action: "create", changes: null }), {
+    verb: "created the tender", detail: null,
+  });
+  assert.deepEqual(
+    api.describeTenderEvent({
+      action: "update",
+      changes: {
+        result: { from: null, to: "WIN" },
+        milestone_notes: { from: {}, to: { pq: "x" } },
+        nilai_penawaran: { from: 1, to: 2 },
+        updated_by: { from: "a", to: "b" },
+      },
+    }),
+    { verb: "updated", detail: "Status (Running → WIN), milestone notes, bid value" },
+  );
+  assert.equal(
+    api.describeTenderEvent({ action: "update", changes: { updated_by: { from: 1, to: 2 } } }).detail,
+    null,
+  );
+  assert.equal(api.plural(1, "meeting"), "1 meeting");
+  assert.equal(api.plural(0, "item"), "0 items");
 });

@@ -128,8 +128,10 @@ export function MeetingForm({
                 Number.isFinite(due) &&
                 (due > previewAt
                   ? " · " +
-                    new Date(due).toLocaleString("id-ID", {
+                    new Date(due).toLocaleString("en-GB", {
                       timeZone: "Asia/Jakarta",
+                      dateStyle: "medium",
+                      timeStyle: "short",
                     }) +
                     " WIB"
                   : " · reminder time has passed")}

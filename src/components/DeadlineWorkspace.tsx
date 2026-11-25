@@ -211,34 +211,33 @@ export function DeadlineWorkspace({
                   <span
                     className={`${styles.day} ${d.urgent ? styles.urgent : ""}`}
                   >
-                    {d.days}
-                    <small>{d.days === 0 ? "TODAY" : "DAYS"}</small>
+                    {d.days === 0 ? (
+                      <small>TODAY</small>
+                    ) : (
+                      <>
+                        {d.days}
+                        <small>{d.days === 1 ? "DAY" : "DAYS"}</small>
+                      </>
+                    )}
                   </span>
                   <span className={styles.rowMain}>
                     <span className={styles.rowTitle}>
-                      {d.product} <TrackBadge track={d.track} />
+                      {d.milestoneLabel}
                     </span>
-                    <span className={styles.rowSub}>{d.customer}</span>
+                    <span className={styles.rowSub}>
+                      {d.product} · {d.customer} <TrackBadge track={d.track} />
+                    </span>
+                    {rest.length > 0 && (
+                      <span className={styles.rowAlso}>
+                        Also due:{" "}
+                        {rest
+                          .map((stage) => `${stage.milestoneLabel} (${stage.dateFormatted})`)
+                          .join(", ")}
+                      </span>
+                    )}
                   </span>
-                  <span className={styles.rowMeta}>
-                    {d.milestoneLabel}
-                    <br />
-                    {d.dateFormatted}
-                  </span>
+                  <span className={styles.rowMeta}>{d.dateFormatted}</span>
                 </Link>
-                {rest.length > 0 && (
-                  <details className="px-4 pb-3 text-sm">
-                    <summary className="cursor-pointer text-primary">
-                      {rest.length} more scheduled{" "}
-                      {rest.length === 1 ? "stage" : "stages"}
-                    </summary>
-                    {rest.map((stage) => (
-                      <p key={stage.milestoneKey}>
-                        {stage.milestoneLabel} · {stage.dateFormatted}
-                      </p>
-                    ))}
-                  </details>
-                )}
               </div>
             ))}
         {(view === "followup" ? !stalled.length : !upcoming.length) && (

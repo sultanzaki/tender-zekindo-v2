@@ -1,4 +1,5 @@
 "use client";
+import { plural } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
@@ -1122,11 +1123,11 @@ export function TenderTableClient({
                         return (
                           <TableCell
                             key={m.key}
-                            className={styles.dateCell}
-                            aria-label="Not applicable"
-                            title="Outside this tender’s schedule"
+                            className={`${styles.dateCell} ${styles.notApplicable}`}
+                            aria-label="Not part of this tender’s schedule"
+                            title="Not part of this tender’s schedule"
                           >
-                            N/A
+                            <span aria-hidden="true">—</span>
                           </TableCell>
                         );
                       }
@@ -1192,7 +1193,7 @@ export function TenderTableClient({
                             dateLabel
                           )}
                           {toggle(m.key)}
-                          {!!t.meetingCounts?.[m.key] && <MeetingLink className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`}><CalendarRange size={13} aria-hidden />{t.meetingCounts[m.key]} meetings</MeetingLink>}
+                          {!!t.meetingCounts?.[m.key] && <MeetingLink className="flex items-center gap-1 text-xs text-primary underline" href={`/tenders/${t.id}/meetings?${new URLSearchParams({milestone:m.key})}`}><CalendarRange size={13} aria-hidden />{plural(t.meetingCounts[m.key], "meeting")}</MeetingLink>}
                           {nearest && (
                             <small className={styles.nextDate}>
                               {nearest.diff === 0
@@ -1281,7 +1282,61 @@ export function TenderTableClient({
             </Table></Fragment>;
             })}
           </div>
-        ) : (
+        ) : null}
+        {pageItems.length > 0 && (
+          // Phones: a readable card per tender instead of the wide matrix.
+          <ul className={styles.phoneCards} aria-label="Tenders">
+            {pageItems.map((t) => {
+              const next = upcoming.get(t.id);
+              const tone = next
+                ? next.diff <= 3
+                  ? "urgent"
+                  : next.diff <= 14
+                    ? "soon"
+                    : "later"
+                : "none";
+              return (
+                <li key={t.id}>
+                  <Link
+                    prefetch={false}
+                    href={tenderHref(t.id)}
+                    className={styles.phoneCard}
+                    onClick={() => rememberRow(t.id)}
+                  >
+                    <span className={styles.phoneCardTop}>
+                      <ResultBadge result={t.result} />
+                      {track === "all" && t.track === "downstream" && (
+                        <span className={styles.phoneTrack}>Downstream</span>
+                      )}
+                    </span>
+                    <strong className={styles.phoneTitle}>
+                      {t.product || t.customer || "Untitled tender"}
+                    </strong>
+                    <span className={styles.phoneMeta}>
+                      {t.customer}
+                      {t.tenderNo ? ` · ${t.tenderNo}` : ""}
+                    </span>
+                    {next ? (
+                      <span className={styles.phoneNext} data-tone={tone}>
+                        <span className={styles.phoneDays}>
+                          {next.diff === 0 ? "Today" : `D-${next.diff}`}
+                        </span>
+                        {next.label} · {formatDateID(next.date)}
+                      </span>
+                    ) : (
+                      !t.result && (
+                        <span className={styles.phoneNext} data-tone="none">
+                          No upcoming milestone
+                        </span>
+                      )
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {pageItems.length === 0 && (
           <div className={styles.emptyBox}>
             <div className={styles.emptyText}>
               No tenders match this filter.

@@ -1,6 +1,7 @@
 import {
   Archive,
   ArrowRight,
+  CalendarDays,
   Bell,
   FolderOpen,
   Settings2,
@@ -21,6 +22,7 @@ import {
 const icons = {
   archive: Archive,
   arrow: ArrowRight,
+  calendar: CalendarDays,
   notifications: Bell,
   tenders: FolderOpen,
   analytics: ChartColumn,

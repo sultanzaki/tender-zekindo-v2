@@ -688,3 +688,68 @@
 .filterChips {display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);}
 .filterChips button {max-width:100%;overflow-wrap:anywhere;padding:4px 8px;border-radius:5px;background:#eff5ff;color:#244f85;font-size:12px;cursor:pointer;}
 .bodyRow[data-returned] td {background-color:#eaf2ff;}
+
+/* ── Phone cards: the matrix needs ~1000px; phones get one card per tender. */
+.phoneCards { display: none; }
+@media (max-width: 600px) {
+  .tableWorkspace .scroll { display: none; }
+  .phoneCards {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 12px;
+    list-style: none;
+  }
+  .phoneCard {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card);
+    color: var(--color-fg1);
+    text-decoration: none;
+  }
+  .phoneCard:hover { text-decoration: none; border-color: var(--zk-blue-200); }
+  .phoneCard:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+  .phoneCardTop { display: flex; align-items: center; gap: 8px; }
+  .phoneTrack {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--zk-blue-50);
+    color: var(--zk-blue-700);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .phoneTitle { font-size: 15px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  .phoneMeta { font-size: 13px; color: var(--color-fg2); overflow-wrap: anywhere; }
+  .phoneNext {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--color-fg2);
+  }
+  .phoneNext[data-tone="none"] { color: var(--color-fg3); font-style: italic; }
+  .phoneDays {
+    flex: none;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    background: var(--zk-blue-50);
+    color: var(--zk-blue-700);
+  }
+  .phoneNext[data-tone="urgent"] .phoneDays { background: var(--zk-error-light); color: var(--zk-error); }
+  .phoneNext[data-tone="soon"] .phoneDays { background: var(--zk-warning-light); color: var(--zk-warning-text); }
+}
+.notApplicable { color: var(--zk-gray-300); }
+/* Column and jump controls act on the matrix, which phones replace with cards. */
+@media (max-width: 600px) {
+  .tableWorkspace .colMenuWrap,
+  .tableWorkspace [data-slot="native-select-wrapper"]:has(> [aria-label="Jump to milestone"]) {
+    display: none;
+  }
+}

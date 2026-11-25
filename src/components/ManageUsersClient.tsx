@@ -30,6 +30,7 @@ import type { Profile, UserRole } from "@/lib/types";
 import { PageHeading } from "./PageHeading";
 import { Modal } from "./Modal";
 import styles from "./Workspace.module.css";
+import members from "./MemberTable.module.css";
 export function ManageUsersClient({
   users,
   currentUserId,
@@ -85,7 +86,7 @@ export function ManageUsersClient({
     <div className={styles.page}>
       <PageHeading
         eyebrow="ADMINISTRATION"
-        title="People & access"
+        title="Users & access"
         description="Manage accounts, permissions, and password resets."
         actions={
           <Button
@@ -123,7 +124,7 @@ export function ManageUsersClient({
         </Alert>
       )}
       <Card className={`${styles.panel} gap-0 py-0`}>
-        <div className={styles.panelHead}>
+        <div className={`${styles.panelHead} ${members.head}`}>
           <h2>Workspace members</h2>
           <Input
             type="search"
@@ -136,7 +137,7 @@ export function ManageUsersClient({
           />
         </div>
         <div className={styles.tableWrap}>
-          <Table className={styles.table}>
+          <Table className={`${styles.table} ${members.members}`}>
             <TableHeader>
               <TableRow>
                 <TableHead>Name & email</TableHead>
@@ -156,7 +157,7 @@ export function ManageUsersClient({
                   </TableCell>
                   <TableCell>
                     <NativeSelect
-                      className="control"
+                      className={`control ${members.roleSelect}`}
                       aria-label={`Role for ${u.name}`}
                       value={u.role}
                       disabled={pending || u.id === currentUserId}
@@ -180,7 +181,7 @@ export function ManageUsersClient({
                     </NativeSelect>
                   </TableCell>
                   <TableCell>
-                    <div className="heading-actions">
+                    <div className={`heading-actions ${members.actions}`}>
                       <Button
                         variant="outline"
                         disabled={pending}
@@ -193,7 +194,8 @@ export function ManageUsersClient({
                         Reset password
                       </Button>
                       <Button
-                        variant="destructive"
+                        variant="outline"
+                        className={members.removeButton}
                         disabled={pending || u.id === currentUserId}
                         onClick={() => {
                           setError("");

@@ -110,10 +110,13 @@ test("without financial access, money is masked and register revenue columns are
       await page.getByRole("columnheader", { name: /Bid Value|OE \(Rp\)/ }).count(),
       0,
     );
-    await page.getByRole("button", { name: /Columns/ }).first().click();
-    await page.getByRole("checkbox", { name: "Qty" }).waitFor();
-    assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
-    await page.keyboard.press("Escape");
+    if (width > 600) {
+      // The Columns menu exists only beside the desktop matrix.
+      await page.getByRole("button", { name: /Columns/ }).first().click();
+      await page.getByRole("checkbox", { name: "Qty" }).waitFor();
+      assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
+      await page.keyboard.press("Escape");
+    }
     assert.equal(
       await page.getByRole("link", { name: "Export to Excel" }).count(),
       0,
@@ -154,7 +157,9 @@ test("signed-in viewers see monetary fields and metrics without administrator co
       (await page.locator("body").innerText()).includes("Rp 1,2 Jt") ||
         (await page.locator("body").innerText()).includes("Rp 1.2 Jt"),
     );
-    assert.ok((await page.locator("body").innerText()).includes("987.654"));
+    // Bid values appear in the desktop matrix; phone cards keep to the schedule.
+    if (width > 600)
+      assert.ok((await page.locator("body").innerText()).includes("987.654"));
     await page.close();
   }
 });
@@ -201,6 +206,77 @@ test("inactivity warns after 59 minutes and signs out at 60 unless the user stay
   await page.clock.runFor("01:00:05");
   await page.waitForFunction(() => document.body.dataset.idleLogout === "true");
   await page.close();
+});
+
+test("calendar shows colour-coded stages, details, filters and a phone agenda", async () => {
+  const page = await open("calendar", 1440);
+  const grid = page.getByRole("region", { name: "November 2026 month view" });
+  await grid.waitFor();
+  assert.match(await page.locator("body").innerText(), /6 due within 3 days/);
+  const chip = grid.getByRole("button", { name: "Prebid: Production Chemical Supply" });
+  assert.equal(await chip.getAttribute("data-tone"), "urgent");
+  await chip.click();
+  const detail = page.getByRole("dialog");
+  await detail.getByText("Tomorrow").waitFor();
+  assert.equal(await detail.getByRole("link", { name: /Production Chemical Supply/ }).getAttribute("href"), "/tenders/C0");
+  await page.keyboard.press("Escape");
+  // 25 Nov holds five entries: two shown, the rest behind "+N more".
+  await grid.getByRole("button", { name: "+3 more" }).click();
+  const day = page.getByRole("dialog").filter({ hasText: "Wednesday 25 November" });
+  await day.waitFor();
+  assert.equal(await day.getByRole("article").count(), 5);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Downstream", exact: true }).click();
+  assert.equal(await grid.getByRole("button", { name: /Production Chemical Supply/ }).count(), 0);
+  await page.getByRole("button", { name: "All tracks" }).click();
+  await page.getByLabel("Meetings").uncheck();
+  assert.equal(await grid.getByRole("button", { name: /^Meeting/ }).count(), 0);
+  await page.getByLabel("Hide closed tenders").check();
+  assert.equal(await grid.locator('[data-tone="closed"]').count(), 0);
+  await page.getByRole("button", { name: "Agenda" }).click();
+  assert.equal(await grid.isVisible(), false);
+  await page.getByRole("region", { name: "November 2026 agenda" }).waitFor();
+  await page.close();
+
+  const phone = await open("calendar", 375);
+  assert.equal(await phone.getByRole("region", { name: "November 2026 month view" }).isVisible(), false);
+  await phone.getByRole("region", { name: "November 2026 agenda" }).getByRole("link", { name: /Field Test|Demulsifier/ }).first().waitFor();
+  assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await phone.close();
+});
+
+test("access-log filter pills stay readable when active, on desktop and phone", async () => {
+  // WCAG contrast ratio between an element's text and its own background.
+  const contrast = (locator) =>
+    locator.evaluate((el) => {
+      const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+      const lum = (c) => {
+        const [r, g, b] = rgb(c).map((v) => {
+          v /= 255;
+          return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const style = getComputedStyle(el);
+      let bg = style.backgroundColor;
+      for (let n = el; n && /rgba\(.*, 0\)|transparent/.test(bg); n = n.parentElement)
+        bg = getComputedStyle(n).backgroundColor;
+      const [a, b] = [lum(style.color), lum(bg)].sort((x, y) => y - x);
+      return (a + 0.05) / (b + 0.05);
+    });
+  for (const [active, label] of [["export", "Excel export"], ["", "All events"]]) {
+    for (const width of [1280, 375]) {
+      const page = await browser.newPage({ viewport: { width, height: 700 } });
+      await page.goto(`${base}/?component=access-filters&active=${active}`);
+      const pill = page.getByRole("link", { name: label });
+      assert.equal(await pill.getAttribute("aria-current"), "page");
+      assert.equal(await page.locator("[aria-current=page]").count(), 1);
+      for (const link of await page.getByRole("link").all())
+        assert.ok((await contrast(link)) >= 4.5, `${await link.innerText()} at ${width}px`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.close();
+    }
+  }
 });
 
 test("mobile account shows sign out without duplicating navigation", async () => {
@@ -354,8 +430,21 @@ test("sorting and quick edits work with keyboard; detail links preserve context"
     .waitFor();
   await page.close();
 });
-test("schedule matrix opens on desktop and phone and contains long package names", async () => {
-  for (const width of [390, 1440]) {
+test("phones list tenders as cards linking to detail instead of the matrix", async () => {
+  const page = await open("table", 390);
+  assert.equal(await page.getByRole("region", { name: "Schedule matrix" }).isVisible(), false);
+  const cards = page.getByRole("list", { name: "Tenders" });
+  const first = cards.getByRole("link").first();
+  await first.waitFor();
+  assert.match(await first.getAttribute("href"), /^\/tenders\//);
+  assert.equal(await page.getByRole("button", { name: /Columns/ }).isVisible(), false);
+  assert.equal(await page.getByRole("combobox", { name: "Jump to milestone" }).count() === 0 ||
+    !(await page.getByRole("combobox", { name: "Jump to milestone" }).isVisible()), true);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.close();
+});
+test("schedule matrix opens on desktop and contains long package names", async () => {
+  for (const width of [1440]) {
     const page = await open("table", width);
     const matrix = page.getByRole("region", {name:"Schedule matrix"});
     await matrix.getByRole("columnheader", {name:"Site visit"}).waitFor();
@@ -370,13 +459,12 @@ test("schedule matrix opens on desktop and phone and contains long package names
         style.textOverflow === "ellipsis" && style.overflowX === "hidden";
     });
     assert.ok(truncated, `expected a single truncated line at ${width}px`);
-    if (width === 390) assert.ok(await matrix.evaluate(el => el.scrollWidth > el.clientWidth));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.close();
   }
 });
 test("long statuses and editors stay inside the cell, and matrix preferences work", async () => {
-  for (const width of [390, 1440]) {
+  for (const width of [1024, 1440]) {
     const page = await open("table&audit=1", width);
     const status = page.getByRole("button", {name:"Edit result for TN-1", exact:true});
     const inside = el => {

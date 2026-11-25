@@ -14,6 +14,9 @@ import { NumberInput } from "../../src/components/NumberInput";
 import { DocumentExplorer } from "../../src/components/DocumentExplorer";
 import { MoneyValue } from "../../src/components/MoneyValue";
 import { MilestoneNote } from "../../src/components/MilestoneNote";
+import { CalendarWorkspace } from "../../src/components/CalendarWorkspace";
+import { AccessLogFilters } from "../../src/components/AccessLogFilters";
+import { buildCalendarEvents, monthGrid } from "../../src/lib/calendar-events";
 import { KpiCards } from "../../src/components/charts/KpiCards";
 import { TrackComparisonChart } from "../../src/components/charts/TrackComparisonChart";
 import type { Tender, Profile } from "../../src/lib/types";
@@ -110,7 +113,42 @@ function FinancialDemo({ signedIn }: { signedIn: boolean }) {
     </>
   );
 }
+const calendarDays = monthGrid("2026-11");
+const calendarTenders = [
+  ["Production Chemical Supply", "Contoh Energi Tbk", "upstream", { regist: "2026-11-02", pq: "2026-11-09", prebid: "2026-11-26", openBid: "2026-12-03" }, null],
+  ["Demulsifier for Field A", "Sampel Migas", "upstream", { regist: "2026-11-05", technicalBidding: "2026-11-24", fieldTest: "2026-11-27" }, null],
+  ["Scale Inhibitor Retender", "Ilustrasi Petro", "upstream", { pq: "2026-11-12", pemasukanDokumen: "2026-11-25", openBid: "2026-11-30" }, null],
+  ["Water Treatment Package", "Kimia Nusantara", "downstream", { dsPendaftaran: "2026-11-03", dsBidding: "2026-11-25", dsNegosiasi1: "2026-12-01" }, null],
+  ["H2S Scavenger Supply", "Energi Contoh", "upstream", { regist: "2026-11-10", openBid: "2026-11-18" }, "WIN"],
+  ["Corrosion Inhibitor", "Migas Ilustrasi", "upstream", { prebid: "2026-11-16", technicalBidding: "2026-11-20" }, null],
+  ["Boiler Feed Water Chemicals", "Sampel Daya", "downstream", { dsPrakualifikasi: "2026-11-25", dsPrebid: "2026-11-25" }, null],
+] as const;
+const calendarEvents = buildCalendarEvents(
+  calendarTenders.map(([product, customer, track, milestones, result], i) => ({
+    id: `C${i}`, track, tenderNo: `DEMO-${i}`, customer, product, milestones: { ...milestones },
+    milestoneLabels: Object.fromEntries(Object.keys(milestones).map((k) => [k, ({
+      regist: "Registration", pq: "PQ", prebid: "Prebid", openBid: "Open Bid", technicalBidding: "Technical Bidding",
+      fieldTest: "Field Test", pemasukanDokumen: "Bid Document Submission", dsPendaftaran: "Pendaftaran",
+      dsBidding: "Bidding", dsNegosiasi1: "Negosiasi 1", dsPrakualifikasi: "Prakualifikasi", dsPrebid: "Prebid" } as Record<string, string>)[k]])),
+    milestoneOrder: Object.keys(milestones), result,
+  })),
+  [
+    { id: "g1", tenderId: "C0", milestone: "prebid", topic: "Prebid prep with tech team", startsAt: "2026-11-25T02:00:00Z" },
+    { id: "g2", tenderId: "C2", milestone: "pemasukanDokumen", topic: "Final document review", startsAt: "2026-11-24T07:30:00Z" },
+    { id: "g3", tenderId: "C3", milestone: "dsBidding", topic: "Pricing alignment", startsAt: "2026-11-19T03:00:00Z" },
+  ],
+  { from: calendarDays[0], to: calendarDays[41], today: "2026-11-25" },
+);
 const components = {
+  "access-filters": (
+    <AccessLogFilters
+      actions={["login", "login_failed", "logout", "logout_idle", "export", "download"] as const}
+      labels={{ login: "Signed in", login_failed: "Failed sign-in", logout: "Signed out",
+        logout_idle: "Signed out (idle)", export: "Excel export", download: "Document download" }}
+      active={(new URLSearchParams(location.search).get("active") || undefined) as "export" | undefined}
+    />
+  ),
+  calendar: <CalendarWorkspace month="2026-11" days={calendarDays} today="2026-11-25" events={calendarEvents} />,
   "milestone-note": (
     <>
       <MilestoneNote tenderId="t" milestoneKey="prebid" label="Prebid" canEdit />
