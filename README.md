@@ -76,6 +76,16 @@ it with `node scripts/generate-seed-sql.mjs` if that source data changes.
 
 Apply migration 0013 before deploying the package schedule update. It freezes the current schedule for existing tenders, including saved order and dates. New tenders start with the template for their track. Adding a stage in a tender form stores it with that tender when the form is saved. Edit the defaults for future packages in Settings → Milestone templates.
 
+### Roles
+
+| Role | Access |
+| --- | --- |
+| `admin` | Everything: edits, archive, users, Settings, internal notes, activity |
+| `viewer` | Read-only; sees OE, bid values and Analytics, not internal notes |
+| `restricted` | Read-only like viewer, but OE, OE note, bid value and IDR/L are removed server-side and Analytics is unavailable (navigation, page and export) |
+
+Apply `supabase/migrations/0014_restricted_role.sql` before assigning the new role. Permission checks live in `src/lib/roles.ts`; redaction happens in `redactTender()` (`src/lib/tenders.ts`) before data reaches the browser.
+
 ### Authentication
 
 This app does **not** use Supabase Auth — it has its own email+password

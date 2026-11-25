@@ -108,6 +108,16 @@ test("viewer export omits internal notes", async () => {
   assert.ok(sheet.getRow(2).values.includes(tender.nilaiPenawaran));
   assert.ok(sheet.getRow(2).values.includes(tender.oeCatatan));
 });
+test("restricted export omits revenue columns and values", async () => {
+  const sheet = await exportSheet({ profile: { role: "restricted" } });
+  const header = sheet.getRow(1).values;
+  for (const name of ["OE (Rp)", "OE Note", "Bid Value (Rp)", "Internal Notes"])
+    assert.ok(!header.includes(name), name);
+  const row = sheet.getRow(2).values;
+  for (const value of [tender.oe, tender.nilaiPenawaran, tender.oeCatatan, tender.catatanInternal])
+    assert.ok(!row.includes(value));
+  assert.ok(row.includes(tender.customer));
+});
 test("admin export retains internal notes and cannot be shared-cached", async () => {
   const sheet = await exportSheet({ profile: { role: "admin" } });
   assert.ok(sheet.getRow(1).values.includes("Internal Notes"));

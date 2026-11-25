@@ -110,7 +110,7 @@ export type ResultValue = (typeof RESULT_ENUM)[number];
 
 export type Milestones = Record<string, string | null>;
 
-export type UserRole = "viewer" | "admin";
+export type UserRole = "viewer" | "admin" | "restricted";
 
 export interface Profile {
   id: string;

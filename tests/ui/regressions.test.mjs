@@ -84,7 +84,7 @@ async function open(component, width = 1280) {
   await page.goto(`${base}/?component=${component}`);
   return page;
 }
-test("guests see blurred placeholders and a scoped sign-in link on desktop and phone", async () => {
+test("without financial access, money is masked and register revenue columns are removed", async () => {
   for (const width of [1440, 375]) {
     const page = await open("guest-money", width);
     const field = page.getByTestId("money-field");
@@ -105,13 +105,15 @@ test("guests see blurred placeholders and a scoped sign-in link on desktop and p
       (await page.locator("body").innerText()).includes("987.654"),
       false,
     );
-    const login = await page
-      .getByRole("link", { name: "Sign in to view amounts" })
-      .getAttribute("href");
+    // The register drops revenue columns for roles without financial access.
     assert.equal(
-      new URL(login, base).searchParams.get("next").startsWith("/tenders?"),
-      true,
+      await page.getByRole("columnheader", { name: /Bid Value|OE \(Rp\)/ }).count(),
+      0,
     );
+    await page.getByRole("button", { name: /Columns/ }).first().click();
+    await page.getByRole("checkbox", { name: "Qty" }).waitFor();
+    assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
+    await page.keyboard.press("Escape");
     assert.equal(
       await page.getByRole("link", { name: "Export to Excel" }).isVisible(),
       true,

@@ -15,11 +15,13 @@ export function RegisterWorkspace({
   catalog,
   anchor,
   isAdmin,
+  canViewMoney,
 }: {
   rows: RegisterTender[];
   catalog: MilestoneType[];
   anchor: string;
   isAdmin: boolean;
+  canViewMoney: boolean;
 }) {
   const params = useSearchParams();
   const track =
@@ -43,7 +45,7 @@ export function RegisterWorkspace({
       milestoneTypes={milestones}
       anchor={anchor}
       isAdmin={isAdmin}
-      canViewMoney
+      canViewMoney={canViewMoney}
       initialFilters={readTenderFilters(params)}
     />
   );

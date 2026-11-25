@@ -1,5 +1,6 @@
 import { meetingCounts } from "@/lib/meeting-counts";
 import { requireUser } from "@/lib/auth/dal";
+import { canViewFinancials } from "@/lib/roles";
 import { getAllTenders } from "@/lib/tenders";
 import { getMilestoneCatalog } from "@/lib/milestones";
 import { todayISO } from "@/lib/tender-logic";
@@ -80,6 +81,7 @@ export default async function TenderTablePage() {
       catalog={[...(catalog.upstream ?? []), ...(catalog.downstream ?? [])]}
       anchor={todayISO()}
       isAdmin={ctx.profile.role === "admin"}
+      canViewMoney={canViewFinancials(ctx.profile.role)}
     />
   );
 }

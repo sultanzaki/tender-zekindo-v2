@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { OperationsHeading } from "@/components/TenderOperations";
 import { AnalyticsFilters } from "@/components/AnalyticsFilters";
 import { Button } from "@/components/ui/button";
-import { requireUser } from "@/lib/auth/dal";
+import { requireFinancialAccess } from "@/lib/auth/dal";
 import { getAnalyticsRows, getFilterOptions } from "@/lib/tenders";
 import {
   ascendingPeriods,
@@ -77,7 +77,7 @@ export default async function Analytics({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requireUser();
+  await requireFinancialAccess();
   const params = await searchParams;
   const track =
     params.track === "upstream" || params.track === "downstream"

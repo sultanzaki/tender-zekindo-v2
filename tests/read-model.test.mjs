@@ -12,7 +12,7 @@ before(async () => {
     "server-only": "",
     react: "export const cache=fn=>fn;",
     "next/cache": `export const unstable_cache=fn=>async(...args)=>{const state=globalThis.${key};state.cached??=new Map();const cacheKey=JSON.stringify(args);if(!state.cached.has(cacheKey))state.cached.set(cacheKey,await fn(...args));return state.cached.get(cacheKey);};`,
-    "./auth/dal": `export async function requireUser(){const ctx=globalThis.${key}.ctx;if(!ctx)throw new Error('UNAUTHORIZED');return ctx;}export async function requireAdmin(){const ctx=await requireUser();if(ctx.profile.role!=='admin')throw new Error('FORBIDDEN');return ctx;}`,
+    "./auth/dal": `export async function requireUser(){const ctx=globalThis.${key}.ctx;if(!ctx)throw new Error('UNAUTHORIZED');return ctx;}export async function requireAdmin(){const ctx=await requireUser();if(ctx.profile.role!=='admin')throw new Error('FORBIDDEN');return ctx;}export async function requireFinancialAccess(){const ctx=await requireUser();if(ctx.profile.role==='restricted')throw new Error('FORBIDDEN');return ctx;}`,
     "./users": "export async function getProfilesByIds(){return new Map();}",
     "./milestones": `export const rowTrack=value=>value==='downstream'?'downstream':'upstream';export async function getMilestoneCatalog(){return {upstream:[],downstream:[]};}`,
     "./supabase-server": `export function supabaseServer(){return {from(){let first=0,last=999,single=false;const filters={};const chain={select(){return chain;},order(){return chain;},is(name,value){filters[name]=value;return chain;},eq(name,value){filters[name]=value;return chain;},range(a,b){first=a;last=b;return chain;},maybeSingle(){single=true;return chain;},then(resolve,reject){const state=globalThis.${key};state.calls++;const rows=state.rows.filter(row=>Object.entries(filters).every(([name,value])=>row[name]===value));return Promise.resolve({data:single?(rows[0]??null):rows.slice(first,last+1),error:null}).then(resolve,reject);}};return chain;}};}`,
@@ -185,4 +185,38 @@ test("viewers cannot request archived lists or archived tender details", async (
   );
   assert.equal(globalThis[key].calls, 0);
   assert.equal(await api.getTenderById("archived"), null);
+});
+
+test("restricted users never receive revenue values or analytics rows", async () => {
+  const state = (globalThis[key] = {
+    calls: 0,
+    ctx: { profile: { role: "restricted" } },
+    rows: [
+      {
+        id: "T0001",
+        qty: 12.5,
+        oe: 1234567.89,
+        nilai_penawaran: 987654.32,
+        idr_per_l: 15000.75,
+        oe_catatan: "OE Rp 1.234.567,89",
+        catatan_internal: "ADMIN ONLY",
+        milestones: {},
+        track: "upstream",
+        archived_at: null,
+      },
+    ],
+  });
+  for (const tender of [
+    (await api.getAllTenders())[0],
+    await api.getTenderById("T0001"),
+  ]) {
+    assert.equal(tender.qty, 12.5, "operational fields stay visible");
+    for (const field of ["oe", "oeCatatan", "nilaiPenawaran", "idrPerL", "catatanInternal"])
+      assert.equal(tender[field], null, field);
+    assert.doesNotMatch(JSON.stringify(tender), /1234567|987654|15000|ADMIN ONLY/);
+  }
+  const calls = state.calls;
+  await assert.rejects(api.getAnalyticsRows("all"), /FORBIDDEN/);
+  assert.equal(state.calls, calls, "analytics is refused before any query");
+  assert.deepEqual(api.redactTender({ oe: 1, catatanInternal: "x" }, "admin"), { oe: 1, catatanInternal: "x" });
 });

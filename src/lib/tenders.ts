@@ -12,7 +12,9 @@ import {
 } from "./tender-logic";
 import { rowTrack } from "./milestones";
 import { SELECT_OPTIONS_TAG, TENDERS_TAG } from "./cache-tags";
-import { requireUser, requireAdmin } from "./auth/dal";
+import { requireUser, requireAdmin, requireFinancialAccess } from "./auth/dal";
+import { canViewFinancials } from "./roles";
+import type { UserRole } from "./types";
 
 // PostgREST (Supabase's REST layer) serializes `numeric` columns as JSON
 // strings, not numbers, to avoid precision loss — so despite the DB column
@@ -66,6 +68,15 @@ function mapRow(row: NamedTenderRow): Tender {
   };
 }
 
+/** Remove what a role may not see before a tender leaves the server. Internal
+ * notes are admin-only; restricted users also lose every revenue value. */
+export function redactTender(tender: Tender, role: UserRole): Tender {
+  if (role === "admin") return tender;
+  const visible = { ...tender, catatanInternal: null };
+  if (canViewFinancials(role)) return visible;
+  return { ...visible, oe: null, oeCatatan: null, nilaiPenawaran: null, idrPerL: null };
+}
+
 const getTendersCached = unstable_cache(
   async (includeArchived: boolean, track: Track | "all"): Promise<Tender[]> => {
     const rows: Tender[] = [];
@@ -106,7 +117,7 @@ export const getAllTenders = cache(
     );
     return ctx.profile.role === "admin"
       ? tenders
-      : tenders.map((t) => ({ ...t, catatanInternal: null }));
+      : tenders.map((t) => redactTender(t, ctx.profile.role));
   },
 );
 
@@ -129,7 +140,7 @@ const analyticsRowsCached = unstable_cache(async () => {
 }, ["analytics:packages", process.env.SUPABASE_URL || "unconfigured"], {tags: [TENDERS_TAG], revalidate: 30});
 
 export async function getAnalyticsRows(track: Track | "all") {
-  await requireUser();
+  await requireFinancialAccess();
   const rows = await analyticsRowsCached();
   return track === "all" ? rows : rows.filter(row => row.track === track);
 }
@@ -175,9 +186,7 @@ export async function getTenderById(id: string): Promise<Tender | null> {
   if (!data) return null;
   if (data.archived_at && ctx.profile.role !== "admin") return null;
   const tender = mapRow(data);
-  return ctx.profile.role === "admin"
-    ? tender
-    : { ...tender, catatanInternal: null };
+  return redactTender(tender, ctx.profile.role);
 }
 
 export { getFilterOptions } from "./tender-logic";

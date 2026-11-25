@@ -12,6 +12,7 @@ import {
 import { requireAdmin } from "./dal";
 import { safeNextPath } from "../validation";
 import type { UserRole } from "../types";
+import { isUserRole } from "../roles";
 import { reserveLoginAttempt, clearLoginAttempts } from "./login-throttle";
 
 export interface FormState {
@@ -89,7 +90,7 @@ export async function createUser(
   if (!email || !name) return { error: "Name and email are required." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: "Enter a valid email address." };
-  if (input.role !== "admin" && input.role !== "viewer")
+  if (!isUserRole(input.role))
     return { error: "Choose a valid role." };
   if (input.password.length < MIN_PASSWORD_LENGTH) {
     return {
@@ -149,7 +150,7 @@ export async function updateUserRole(
   const ctx = await requireAdmin();
   if (userId === ctx.userId)
     return { error: "You cannot change your own role." };
-  if (role !== "admin" && role !== "viewer")
+  if (!isUserRole(role))
     return { error: "Choose a valid role." };
   const { error } = await supabaseServer()
     .from("profiles")

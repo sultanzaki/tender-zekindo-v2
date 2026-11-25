@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { safeNextPath } from "../validation";
 import { getSessionProfile } from "./session";
+import { canViewFinancials, isUserRole } from "../roles";
 import type { Profile } from "../types";
 
 export interface AuthContext {
@@ -21,11 +22,7 @@ export interface AuthContext {
 export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
   try {
     const profileRow = await getSessionProfile();
-    if (
-      !profileRow ||
-      (profileRow.role !== "admin" && profileRow.role !== "viewer")
-    )
-      return null;
+    if (!profileRow || !isUserRole(profileRow.role)) return null;
 
     return {
       userId: profileRow.id,
@@ -55,5 +52,12 @@ export async function requireUser(): Promise<AuthContext> {
 export async function requireAdmin(): Promise<AuthContext> {
   const ctx = await requireUser();
   if (ctx.profile.role !== "admin") redirect("/");
+  return ctx;
+}
+
+/** Analytics and any other page built from OE / bid values. */
+export async function requireFinancialAccess(): Promise<AuthContext> {
+  const ctx = await requireUser();
+  if (!canViewFinancials(ctx.profile.role)) redirect("/");
   return ctx;
 }
