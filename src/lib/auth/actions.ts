@@ -10,6 +10,7 @@ import {
   destroySession,
 } from "./session";
 import { getAuthContext, requireAdmin } from "./dal";
+import { logAccess } from "../access-log";
 import { safeNextPath } from "../validation";
 import type { UserRole } from "../types";
 import { isUserRole } from "../roles";
@@ -36,10 +37,16 @@ export async function login(
   if (!email || !password) return { error: "Enter your email and password." };
   if (email.length > 254 || password.length > 1024)
     return { error: "Incorrect email or password." };
-  if (!reserveLoginAttempt(email))
+  if (!reserveLoginAttempt(email)) {
+    await logAccess({
+      action: "login_failed",
+      actorEmail: email,
+      detail: { reason: "throttled" },
+    });
     return {
       error: "Too many sign-in attempts. Please try again in 15 minutes.",
     };
+  }
 
   try {
     const { data: profile, error } = await supabaseServer()
@@ -53,10 +60,18 @@ export async function login(
       password,
       profile?.password_hash || DUMMY_HASH,
     );
-    if (!profile?.password_hash || !matches)
+    if (!profile?.password_hash || !matches) {
+      await logAccess({
+        action: "login_failed",
+        actorId: profile?.id ?? null,
+        actorEmail: email,
+        detail: { reason: profile ? "wrong_password" : "unknown_account" },
+      });
       return { error: "Incorrect email or password." };
+    }
     await createSession(profile.id);
     clearLoginAttempts(email);
+    await logAccess({ action: "login", actorId: profile.id, actorEmail: email });
   } catch {
     return { error: "Unable to sign in. Check your connection and try again." };
   }
@@ -65,14 +80,21 @@ export async function login(
   redirect(safeNextPath(next));
 }
 
-export async function logout() {
+async function endSession(action: "logout" | "logout_idle") {
+  const ctx = await getAuthContext();
   await destroySession();
+  if (ctx)
+    await logAccess({ action, actorId: ctx.userId, actorEmail: ctx.email });
+}
+
+export async function logout() {
+  await endSession("logout");
   redirect("/login");
 }
 
 /** Called by the idle timer: ends the session and explains why on /login. */
 export async function logoutIdle() {
-  await destroySession();
+  await endSession("logout_idle");
   redirect("/login?reason=idle");
 }
 

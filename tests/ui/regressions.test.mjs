@@ -115,8 +115,9 @@ test("without financial access, money is masked and register revenue columns are
     assert.equal(await page.getByRole("checkbox", { name: "OE (Rp)" }).count(), 0);
     await page.keyboard.press("Escape");
     assert.equal(
-      await page.getByRole("link", { name: "Export to Excel" }).isVisible(),
-      true,
+      await page.getByRole("link", { name: "Export to Excel" }).count(),
+      0,
+      "export is administrator-only",
     );
     assert.equal(
       await page.evaluate(

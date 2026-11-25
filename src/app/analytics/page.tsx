@@ -77,7 +77,7 @@ export default async function Analytics({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requireFinancialAccess();
+  const ctx = await requireFinancialAccess();
   const params = await searchParams;
   const track =
     params.track === "upstream" || params.track === "downstream"
@@ -128,9 +128,11 @@ export default async function Analytics({
         title="Tender analytics"
         context={`${data.length} tenders · ${coverage} · ${track === "all" ? "Both tracks" : track}`}
         actions={
-          <Button asChild variant="outline">
-            <a href={`/tenders/export?${query}`}>Export this scope</a>
-          </Button>
+          ctx.profile.role === "admin" ? (
+            <Button asChild variant="outline">
+              <a href={`/tenders/export?${query}`}>Export this scope</a>
+            </Button>
+          ) : undefined
         }
       />
       <AnalyticsFilters

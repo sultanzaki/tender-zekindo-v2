@@ -267,6 +267,24 @@ export interface Database {
           referencedColumns: ["id"];
         }];
       };
+      /** Migration 0017. Written by src/lib/access-log.ts only. */
+      access_log: {
+        Row: {
+          id: number;
+          created_at: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          action: string;
+          detail: Record<string, unknown>;
+          ip: string | null;
+          user_agent: string | null;
+        };
+        Insert: Partial<
+          Omit<Database["public"]["Tables"]["access_log"]["Row"], "id">
+        > & { action: string };
+        Update: never;
+        Relationships: [];
+      };
       milestone_types: {
         Row: {
           id: string;

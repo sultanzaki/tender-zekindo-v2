@@ -33,7 +33,8 @@ const tender = {
 before(async () => {
   directory = await mkdtemp(path.resolve("node_modules/.export-tests-"));
   const mocks = {
-    "@/lib/auth/dal": `export async function requireUser() { const ctx=globalThis.${stateKey}.ctx;if(!ctx)throw new Error('UNAUTHORIZED');return ctx; }`,
+    "@/lib/auth/dal": `export async function requireAdmin() { const ctx=globalThis.${stateKey}.ctx;if(!ctx)throw new Error('UNAUTHORIZED');if(ctx.profile.role!=='admin')throw new Error('FORBIDDEN');return ctx; }`,
+    "@/lib/access-log": `export async function logAccess(entry) { const s=globalThis.${stateKey}; (s.logged??=[]).push(entry); return !s.logFails; }`,
     "@/lib/tenders": `export async function getAllTenders(options) {
       globalThis.${stateKey}.options = options;
       return globalThis.${stateKey}.tenders.filter(t => options.track === "all" || t.track === options.track);
@@ -52,7 +53,7 @@ before(async () => {
         name: "export-fixtures",
         setup(b) {
           b.onResolve(
-            { filter: /^@\/lib\/(auth\/dal|tenders|milestones)$/ },
+            { filter: /^@\/lib\/(auth\/dal|access-log|tenders|milestones)$/ },
             (args) => ({ path: args.path, namespace: "fixture" }),
           );
           b.onLoad({ filter: /.*/, namespace: "fixture" }, (args) => ({
@@ -69,6 +70,7 @@ after(async () => {
   delete globalThis[stateKey];
   if (directory) await rm(directory, { recursive: true, force: true });
 });
+const admin = { userId: "a", email: "admin@example.test", profile: { role: "admin" } };
 async function exportSheet(ctx, query = "") {
   globalThis[stateKey] = {
     ctx,
@@ -94,32 +96,14 @@ test("anonymous export is rejected before reading any tender", async () => {
 });
 test("signed-in export preserves track and search filters", async () => {
   const sheet = await exportSheet(
-    { profile: { role: "viewer" } },
+    admin,
     "?track=downstream&search=does-not-match",
   );
   assert.equal(sheet.rowCount, 1);
   assert.deepEqual(globalThis[stateKey].options, { track: "downstream" });
 });
-test("viewer export omits internal notes", async () => {
-  const sheet = await exportSheet({ profile: { role: "viewer" } });
-  assert.ok(!sheet.getRow(1).values.includes("Internal Notes"));
-  assert.ok(!sheet.getRow(2).values.includes(tender.catatanInternal));
-  assert.ok(sheet.getRow(2).values.includes(tender.oe));
-  assert.ok(sheet.getRow(2).values.includes(tender.nilaiPenawaran));
-  assert.ok(sheet.getRow(2).values.includes(tender.oeCatatan));
-});
-test("restricted export omits revenue columns and values", async () => {
-  const sheet = await exportSheet({ profile: { role: "restricted" } });
-  const header = sheet.getRow(1).values;
-  for (const name of ["OE (Rp)", "OE Note", "Bid Value (Rp)", "Internal Notes"])
-    assert.ok(!header.includes(name), name);
-  const row = sheet.getRow(2).values;
-  for (const value of [tender.oe, tender.nilaiPenawaran, tender.oeCatatan, tender.catatanInternal])
-    assert.ok(!row.includes(value));
-  assert.ok(row.includes(tender.customer));
-});
 test("admin export retains internal notes and cannot be shared-cached", async () => {
-  const sheet = await exportSheet({ profile: { role: "admin" } });
+  const sheet = await exportSheet(admin);
   assert.ok(sheet.getRow(1).values.includes("Internal Notes"));
   assert.ok(sheet.getRow(2).values.includes(tender.catatanInternal));
   assert.ok(sheet.getRow(2).values.includes(tender.oe));
@@ -128,9 +112,28 @@ test("admin export retains internal notes and cannot be shared-cached", async ()
 
 test("all-track export includes both tracks without key collisions", async () => {
   const sheet = await exportSheet(
-    { profile: { role: "viewer" } },
+    admin,
     "?track=all",
   );
   assert.equal(sheet.rowCount, 3);
   assert.ok(sheet.getRow(1).values.includes("Downstream registration"));
+});
+
+test("only administrators can export, and every export is logged first", async () => {
+  for (const role of ["viewer", "restricted"]) {
+    globalThis[stateKey] = { ctx: { profile: { role } }, tenders: [tender] };
+    await assert.rejects(GET(new Request("http://localhost/tenders/export")), /FORBIDDEN/);
+    assert.equal(globalThis[stateKey].options, undefined, "no tender data read");
+  }
+  await exportSheet(admin, "?track=all");
+  const [entry] = globalThis[stateKey].logged;
+  assert.equal(entry.action, "export");
+  assert.equal(entry.actorId, "a");
+  assert.equal(entry.detail.rows, 2);
+});
+test("an export that cannot be logged is refused", async () => {
+  globalThis[stateKey] = { ctx: admin, tenders: [tender], logFails: true };
+  const response = await GET(new Request("http://localhost/tenders/export"));
+  assert.equal(response.status, 503);
+  assert.doesNotMatch(response.headers.get("Content-Type") ?? "", /spreadsheetml/);
 });

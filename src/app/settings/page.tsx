@@ -16,6 +16,12 @@ const destinations = [
     icon: "milestones",
   },
   {
+    href: "/admin/access-log",
+    title: "Access log",
+    description: "Who signed in, exported or downloaded documents, and from where.",
+    icon: "shield",
+  },
+  {
     href: "/tenders/archive",
     title: "Archived tenders",
     description: "Review and restore archived tenders",

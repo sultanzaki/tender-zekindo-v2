@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
-import { requireUser } from "@/lib/auth/dal";
+import { requireAdmin } from "@/lib/auth/dal";
+import { logAccess } from "@/lib/access-log";
 import { canViewFinancials } from "@/lib/roles";
 import { getAllTenders } from "@/lib/tenders";
 import { getMilestoneTypes, getMilestoneCatalog } from "@/lib/milestones";
@@ -21,7 +22,9 @@ export const dynamic = "force-dynamic";
 const msKey = (key: string) => `ms_${key}`;
 
 export async function GET(request: Request) {
-  const ctx = await requireUser();
+  // Exports carry the whole register out of the application: administrators
+  // only, and never without an access-log entry.
+  const ctx = await requireAdmin();
   const isAdmin = ctx?.profile.role === "admin";
   const financials = canViewFinancials(ctx.profile.role);
 
@@ -52,6 +55,18 @@ export async function GET(request: Request) {
         deadlineBucket(nextMilestone(t, anchor, catalog)?.diff) ===
           filters.deadline),
   );
+
+  const logged = await logAccess({
+    action: "export",
+    actorId: ctx.userId,
+    actorEmail: ctx.email,
+    detail: { track, rows: rows.length, query: searchParams.toString().slice(0, 500) },
+  });
+  if (!logged)
+    return new Response("Export is unavailable right now. Please try again.", {
+      status: 503,
+      headers: { "Cache-Control": "private, no-store" },
+    });
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Tenders");

@@ -738,16 +738,18 @@ export function TenderTableClient({
               </PopoverContent>
             </Popover>
           </div>
-          <Button asChild variant="outline" size="icon">
-            <a
-              href={exportHref}
-              aria-label="Export to Excel"
-              title="Export to Excel"
-              className={styles.exportAction}
-            >
-              <Icon name="download" width={16} height={16} />
-            </a>
-          </Button>
+          {isAdmin && (
+            <Button asChild variant="outline" size="icon">
+              <a
+                href={exportHref}
+                aria-label="Export to Excel"
+                title="Export to Excel"
+                className={styles.exportAction}
+              >
+                <Icon name="download" width={16} height={16} />
+              </a>
+            </Button>
+          )}
         </div>
         {(chips.length > 0 || track !== "all") && (
           <div className={styles.filterChips} aria-label="Active filters">

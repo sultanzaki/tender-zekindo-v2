@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/dal";
 import { getTenderById } from "@/lib/tenders";
 import { supabaseServer } from "@/lib/supabase-server";
 import { DOCUMENT_BUCKET } from "@/lib/documents";
+import { logAccess } from "@/lib/access-log";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,22 @@ export async function GET(
   if (error || !record?.file_path)
     return new Response("Document not found.", {
       status: 404,
+      headers: privateHeaders,
+    });
+
+  const logged = await logAccess({
+    action: "download",
+    actorId: ctx.userId,
+    actorEmail: ctx.email,
+    detail: {
+      tenderId: id,
+      tender: tender.tenderNo || tender.product || id,
+      file: record.file_name,
+    },
+  });
+  if (!logged)
+    return new Response("Downloads are unavailable right now. Please try again.", {
+      status: 503,
       headers: privateHeaders,
     });
 

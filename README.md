@@ -77,6 +77,10 @@ it into the production database directly, never through a file in Git.
 
 Apply migration 0013 before deploying the package schedule update. It freezes the current schedule for existing tenders, including saved order and dates. New tenders start with the template for their track. Adding a stage in a tender form stores it with that tender when the form is saved. Edit the defaults for future packages in Settings → Milestone templates.
 
+### Access log
+
+Sign-ins (including failed attempts), sign-outs, Excel exports and document downloads are written to `access_log` with user, time, IP address and browser (migration 0017). Administrators review them in **Settings → Access log**. Exports and downloads are refused if their entry cannot be stored, so nothing leaves the application unrecorded. **Excel export is administrator-only.**
+
 ### Milestone notes
 
 Each tender milestone can carry one note, written by administrators from **Tender detail → Schedule → Add note**. Every role can read it. Notes belong to that tender only, are recorded in the activity history and are not exported to Excel. Apply `supabase/migrations/0015_milestone_notes.sql` before deploying.
@@ -86,7 +90,7 @@ Each tender milestone can carry one note, written by administrators from **Tende
 | Role | Access |
 | --- | --- |
 | `admin` | Everything: edits, archive, users, Settings, internal notes, activity |
-| `viewer` | Read-only; sees OE, bid values and Analytics, not internal notes |
+| `viewer` | Read-only; sees OE, bid values and Analytics, not internal notes; no Excel export |
 | `restricted` | Read-only like viewer, but OE, OE note, bid value and IDR/L are removed server-side and Analytics is unavailable (navigation, page and export) |
 
 Apply `supabase/migrations/0014_restricted_role.sql` before assigning the new role. Permission checks live in `src/lib/roles.ts`; redaction happens in `redactTender()` (`src/lib/tenders.ts`) before data reaches the browser.
