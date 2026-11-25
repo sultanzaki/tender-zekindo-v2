@@ -240,6 +240,40 @@ test("calendar shows colour-coded stages, details, filters and a phone agenda", 
   await phone.close();
 });
 
+test("access-log filter pills stay readable when active, on desktop and phone", async () => {
+  // WCAG contrast ratio between an element's text and its own background.
+  const contrast = (locator) =>
+    locator.evaluate((el) => {
+      const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+      const lum = (c) => {
+        const [r, g, b] = rgb(c).map((v) => {
+          v /= 255;
+          return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const style = getComputedStyle(el);
+      let bg = style.backgroundColor;
+      for (let n = el; n && /rgba\(.*, 0\)|transparent/.test(bg); n = n.parentElement)
+        bg = getComputedStyle(n).backgroundColor;
+      const [a, b] = [lum(style.color), lum(bg)].sort((x, y) => y - x);
+      return (a + 0.05) / (b + 0.05);
+    });
+  for (const [active, label] of [["export", "Excel export"], ["", "All events"]]) {
+    for (const width of [1280, 375]) {
+      const page = await browser.newPage({ viewport: { width, height: 700 } });
+      await page.goto(`${base}/?component=access-filters&active=${active}`);
+      const pill = page.getByRole("link", { name: label });
+      assert.equal(await pill.getAttribute("aria-current"), "page");
+      assert.equal(await page.locator("[aria-current=page]").count(), 1);
+      for (const link of await page.getByRole("link").all())
+        assert.ok((await contrast(link)) >= 4.5, `${await link.innerText()} at ${width}px`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.close();
+    }
+  }
+});
+
 test("mobile account shows sign out without duplicating navigation", async () => {
   const page = await open("nav", 375);
   await page.goto(page.url() + "&track=downstream");

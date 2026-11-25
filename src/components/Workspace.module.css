@@ -354,3 +354,13 @@
 .rowTitle { font-size: 13px; }
 .panel { border-radius: 12px; }
 .filterBar { background: var(--zk-gray-50); }
+/* Many options (e.g. access-log events): wrap instead of overflowing phones. */
+.pillsWrap {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.pillsWrap a {
+  font-size: 13px;
+  padding: 7px 14px;
+  white-space: nowrap;
+}

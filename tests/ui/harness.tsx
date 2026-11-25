@@ -15,6 +15,7 @@ import { DocumentExplorer } from "../../src/components/DocumentExplorer";
 import { MoneyValue } from "../../src/components/MoneyValue";
 import { MilestoneNote } from "../../src/components/MilestoneNote";
 import { CalendarWorkspace } from "../../src/components/CalendarWorkspace";
+import { AccessLogFilters } from "../../src/components/AccessLogFilters";
 import { buildCalendarEvents, monthGrid } from "../../src/lib/calendar-events";
 import { KpiCards } from "../../src/components/charts/KpiCards";
 import { TrackComparisonChart } from "../../src/components/charts/TrackComparisonChart";
@@ -139,6 +140,14 @@ const calendarEvents = buildCalendarEvents(
   { from: calendarDays[0], to: calendarDays[41], today: "2026-11-25" },
 );
 const components = {
+  "access-filters": (
+    <AccessLogFilters
+      actions={["login", "login_failed", "logout", "logout_idle", "export", "download"] as const}
+      labels={{ login: "Signed in", login_failed: "Failed sign-in", logout: "Signed out",
+        logout_idle: "Signed out (idle)", export: "Excel export", download: "Document download" }}
+      active={(new URLSearchParams(location.search).get("active") || undefined) as "export" | undefined}
+    />
+  ),
   calendar: <CalendarWorkspace month="2026-11" days={calendarDays} today="2026-11-25" events={calendarEvents} />,
   "milestone-note": (
     <>
