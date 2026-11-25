@@ -28,7 +28,7 @@ LOSS REGIST, WITHDRAW, CANCELED, RETENDER, NO INFO. Result kosong berarti
 tender masih berjalan.
 
 Dimensi lain: Area (Sumatera, Jawa, Kalimantan, Papua), Customer (mayoritas
-anak usaha Pertamina, Petrochina Jabung, Medco), Entitas/Konsorsium (ZKI
+[customer names redacted]), Entitas/Konsorsium (ZKI
 sendiri atau konsorsium seperti ZKI-RGA, ZKI-BEI), OE dalam rupiah, dan
 Nilai Penawaran Kita.
 
@@ -163,7 +163,7 @@ _[tool: run_script]_
 
 _[tool: update_todos]_
 
-Turns out Area isn't merged cells — it's genuinely blank for most rows in the source (only 37/270 have it filled). No merge fix applies. I'll infer Area for the blank ones from the customer name text (e.g. "Pertamina Hulu Kalimantan Timur" → Kalimantan, "Medco E&P Rimau" → Sumatera) where possible, and label the rest "Tidak diketahui" — that's derived from real data, not invented. Will proceed with this unless you'd rather leave it blank.
+Turns out Area isn't merged cells — it's genuinely blank for most rows in the source (only 37/270 have it filled). No merge fix applies. I'll infer Area for the blank ones from the customer name text (e.g. a customer name containing "Kalimantan" → Kalimantan) where possible, and label the rest "Tidak diketahui" — that's derived from real data, not invented. Will proceed with this unless you'd rather leave it blank.
 
 Hit my usage limit — say "continue" and I'll finish the data cleanup and start building the screens.
 

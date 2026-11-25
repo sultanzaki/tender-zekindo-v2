@@ -68,9 +68,10 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # or: supabase db reset (applies see
 npm run dev
 ```
 
-`supabase/seed.sql` is generated from the 270 tenders extracted from the
-source Excel during the design phase (`project/tenders-data.js`). Regenerate
-it with `node scripts/generate-seed-sql.mjs` if that source data changes.
+`supabase/seed.sql` holds three **fictional** tenders for local development.
+It never truncates and skips rows that already exist. The company's real
+register is confidential and must not be committed to this repository: import
+it into the production database directly, never through a file in Git.
 
 ### Tender schedules
 
