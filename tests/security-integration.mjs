@@ -576,6 +576,11 @@ test("every exposed admin action rejects forged sessions and viewers before muta
         "logoutIdle",
         "keepSessionAlive",
         "reportClientError",
+        // Sign-in step and self-service 2FA: covered by their own test below.
+        "verifyTwoFactorLogin",
+        "beginTwoFactorSetup",
+        "confirmTwoFactorSetup",
+        "disableTwoFactor",
       ].includes(action.exportedName),
   );
   assert.ok(actions.length >= 20);
@@ -615,6 +620,26 @@ test("every exposed admin action rejects forged sessions and viewers before muta
     0,
     "authorization failures must not mutate fixture data",
   );
+});
+
+test("self-service two-factor actions refuse a revoked session and write nothing", async () => {
+  const names = ["beginTwoFactorSetup", "confirmTwoFactorSetup", "disableTwoFactor"];
+  const found = Object.entries(manifest.node).filter(([, a]) => names.includes(a.exportedName));
+  assert.equal(found.length, names.length);
+  for (const [id, action] of found) {
+    const worker =
+      Object.keys(action.workers).find((key) => !key.includes("[")) ||
+      Object.keys(action.workers)[0];
+    const route = worker.replace(/^app/, "").replace(/\/page$/, "").replace(/\[id\]/g, "T0001") || "/";
+    const response = await fetch(base + route, {
+      method: "POST",
+      headers: headers("revoked", { "Next-Action": id, "Content-Type": "text/plain;charset=UTF-8", Origin: base }),
+      body: "[]",
+      redirect: "manual",
+    });
+    assert.ok(response.headers.get("x-action-redirect"), `${action.exportedName}: ${response.status}`);
+  }
+  assert.equal(writes.filter((w) => w.table === "profiles").length, 0);
 });
 
 test("cross-origin requests cannot execute an authenticated admin action", async () => {

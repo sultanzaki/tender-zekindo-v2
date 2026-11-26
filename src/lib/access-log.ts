@@ -9,7 +9,15 @@ export type AccessAction =
   | "logout"
   | "logout_idle"
   | "export"
-  | "download";
+  | "download"
+  | "user_created"
+  | "user_role_changed"
+  | "user_password_reset"
+  | "user_removed"
+  | "tender_deleted"
+  | "twofactor_enabled"
+  | "twofactor_disabled"
+  | "twofactor_reset";
 
 export const ACCESS_ACTIONS: AccessAction[] = [
   "login",
@@ -18,6 +26,14 @@ export const ACCESS_ACTIONS: AccessAction[] = [
   "logout_idle",
   "export",
   "download",
+  "user_created",
+  "user_role_changed",
+  "user_password_reset",
+  "user_removed",
+  "tender_deleted",
+  "twofactor_enabled",
+  "twofactor_disabled",
+  "twofactor_reset",
 ];
 
 export interface AccessLogEntry {
@@ -31,7 +47,7 @@ export interface AccessLogEntry {
 }
 
 /** The client address as Vercel reports it: the first x-forwarded-for hop. */
-function clientIp(h: Headers): string | null {
+export function clientIp(h: Headers): string | null {
   const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
   return (forwarded || h.get("x-real-ip") || "").slice(0, 64) || null;
 }

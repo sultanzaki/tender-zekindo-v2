@@ -54,6 +54,9 @@ export async function removeUser() {
 export async function updateUserRole() {
   return { error: "Could not update role" };
 }
+export async function resetUserTwoFactor() {
+  return {};
+}
 export async function resetUserPassword() {
   return {};
 }
@@ -138,6 +141,9 @@ export async function setMilestoneTableVisibility() {
   return {};
 }
 
+export async function verifyTwoFactorLogin() {
+  return { error: "That code is not valid. Try again.", twoFactor: true };
+}
 export async function login() {
   return { error: "Incorrect email or password." };
 }

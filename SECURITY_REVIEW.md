@@ -99,3 +99,37 @@ GitHub access policy is separate from website authentication.
 
 These source changes take effect when the new build is deployed. A Git push and
 local production verification do not establish that an external deployment is active.
+
+---
+
+# Hardening round — 26 November 2026
+
+Supersedes the older statements above where they differ (viewers no longer see
+amounts if they are `restricted`; Next.js is 16.4.6).
+
+- **Sign-in limits are shared.** Failed sign-ins are counted from `access_log`
+  (10 per email, 30 per IP, 15-minute window), so they hold across serverless
+  instances and cold starts. If the log cannot be read, sign-in fails closed.
+- **Optional two-factor (TOTP).** Each user can enable it under Account security;
+  accounts without it sign in as before. A password alone never creates a
+  session for an enrolled account: a short-lived `login_challenges` row (5 minutes,
+  5 code attempts) sits in between. Codes are single-use per time step, ten
+  single-use recovery codes are issued, and wrong codes count towards the sign-in
+  limits. Turning it off needs the password and a current code. Administrators can
+  reset a user's 2FA (revokes their sessions). Set `TWO_FACTOR_ENCRYPTION_KEY` to
+  store the secrets AES-256-GCM encrypted.
+- **Database privileges revoked explicitly** (`0018`): `anon` / `authenticated`
+  have no table, sequence or function privileges, independent of RLS. Future
+  objects start closed too.
+- **Administrator actions are logged**: user created / role changed / password
+  reset / removed, tender deleted, 2FA enabled / disabled / reset.
+- **Uploads**: the private bucket enforces a 5 MB limit server-side.
+- **Meetings**: non-admins may still organise meetings, now capped at 20 new
+  meetings per hour (each sends email).
+
+Still open: real data remains in git history (needs a history rewrite), a full
+Content-Security-Policy, and the dashboard-side items (2FA on GitHub, Vercel and
+Supabase, key rotation, preview protection, backups).
+
+Tests: unit 63, security integration 13, two-factor end-to-end 8 (real build,
+real browser).

@@ -121,6 +121,8 @@ export interface Profile {
   name: string;
   role: UserRole;
   createdAt: string;
+  /** Set only by the administrator user list. */
+  twoFactor?: boolean;
 }
 
 export interface Tender {

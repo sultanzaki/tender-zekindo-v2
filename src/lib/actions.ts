@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "./supabase-server";
 import { requireAdmin } from "./auth/dal";
+import { logAccess } from "./access-log";
 import { getTenderById } from "./tenders";
 import { DOCUMENT_BUCKET } from "./documents";
 import { getMilestoneTypes } from "./milestones";
@@ -410,6 +411,12 @@ export async function deleteTenderPermanently(
     action: "delete",
     changes: null,
   });
+  await logAccess({
+    action: "tender_deleted",
+    actorId: ctx.userId,
+    actorEmail: ctx.email,
+    detail: { tender: labelFor(tender) },
+  });
 
   revalidatePath("/tenders/archive");
   updateTag(TENDERS_TAG);
@@ -474,6 +481,15 @@ export async function bulkDeleteTenders(ids: string[]): Promise<BulkResult> {
 
   for (const targetId of targetIds) await deleteTenderStorageFiles(targetId);
   await logBulkEvents(targets, ctx, "delete", true);
+  await logAccess({
+    action: "tender_deleted",
+    actorId: ctx.userId,
+    actorEmail: ctx.email,
+    detail: {
+      tenders: targets.map((t) => t.tender_no || t.product || t.id).join(", ").slice(0, 500),
+      count: targets.length,
+    },
+  });
 
   revalidatePath("/");
   revalidatePath("/tenders");

@@ -7,7 +7,7 @@ export async function getAllProfiles(): Promise<Profile[]> {
   await requireAdmin();
   const { data, error } = await supabaseServer()
     .from("profiles")
-    .select("id, email, name, role, created_at")
+    .select("id, email, name, role, created_at, totp_enabled_at")
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Failed to load users: ${error.message}`);
   return (data ?? []).map((row) => ({
@@ -16,6 +16,7 @@ export async function getAllProfiles(): Promise<Profile[]> {
     name: row.name,
     role: row.role,
     createdAt: row.created_at,
+    twoFactor: Boolean(row.totp_enabled_at),
   }));
 }
 

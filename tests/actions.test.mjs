@@ -40,6 +40,7 @@ before(async () => {
     "@/unused": "",
     "next/cache": `export function revalidatePath(){} export function updateTag(){};`,
     "next/navigation": `export function redirect(path){throw new Error('REDIRECT:'+path);}`,
+    "./access-log": "export async function logAccess(){return true;}",
     "./auth/dal": `export async function requireAdmin(){if(!globalThis.${stateKey}.authorized)throw new Error('UNAUTHORIZED');return {userId:'admin',profile:{name:'Test Admin'}};}`,
     "./tenders": `export async function getTenderById(){return {id:'t',track:'upstream',archivedAt:null};}`,
     "./documents": `export const DOCUMENT_BUCKET='fixture';`,
@@ -64,7 +65,7 @@ before(async () => {
           b.onResolve(
             {
               filter:
-                /^(next\/(cache|navigation)|\.\/(auth\/dal|tenders|documents|milestones|supabase-server))$/,
+                /^(next\/(cache|navigation)|\.\/(access-log|auth\/dal|tenders|documents|milestones|supabase-server))$/,
             },
             (args) => ({ path: args.path, namespace: "mock" }),
           );

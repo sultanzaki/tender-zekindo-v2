@@ -7,6 +7,8 @@ import { resolveTenderMilestones } from "./tender-logic";
 import { MEETING_COUNTS_TAG } from "./cache-tags";
 import { revalidatePath, updateTag } from "next/cache";
 
+const MAX_MEETINGS_PER_HOUR = 20;
+
 export async function saveMeeting(
   tenderId: string,
   milestone: string,
@@ -36,6 +38,17 @@ export async function saveMeeting(
     )
       return "Meeting unavailable.";
     organizer = data.organizer ?? ctx.userId;
+  }
+  if (!id && !cancel && ctx.profile.role !== "admin") {
+    // Anyone may organise a meeting, but it sends email: cap how many a
+    // non-admin can create per hour.
+    const { count } = await db
+      .from("tender_meetings")
+      .select("id", { count: "exact", head: true })
+      .eq("organizer", ctx.userId)
+      .gte("created_at", new Date(Date.now() - 3600_000).toISOString());
+    if ((count ?? 0) >= MAX_MEETINGS_PER_HOUR)
+      return "You have created many meetings in the last hour. Please try again later.";
   }
   const topic = String(form.get("topic") || "").trim(),
     local = String(form.get("time") || ""),

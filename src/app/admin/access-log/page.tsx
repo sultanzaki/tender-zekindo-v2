@@ -28,6 +28,14 @@ const LABELS: Record<AccessAction, string> = {
   logout_idle: "Signed out (idle)",
   export: "Excel export",
   download: "Document download",
+  user_created: "User created",
+  user_role_changed: "Role changed",
+  user_password_reset: "Password reset",
+  user_removed: "User removed",
+  tender_deleted: "Tender deleted",
+  twofactor_enabled: "2FA enabled",
+  twofactor_disabled: "2FA disabled",
+  twofactor_reset: "2FA reset by admin",
 };
 
 const when = new Intl.DateTimeFormat("en-GB", {
@@ -45,6 +53,16 @@ function describe(entry: AccessLogEntry): string {
       return `${d.rows ?? "?"} tenders · ${d.track ?? "all"}${d.query ? ` · ${d.query}` : ""}`;
     case "download":
       return `${d.file ?? "file"} · ${d.tender ?? d.tenderId ?? ""}`;
+    case "user_role_changed":
+      return `${d.target ?? ""} · ${d.from ?? "?"} → ${d.to ?? "?"}`;
+    case "user_created":
+      return `${d.target ?? ""} · ${d.role ?? ""}`;
+    case "tender_deleted":
+      return String(d.tender ?? d.tenders ?? "");
+    case "user_password_reset":
+    case "user_removed":
+    case "twofactor_reset":
+      return String(d.target ?? "");
     default:
       return "";
   }

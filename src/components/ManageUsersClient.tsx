@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import {
   createUser,
   removeUser,
+  resetUserTwoFactor,
   resetUserPassword,
   updateUserRole,
 } from "@/lib/auth/actions";
@@ -153,7 +154,10 @@ export function ManageUsersClient({
                     {u.id === currentUserId && (
                       <span className="muted"> · You</span>
                     )}
-                    <div className="muted">{u.email}</div>
+                    <div className="muted">
+                      {u.email}
+                      {u.twoFactor && " · 2FA on"}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <NativeSelect
@@ -193,6 +197,25 @@ export function ManageUsersClient({
                       >
                         Reset password
                       </Button>
+                      {u.twoFactor && u.id !== currentUserId && (
+                        <Button
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Turn off two-factor for ${u.name}? They will be signed out and can enrol again.`,
+                              )
+                            )
+                              run(
+                                () => resetUserTwoFactor(u.id),
+                                `Two-factor reset for ${u.name}.`,
+                              );
+                          }}
+                        >
+                          Reset 2FA
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         className={members.removeButton}

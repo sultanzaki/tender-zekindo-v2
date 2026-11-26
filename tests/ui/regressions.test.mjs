@@ -284,7 +284,8 @@ test("mobile account shows sign out without duplicating navigation", async () =>
   await page.goto(page.url() + "&track=downstream");
   await page.getByRole("button", { name: "Account", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  assert.equal(await dialog.getByRole("link").count(), 0);
+  // Only the account's own page; the main navigation is not repeated here.
+  assert.deepEqual(await dialog.getByRole("link").allInnerTexts(), ["Account security"]);
   assert.equal(
     await dialog
       .getByRole("button", { name: "Sign out", exact: true })

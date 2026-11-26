@@ -24,6 +24,12 @@ const destinations = [
     icon: "shield",
   },
   {
+    href: "/settings/security",
+    title: "Account security",
+    description: "Two-factor authentication for your own account (optional).",
+    icon: "shield",
+  },
+  {
     href: "/tenders/archive",
     title: "Archived tenders",
     description: "Review and restore archived tenders",
