@@ -61,6 +61,7 @@ const SUBPAGES: [RegExp, string][] = [
   [/^\/admin\/users/, "Users & access"],
   [/^\/admin\/milestones/, "Milestone templates"],
   [/^\/admin\/access-log/, "Access log"],
+  [/^\/admin\/retention/, "Data retention"],
   [/^\/tenders\/archive/, "Archived tenders"],
   [/^\/tenders\/new/, "New tender"],
   [/^\/tenders\/[^/]+\/edit/, "Edit tender"],

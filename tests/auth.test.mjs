@@ -19,7 +19,7 @@ before(async () => {
   await build({
     stdin: {
       contents:
-        "export * from './src/lib/auth/session.ts'; export * from './src/lib/auth/dal.ts'; export * from './src/lib/auth/login-throttle.ts'; export * from './src/lib/auth/totp.ts';",
+        "export * from './src/lib/auth/session.ts'; export * from './src/lib/auth/dal.ts'; export * from './src/lib/auth/login-throttle.ts'; export * from './src/lib/auth/totp.ts'; export * from './src/lib/csp.ts'; export * from './src/lib/alert-rules.ts';",
       resolveDir: process.cwd(),
     },
     outfile: path.join(directory, "auth.mjs"),
@@ -172,6 +172,32 @@ test("recovery codes hash case- and hyphen-insensitively; secrets round-trip sea
   } finally {
     delete process.env.TWO_FACTOR_ENCRYPTION_KEY;
   }
+});
+
+test("CSP: nonce-only scripts, framing and plugins blocked, storage host allowed to connect", () => {
+  const csp = api.buildCsp({ nonce: "abc", storageOrigin: "https://x.supabase.co" });
+  assert.match(csp, /script-src 'self' 'nonce-abc' 'strict-dynamic'(;|$)/);
+  assert.doesNotMatch(csp, /script-src[^;]*(unsafe-inline|unsafe-eval)/);
+  assert.match(csp, /connect-src 'self' https:\/\/x\.supabase\.co(;|$)/);
+  for (const directive of ["object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "upgrade-insecure-requests"])
+    assert.ok(csp.includes(directive), directive);
+  assert.match(api.buildCsp({ nonce: "n", dev: true }), /'unsafe-eval'/);
+  assert.equal(api.originOf("https://x.supabase.co/rest/v1"), "https://x.supabase.co");
+  assert.equal(api.originOf("not a url"), null);
+});
+
+test("security alerts fire for sensitive events and failed-login bursts only", () => {
+  const alert = (action, extra = {}) => api.alertFor({ action, actorEmail: "a@x.test", ...extra });
+  for (const action of ["export", "tender_deleted", "user_removed", "user_role_changed", "user_password_reset", "twofactor_reset", "twofactor_disabled"])
+    assert.ok(alert(action), action);
+  for (const action of ["login", "logout", "logout_idle", "download", "twofactor_enabled", "retention_run", "user_created"])
+    assert.equal(alert(action), null, action);
+  assert.ok(alert("user_created", { detail: { role: "admin", target: "n@x.test" } }), "new administrator");
+  assert.equal(alert("login_failed", { recentFailures: 4 }), null);
+  assert.match(alert("login_failed", { recentFailures: 5 }).subject, /Repeated failed/);
+  assert.equal(alert("login_failed", { recentFailures: 6 }), null, "one alert per burst, not per attempt");
+  assert.match(alert("login_failed", { detail: { reason: "throttled" } }).subject, /locked/);
+  assert.match(alert("user_role_changed", { detail: { target: "b@x.test", from: "viewer", to: "admin" } }).summary, /viewer → admin/);
 });
 
 test("idle sessions end on the server; active ones refresh last-seen sparingly", async () => {

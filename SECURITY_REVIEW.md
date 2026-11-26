@@ -133,3 +133,29 @@ Supabase, key rotation, preview protection, backups).
 
 Tests: unit 63, security integration 13, two-factor end-to-end 8 (real build,
 real browser).
+
+---
+
+# Hardening round 2 — 26 November 2026
+
+- **Append-only access log** (`0019`): a database trigger rejects edits and
+  truncation, and refuses deleting rows younger than 12 months, even with the
+  service-role key. (Owner-level database access could still drop the trigger;
+  shipping the log to external storage would close that gap.)
+- **Security alerts**: emails to `SECURITY_ALERT_RECIPIENTS` for failed-login
+  bursts (5 in 10 minutes), lockouts, exports, tender deletion, user removal,
+  role changes, password and 2FA resets, new administrators. Rules in
+  `src/lib/alert-rules.ts`; sent after the response, never blocking the action.
+- **CSP with per-request nonce** (`src/proxy.ts`, `src/lib/csp.ts`): scripts run
+  only with the nonce (`strict-dynamic`), no framing, objects or foreign form
+  posts; the browser may connect to this site and the storage host only. Styles
+  keep `unsafe-inline` (React/Radix style attributes). **HSTS** one year,
+  `includeSubDomains` (no preload).
+- **Data retention** (`src/lib/retention-policy.ts`, Settings → Data retention):
+  access log 12 months, expired sessions 7 days, error log 90 days, mail queue
+  and digests 30 days — purged daily by `/api/cron/retention`. Business records
+  are never deleted automatically; archived tenders older than 5 years are listed
+  for an administrator's review.
+
+Tests: unit 65, security integration 14 (includes a browser sweep proving the
+CSP blocks nothing the app needs), two-factor end-to-end 8.

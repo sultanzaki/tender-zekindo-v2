@@ -36,6 +36,7 @@ const LABELS: Record<AccessAction, string> = {
   twofactor_enabled: "2FA enabled",
   twofactor_disabled: "2FA disabled",
   twofactor_reset: "2FA reset by admin",
+  retention_run: "Data retention run",
 };
 
 const when = new Intl.DateTimeFormat("en-GB", {
@@ -59,6 +60,8 @@ function describe(entry: AccessLogEntry): string {
       return `${d.target ?? ""} · ${d.role ?? ""}`;
     case "tender_deleted":
       return String(d.tender ?? d.tenders ?? "");
+    case "retention_run":
+      return Object.entries(d).map(([k, v]) => `${k}: ${v}`).join(" · ");
     case "user_password_reset":
     case "user_removed":
     case "twofactor_reset":

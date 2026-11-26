@@ -382,6 +382,11 @@ export interface Database {
       };
     };
     Functions: {
+      /** Migration 0019: purges short-lived data, returns rows removed per table. */
+      apply_retention: {
+        Args: Record<string, never>;
+        Returns: Record<string, number>;
+      };
       claim_meeting_mail: {
         Args: Record<string, never>;
         Returns: MeetingMail[];
