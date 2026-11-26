@@ -287,6 +287,8 @@ const routes = [
   "/calendar",
   "/calendar?month=2026-10",
   "/admin/access-log",
+  "/admin/retention",
+  "/settings/security",
   "/tenders?track=all",
   "/tenders/T0001",
   "/tenders/T0001?tab=documents",
@@ -576,6 +578,11 @@ test("every exposed admin action rejects forged sessions and viewers before muta
         "logoutIdle",
         "keepSessionAlive",
         "reportClientError",
+        // Sign-in step and self-service 2FA: covered by their own test below.
+        "verifyTwoFactorLogin",
+        "beginTwoFactorSetup",
+        "confirmTwoFactorSetup",
+        "disableTwoFactor",
       ].includes(action.exportedName),
   );
   assert.ok(actions.length >= 20);
@@ -617,6 +624,26 @@ test("every exposed admin action rejects forged sessions and viewers before muta
   );
 });
 
+test("self-service two-factor actions refuse a revoked session and write nothing", async () => {
+  const names = ["beginTwoFactorSetup", "confirmTwoFactorSetup", "disableTwoFactor"];
+  const found = Object.entries(manifest.node).filter(([, a]) => names.includes(a.exportedName));
+  assert.equal(found.length, names.length);
+  for (const [id, action] of found) {
+    const worker =
+      Object.keys(action.workers).find((key) => !key.includes("[")) ||
+      Object.keys(action.workers)[0];
+    const route = worker.replace(/^app/, "").replace(/\/page$/, "").replace(/\[id\]/g, "T0001") || "/";
+    const response = await fetch(base + route, {
+      method: "POST",
+      headers: headers("revoked", { "Next-Action": id, "Content-Type": "text/plain;charset=UTF-8", Origin: base }),
+      body: "[]",
+      redirect: "manual",
+    });
+    assert.ok(response.headers.get("x-action-redirect"), `${action.exportedName}: ${response.status}`);
+  }
+  assert.equal(writes.filter((w) => w.table === "profiles").length, 0);
+});
+
 test("cross-origin requests cannot execute an authenticated admin action", async () => {
   const [id] = Object.entries(manifest.node).find(
     ([, action]) => action.exportedName === "archiveTender",
@@ -645,7 +672,18 @@ test("security headers and login page expose no public workspace entry", async (
     /frame-ancestors 'none'/,
   );
   assert.equal(response.headers.get("x-powered-by"), null);
+  assert.match(
+    response.headers.get("strict-transport-security"),
+    /max-age=31536000; includeSubDomains/,
+  );
+  const csp = response.headers.get("content-security-policy");
+  const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
+  assert.ok(nonce, "script nonce present");
+  assert.doesNotMatch(csp, /script-src[^;]*unsafe-inline/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /form-action 'self'/);
   const html = await response.text();
+  assert.ok(html.includes(`nonce="${nonce}"`), "Next stamps the nonce on its scripts");
   assert.ok(!html.includes("Continue to public workspace"));
   assert.ok(!html.includes(tender.customer));
 });
@@ -721,6 +759,47 @@ test("real login uses generic credential errors, secure cookies and revokes the 
     redirect: "manual",
   });
   assert.ok([303, 307, 308].includes(reuse.status));
+  await context.close();
+});
+
+test("the Content-Security-Policy blocks nothing the application needs", async () => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await context.addCookies([
+    { name: "zk_session", value: tokens.admin, domain: "localhost", path: "/" },
+  ]);
+  const violations = [];
+  const page = await context.newPage();
+  page.on("pageerror", (error) => violations.push("pageerror: " + error.message));
+  page.on("console", (message) => {
+    if (/Content Security Policy|Refused to/i.test(message.text())) violations.push(message.text());
+  });
+  await page.addInitScript(() =>
+    document.addEventListener("securitypolicyviolation", (e) =>
+      console.error("Refused to " + e.violatedDirective + " " + e.blockedURI),
+    ),
+  );
+  for (const route of [
+    "/tenders?track=all",
+    "/tenders/T0001",
+    "/tenders/T0001?tab=documents",
+    "/tenders/T0001/edit",
+    "/analytics?track=all",
+    "/calendar",
+    "/admin/users",
+    "/admin/access-log",
+    "/admin/retention",
+    "/settings/security",
+    "/tenders/NOPE",
+  ]) {
+    await page.goto(base + route, { waitUntil: "networkidle" });
+    // Hydration proves scripts ran: the account button opens a dialog.
+    if (route === "/calendar") {
+      await page.getByRole("button", { name: "Agenda" }).click();
+      assert.equal(await page.locator('button[aria-pressed="true"]', { hasText: "Agenda" }).count(), 1);
+    }
+  }
+  await page.goto(base + "/login", { waitUntil: "networkidle" });
+  assert.deepEqual(violations, []);
   await context.close();
 });
 

@@ -19,7 +19,7 @@ before(async () => {
   await build({
     stdin: {
       contents:
-        "export * from './src/lib/auth/session.ts'; export * from './src/lib/auth/dal.ts'; export * from './src/lib/auth/login-throttle.ts';",
+        "export * from './src/lib/auth/session.ts'; export * from './src/lib/auth/dal.ts'; export * from './src/lib/auth/login-throttle.ts'; export * from './src/lib/auth/totp.ts'; export * from './src/lib/csp.ts'; export * from './src/lib/alert-rules.ts';",
       resolveDir: process.cwd(),
     },
     outfile: path.join(directory, "auth.mjs"),
@@ -136,15 +136,68 @@ test("failed session revocation is reported instead of silently claiming logout 
     /Unable to revoke/,
   );
 });
-test("login throttle reserves concurrent attempts, expires and resets after success", () => {
-  const email = "throttle@example.test",
-    now = Date.now();
-  for (let i = 0; i < 10; i++)
-    assert.equal(api.reserveLoginAttempt(email, now), true);
-  assert.equal(api.reserveLoginAttempt(email, now), false);
-  assert.equal(api.reserveLoginAttempt(email, now + 15 * 60 * 1000), true);
-  api.clearLoginAttempts(email);
-  assert.equal(api.reserveLoginAttempt(email, now), true);
+test("login limits trip per email or per address, from shared log counts", () => {
+  assert.equal(api.exceedsLoginLimits({ email: 9, ip: 29 }), false);
+  assert.equal(api.exceedsLoginLimits({ email: 10, ip: 0 }), true);
+  assert.equal(api.exceedsLoginLimits({ email: 0, ip: 30 }), true);
+  assert.equal(api.exceedsLoginLimits({ email: 0, ip: null }), false);
+});
+
+test("TOTP follows RFC 6238, tolerates one step of drift and refuses replays", () => {
+  // RFC 6238 appendix B: secret "12345678901234567890", T=59s -> 94287082 (8 digits).
+  const secret = api.base32Encode(Buffer.from("12345678901234567890"));
+  assert.equal(api.totpCode(secret, 1), "287082");
+  const now = 59_000;
+  assert.equal(api.verifyTotp(secret, "287 082", null, now), 1);
+  assert.equal(api.verifyTotp(secret, "287082", null, now + 30_000), 1, "previous step still accepted");
+  assert.equal(api.verifyTotp(secret, "287082", null, now + 90_000), null, "stale code refused");
+  assert.equal(api.verifyTotp(secret, "287082", 1, now), null, "same step cannot be replayed");
+  assert.equal(api.verifyTotp(secret, "12345", null, now), null);
+  assert.deepEqual([...api.base32Decode(api.base32Encode(Buffer.from("zekindo")))], [...Buffer.from("zekindo")]);
+});
+
+test("recovery codes hash case- and hyphen-insensitively; secrets round-trip sealed", () => {
+  const [code] = api.generateRecoveryCodes();
+  assert.match(code, /^[a-z2-7]{5}-[a-z2-7]{5}$/);
+  assert.equal(api.hashRecoveryCode(code), api.hashRecoveryCode(code.toUpperCase().replace("-", " ")));
+  const secret = api.generateTotpSecret();
+  assert.equal(api.openSecret(api.sealSecret(secret)), secret);
+  process.env.TWO_FACTOR_ENCRYPTION_KEY = "k".repeat(40);
+  try {
+    const sealed = api.sealSecret(secret);
+    assert.match(sealed, /^v1:/);
+    assert.ok(!sealed.includes(secret));
+    assert.equal(api.openSecret(sealed), secret);
+    assert.equal(api.openSecret(secret), secret, "pre-encryption rows stay readable");
+  } finally {
+    delete process.env.TWO_FACTOR_ENCRYPTION_KEY;
+  }
+});
+
+test("CSP: nonce-only scripts, framing and plugins blocked, storage host allowed to connect", () => {
+  const csp = api.buildCsp({ nonce: "abc", storageOrigin: "https://x.supabase.co" });
+  assert.match(csp, /script-src 'self' 'nonce-abc' 'strict-dynamic'(;|$)/);
+  assert.doesNotMatch(csp, /script-src[^;]*(unsafe-inline|unsafe-eval)/);
+  assert.match(csp, /connect-src 'self' https:\/\/x\.supabase\.co(;|$)/);
+  for (const directive of ["object-src 'none'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "upgrade-insecure-requests"])
+    assert.ok(csp.includes(directive), directive);
+  assert.match(api.buildCsp({ nonce: "n", dev: true }), /'unsafe-eval'/);
+  assert.equal(api.originOf("https://x.supabase.co/rest/v1"), "https://x.supabase.co");
+  assert.equal(api.originOf("not a url"), null);
+});
+
+test("security alerts fire for sensitive events and failed-login bursts only", () => {
+  const alert = (action, extra = {}) => api.alertFor({ action, actorEmail: "a@x.test", ...extra });
+  for (const action of ["export", "tender_deleted", "user_removed", "user_role_changed", "user_password_reset", "twofactor_reset", "twofactor_disabled"])
+    assert.ok(alert(action), action);
+  for (const action of ["login", "logout", "logout_idle", "download", "twofactor_enabled", "retention_run", "user_created"])
+    assert.equal(alert(action), null, action);
+  assert.ok(alert("user_created", { detail: { role: "admin", target: "n@x.test" } }), "new administrator");
+  assert.equal(alert("login_failed", { recentFailures: 4 }), null);
+  assert.match(alert("login_failed", { recentFailures: 5 }).subject, /Repeated failed/);
+  assert.equal(alert("login_failed", { recentFailures: 6 }), null, "one alert per burst, not per attempt");
+  assert.match(alert("login_failed", { detail: { reason: "throttled" } }).subject, /locked/);
+  assert.match(alert("user_role_changed", { detail: { target: "b@x.test", from: "viewer", to: "admin" } }).summary, /viewer → admin/);
 });
 
 test("idle sessions end on the server; active ones refresh last-seen sparingly", async () => {

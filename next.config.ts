@@ -10,9 +10,11 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "no-referrer" },
+          // The Content-Security-Policy is set per request in src/proxy.ts (it
+          // carries a nonce). HSTS: browsers remember to use HTTPS only.
           {
-            key: "Content-Security-Policy",
-            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
           },
           {
             key: "Permissions-Policy",

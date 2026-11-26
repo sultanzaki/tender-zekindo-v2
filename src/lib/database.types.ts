@@ -21,6 +21,7 @@ export type Meeting = {
   hour_notice: boolean;
   cancelled: boolean;
   revision: number;
+  created_at?: string;
 };
 type MeetingMail = {
   id: string;
@@ -147,6 +148,11 @@ export interface Database {
           role: UserRole;
           password_hash: string | null;
           created_at: string;
+          /** Migration 0018 — optional TOTP two-factor authentication. */
+          totp_secret: string | null;
+          totp_enabled_at: string | null;
+          totp_last_step: number | null;
+          totp_recovery_hashes: string[];
         };
         // id defaults to gen_random_uuid() (see 0004_custom_auth.sql) — no
         // longer supplied by a Supabase Auth trigger.
@@ -267,6 +273,21 @@ export interface Database {
           referencedColumns: ["id"];
         }];
       };
+      /** Migration 0018. Pending second step of a sign-in. */
+      login_challenges: {
+        Row: {
+          id: string;
+          user_id: string;
+          attempts: number;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: Partial<
+          Database["public"]["Tables"]["login_challenges"]["Row"]
+        > & { id: string; user_id: string; expires_at: string };
+        Update: Partial<Database["public"]["Tables"]["login_challenges"]["Row"]>;
+        Relationships: [];
+      };
       /** Migration 0017. Written by src/lib/access-log.ts only. */
       access_log: {
         Row: {
@@ -361,6 +382,11 @@ export interface Database {
       };
     };
     Functions: {
+      /** Migration 0019: purges short-lived data, returns rows removed per table. */
+      apply_retention: {
+        Args: Record<string, never>;
+        Returns: Record<string, number>;
+      };
       claim_meeting_mail: {
         Args: Record<string, never>;
         Returns: MeetingMail[];

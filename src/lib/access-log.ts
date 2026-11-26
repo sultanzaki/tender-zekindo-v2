@@ -2,6 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { supabaseServer } from "./supabase-server";
 import { requireAdmin } from "./auth/dal";
+import { sendSecurityAlert } from "./security-alerts";
 
 export type AccessAction =
   | "login"
@@ -9,7 +10,16 @@ export type AccessAction =
   | "logout"
   | "logout_idle"
   | "export"
-  | "download";
+  | "download"
+  | "user_created"
+  | "user_role_changed"
+  | "user_password_reset"
+  | "user_removed"
+  | "tender_deleted"
+  | "twofactor_enabled"
+  | "twofactor_disabled"
+  | "twofactor_reset"
+  | "retention_run";
 
 export const ACCESS_ACTIONS: AccessAction[] = [
   "login",
@@ -18,6 +28,15 @@ export const ACCESS_ACTIONS: AccessAction[] = [
   "logout_idle",
   "export",
   "download",
+  "user_created",
+  "user_role_changed",
+  "user_password_reset",
+  "user_removed",
+  "tender_deleted",
+  "twofactor_enabled",
+  "twofactor_disabled",
+  "twofactor_reset",
+  "retention_run",
 ];
 
 export interface AccessLogEntry {
@@ -31,9 +50,32 @@ export interface AccessLogEntry {
 }
 
 /** The client address as Vercel reports it: the first x-forwarded-for hop. */
-function clientIp(h: Headers): string | null {
+export function clientIp(h: Headers): string | null {
   const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
   return (forwarded || h.get("x-real-ip") || "").slice(0, 64) || null;
+}
+
+/** Emails the security recipients for events that warrant it. Best effort. */
+async function raiseAlert(
+  entry: { action: AccessAction; actorEmail?: string | null; detail?: Record<string, unknown> },
+  ip: string | null,
+) {
+  try {
+    let recentFailures: number | undefined;
+    if (entry.action === "login_failed" && entry.actorEmail && entry.detail?.reason !== "throttled") {
+      const { count } = await supabaseServer()
+        .from("access_log")
+        .select("id", { count: "exact", head: true })
+        .eq("action", "login_failed")
+        .eq("actor_email", entry.actorEmail.slice(0, 254))
+        .neq("detail->>reason", "throttled")
+        .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString());
+      recentFailures = count ?? undefined;
+    }
+    sendSecurityAlert({ ...entry, ip, recentFailures });
+  } catch (error) {
+    console.error("Security alert skipped:", error);
+  }
 }
 
 /** Records one access event. Returns false when the row could not be stored;
@@ -59,6 +101,7 @@ export async function logAccess(entry: {
       console.error("Failed to write access_log row:", error.message);
       return false;
     }
+    await raiseAlert(entry, clientIp(h));
     return true;
   } catch (error) {
     console.error("Failed to write access_log row:", error);

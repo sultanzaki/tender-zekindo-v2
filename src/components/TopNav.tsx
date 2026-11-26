@@ -57,9 +57,11 @@ function CreateLink() {
   );
 }
 const SUBPAGES: [RegExp, string][] = [
+  [/^\/settings\/security/, "Account security"],
   [/^\/admin\/users/, "Users & access"],
   [/^\/admin\/milestones/, "Milestone templates"],
   [/^\/admin\/access-log/, "Access log"],
+  [/^\/admin\/retention/, "Data retention"],
   [/^\/tenders\/archive/, "Archived tenders"],
   [/^\/tenders\/new/, "New tender"],
   [/^\/tenders\/[^/]+\/edit/, "Edit tender"],
@@ -300,6 +302,11 @@ function Workspace({
       >
         <p className="text-sm text-muted-foreground">{profile.email}</p>
         <nav aria-label="Account actions" className="grid gap-2">
+          <Button asChild variant="outline">
+            <Link href="/settings/security" onClick={() => setAccountOpen(false)}>
+              Account security
+            </Link>
+          </Button>
           <form action={logout}>
             <Button type="submit" variant="outline">
               Sign out
